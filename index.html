@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="zh-Hant"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>AI門市營運助手 V6.25</title><style>*{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#182033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}.w{max-width:1120px;margin:auto;padding:14px}.hero,.card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:17px;margin-bottom:13px}.tag{display:inline-block;background:#eef2ff;color:#3046a0;padding:6px 9px;border-radius:99px;font-size:12px;font-weight:900}h1{margin:9px 0 4px}.muted{color:#6b7280;line-height:1.55}.thresholds{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}.thresholds label{display:block;font-size:12px;color:#6b7280;font-weight:800;margin-bottom:5px}.thresholds input{width:100%;min-height:44px;border:1px solid #d1d5db;border-radius:11px;padding:9px 11px;font-size:16px}.thresholds button{min-height:44px;border:0;border-radius:11px;padding:9px 16px;background:#172033;color:#fff;font-weight:900}.summaryline{margin-top:10px;padding:10px 12px;background:#f7f8fb;border-radius:11px;font-size:13px}.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.kpi{background:#f7f8fb;border-radius:12px;padding:12px}.kpi span{font-size:12px;color:#6b7280}.kpi b{display:block;font-size:25px;margin-top:4px}.compare,.delta,.daytops,.trendgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.period{border:2px solid #e5e7eb;border-radius:16px;padding:15px}.d{border-radius:12px;padding:12px;background:#fff4e5}.d b{font-size:21px;display:block}.trend{border:1px solid #e5e7eb;border-radius:14px;padding:12px}.trend h3{margin:0 0 8px}.trendrow{display:grid;grid-template-columns:28px 1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid #eee}.trendrow:last-child{border-bottom:0}.up{font-weight:900}.down{font-weight:900}.ai{border:1px solid #d8def7;background:#f7f8ff;border-radius:14px;padding:12px;margin-top:10px}.ai h3{margin:0 0 7px;font-size:15px}.ai .focus{font-weight:800;line-height:1.55}.ai ul{margin:7px 0 0;padding-left:20px}.ai li{margin:5px 0;line-height:1.5}.week{border:1px solid #e5e7eb;border-radius:14px;padding:13px;margin:10px 0}.weekhead{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.rank{border:1px solid #e5e7eb;border-radius:13px;padding:11px}.row{display:grid;grid-template-columns:24px 1fr auto;gap:7px;padding:7px 0;border-bottom:1px solid #eee}.row:last-child{border:0}.right{text-align:right;font-size:12px}.pill{font-size:11px;font-weight:900;padding:5px 8px;border-radius:99px}.pg{background:#eaf7f0;color:#137a49}.py{background:#fff3cd;color:#805d00}.pr{background:#fdecea;color:#b42318}details{border-radius:13px;margin:8px 0;overflow:hidden;border:2px solid transparent}summary{padding:13px;font-weight:900;cursor:pointer;list-style:none}.green{border-color:#a9dfc2}.green summary{background:#eaf7f0}.yellow{border-color:#f1d47b}.yellow summary{background:#fff5d9}.red{border-color:#efaaa3}.red summary{background:#fdecea}.body{background:#fff;padding:11px}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:10px}.box{background:#f7f8fb;border-radius:9px;padding:8px;font-size:12px}.daytops h3{font-size:14px;margin:0 0 6px}@media(max-width:760px){.kpis{grid-template-columns:1fr 1fr}.compare,.delta,.daytops,.trendgrid{grid-template-columns:1fr}.thresholds{grid-template-columns:1fr 1fr}.thresholds button{grid-column:1/-1}.stats{grid-template-columns:repeat(2,1fr)}.kpi b{font-size:23px}}</style>
+<html lang="zh-Hant"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>AI門市營運助手 V6.27</title><style>*{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#182033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}.w{max-width:1120px;margin:auto;padding:14px}.hero,.card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:17px;margin-bottom:13px}.tag{display:inline-block;background:#eef2ff;color:#3046a0;padding:6px 9px;border-radius:99px;font-size:12px;font-weight:900}h1{margin:9px 0 4px}.muted{color:#6b7280;line-height:1.55}.thresholds{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}.thresholds label{display:block;font-size:12px;color:#6b7280;font-weight:800;margin-bottom:5px}.thresholds input{width:100%;min-height:44px;border:1px solid #d1d5db;border-radius:11px;padding:9px 11px;font-size:16px}.thresholds button{min-height:44px;border:0;border-radius:11px;padding:9px 16px;background:#172033;color:#fff;font-weight:900}.summaryline{margin-top:10px;padding:10px 12px;background:#f7f8fb;border-radius:11px;font-size:13px}.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.kpi{background:#f7f8fb;border-radius:12px;padding:12px}.kpi span{font-size:12px;color:#6b7280}.kpi b{display:block;font-size:25px;margin-top:4px}.compare,.delta,.daytops,.trendgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.period{border:2px solid #e5e7eb;border-radius:16px;padding:15px}.d{border-radius:12px;padding:12px;background:#fff4e5}.d b{font-size:21px;display:block}.trend{border:1px solid #e5e7eb;border-radius:14px;padding:12px}.trend h3{margin:0 0 8px}.trendrow{display:grid;grid-template-columns:28px 1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid #eee}.trendrow:last-child{border-bottom:0}.up{font-weight:900}.down{font-weight:900}.ai{border:1px solid #d8def7;background:#f7f8ff;border-radius:14px;padding:12px;margin-top:10px}.ai h3{margin:0 0 7px;font-size:15px}.ai .focus{font-weight:800;line-height:1.55}.ai ul{margin:7px 0 0;padding-left:20px}.ai li{margin:5px 0;line-height:1.5}.week{border:1px solid #e5e7eb;border-radius:14px;padding:13px;margin:10px 0}.weekhead{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}.rank{border:1px solid #e5e7eb;border-radius:13px;padding:11px}.row{display:grid;grid-template-columns:24px 1fr auto;gap:7px;padding:7px 0;border-bottom:1px solid #eee}.row:last-child{border:0}.right{text-align:right;font-size:12px}.pill{font-size:11px;font-weight:900;padding:5px 8px;border-radius:99px}.pg{background:#eaf7f0;color:#137a49}.py{background:#fff3cd;color:#805d00}.pr{background:#fdecea;color:#b42318}details{border-radius:13px;margin:8px 0;overflow:hidden;border:2px solid transparent}summary{padding:13px;font-weight:900;cursor:pointer;list-style:none}.green{border-color:#a9dfc2}.green summary{background:#eaf7f0}.yellow{border-color:#f1d47b}.yellow summary{background:#fff5d9}.red{border-color:#efaaa3}.red summary{background:#fdecea}.body{background:#fff;padding:11px}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:10px}.box{background:#f7f8fb;border-radius:9px;padding:8px;font-size:12px}.daytops h3{font-size:14px;margin:0 0 6px}@media(max-width:760px){.kpis{grid-template-columns:1fr 1fr}.compare,.delta,.daytops,.trendgrid{grid-template-columns:1fr}.thresholds{grid-template-columns:1fr 1fr}.thresholds button{grid-column:1/-1}.stats{grid-template-columns:repeat(2,1fr)}.kpi b{font-size:23px}}</style>
 <style>
 #monthly-ai-priority{padding:18px}
 #monthly-ai-priority .ai-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
@@ -959,6 +959,191 @@ body{
   .export-actions{width:100%}
   .export-primary,.export-secondary{flex:1}
 }
+</style><style id="v6-26-import-style">
+/* V6.26 Excel / CSV 匯入 */
+.import-card{border-top:4px solid #32a06d!important}
+.import-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+}
+.import-badges{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.import-badges span{
+  padding:5px 8px;border-radius:8px;background:#eef8f3;color:#268158;
+  border:1px solid #d6eee2;font-size:10px;font-weight:800;letter-spacing:.03em;
+}
+.import-dropzone{
+  margin-top:16px;display:flex;align-items:center;gap:12px;
+  padding:16px;border:1.5px dashed #cfd8e6;border-radius:15px;
+  background:#fafcff;cursor:pointer;
+}
+.import-dropzone:hover{border-color:#98a8c2;background:#f7f9fd}
+.import-drop-icon{
+  width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;
+  border-radius:11px;background:#edf0ff;color:#5058c7;font-size:22px;font-weight:700;
+}
+.import-drop-copy{display:flex;flex-direction:column;gap:2px}
+.import-drop-copy strong{font-size:13px;color:#172033}
+.import-drop-copy span{font-size:11px;color:#7e8a9d}
+#importDataFile,#opsDataFile{display:none}
+.import-status{
+  margin-top:12px;display:flex;align-items:flex-start;gap:9px;padding:11px 12px;
+  border-radius:12px;background:#f7f9fc;border:1px solid #e5eaf1;
+}
+.status-dot{
+  width:8px;height:8px;border-radius:50%;background:#a6b0bf;flex:0 0 8px;margin-top:5px;
+}
+.import-status strong{display:block;font-size:12px;color:#172033;margin-bottom:2px}
+.import-status span{display:block;font-size:10px;color:#7f8a9b;line-height:1.55}
+.import-status.ok .status-dot{background:#22a06b}
+.import-status.error .status-dot{background:#d65361}
+.import-preview{
+  margin-top:12px;border:1px solid #e2e7ef;border-radius:14px;overflow:hidden;background:#fff;
+}
+.preview-head{
+  padding:11px 12px;display:flex;justify-content:space-between;gap:10px;
+  border-bottom:1px solid #e9edf3;background:#fafbfe;
+}
+.preview-head strong{font-size:12px;color:#172033}
+.preview-head span{font-size:10px;color:#7e899a}
+.field-map{display:flex;gap:6px;flex-wrap:wrap;padding:10px 12px}
+.field-chip{
+  padding:5px 8px;border-radius:999px;font-size:10px;font-weight:700;
+  background:#f2f4f8;color:#5d6879;border:1px solid #e2e7ef;
+}
+.field-chip.hit{background:#eef8f3;color:#268158;border-color:#d5ecdf}
+.preview-table-wrap{overflow:auto;max-height:260px;border-top:1px solid #eef1f5}
+.preview-table{width:100%;border-collapse:collapse;font-size:10px;min-width:620px}
+.preview-table th,.preview-table td{
+  padding:7px 9px;border-bottom:1px solid #eef1f5;text-align:left;white-space:nowrap;
+}
+.preview-table th{position:sticky;top:0;background:#f8faff;color:#5f6c7d;font-weight:800}
+.preview-table td{color:#394657}
+@media(max-width:760px){
+  .import-head{flex-direction:column}
+  .import-badges{justify-content:flex-start}
+  .import-dropzone{padding:14px 11px}
+}
+</style><style id="v6-27-report-style">
+/* V6.27 真正的主管月報 */
+.report-modal{
+  position:fixed;inset:0;z-index:99999;background:rgba(20,28,42,.72);
+  overflow:auto;padding:22px;
+}
+.report-modal-shell{max-width:980px;margin:0 auto}
+.report-toolbar{
+  position:sticky;top:8px;z-index:5;
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:12px 14px;margin-bottom:12px;border-radius:14px;
+  background:rgba(255,255,255,.96);box-shadow:0 8px 28px rgba(0,0,0,.14);
+}
+.report-toolbar strong{display:block;color:#172033;font-size:13px}
+.report-toolbar span{display:block;color:#7b8799;font-size:10px;margin-top:2px}
+.report-toolbar-actions{display:flex;gap:8px}
+.report-toolbar button{
+  border:0;border-radius:9px;padding:8px 12px;background:#5d63d8;color:#fff;
+  font-size:11px;font-weight:800;
+}
+.report-toolbar button.ghost{background:#eef1f6;color:#596579}
+.report-document{display:flex;flex-direction:column;gap:16px}
+.report-page{
+  background:#fff;border-radius:18px;padding:34px 38px;
+  box-shadow:0 16px 50px rgba(17,28,45,.16);
+  min-height:860px;
+}
+.report-cover-page{
+  display:flex;flex-direction:column;justify-content:center;
+  background:
+    radial-gradient(circle at 90% 10%,rgba(93,99,216,.14),transparent 26%),
+    linear-gradient(180deg,#fff 0%,#f8f9ff 100%);
+}
+.report-brand,.report-section-kicker{
+  font-size:11px;font-weight:850;letter-spacing:.08em;color:#5d63d8;text-transform:uppercase;
+}
+.report-period{margin-top:76px;color:#9aa3b1;font-size:13px;font-weight:700}
+.report-cover-page h1{font-size:42px!important;margin:8px 0 10px!important;color:#172033!important}
+.report-cover-page>p{font-size:15px!important;color:#728095!important}
+.report-cover-line{width:72px;height:6px;border-radius:999px;background:#5d63d8;margin:28px 0 34px}
+.report-cover-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.report-cover-summary div,.report-kpi{
+  padding:16px;border:1px solid #e5e9f1;border-radius:14px;background:rgba(255,255,255,.78);
+}
+.report-cover-summary span,.report-kpi span{display:block;color:#8b95a5;font-size:10px;margin-bottom:5px}
+.report-cover-summary strong,.report-kpi strong{display:block;color:#172033!important;font-size:20px!important}
+.report-generated{margin-top:auto;padding-top:40px;color:#9aa3b1;font-size:10px}
+.report-page h2{font-size:27px!important;margin:8px 0 18px!important;color:#172033!important}
+.report-page h3{font-size:16px!important;margin:24px 0 12px!important}
+.report-lead{font-size:12px!important;color:#7b8799!important;margin-top:-8px!important}
+.report-summary-banner{
+  padding:18px 20px;border-radius:15px;background:#f1f3ff;border:1px solid #dfe3ff;margin-bottom:16px;
+}
+.report-summary-banner strong{font-size:15px;color:#313a9d}
+.report-summary-banner p{font-size:11px!important;color:#65718a!important;margin:5px 0 0!important}
+.report-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.report-kpi small{display:block;margin-top:4px;color:#9aa3b1;font-size:9px}
+.report-priority-list{display:flex;flex-direction:column;gap:9px}
+.report-priority{display:flex;gap:12px;padding:13px 14px;border-radius:13px;border:1px solid #e6eaf1}
+.report-priority>b{
+  width:27px;height:27px;flex:0 0 27px;display:grid;place-items:center;border-radius:8px;
+  color:#fff;font-size:11px;
+}
+.report-priority.red>b{background:#d65361}.report-priority.amber>b{background:#df8a2e}.report-priority.green>b{background:#1c9b68}
+.report-priority strong{font-size:12px;color:#172033}
+.report-priority p{font-size:10px!important;line-height:1.6!important;color:#748095!important;margin:3px 0 0!important}
+.report-chart-box{
+  height:360px;border:1px solid #e5e9f0;border-radius:15px;padding:12px;background:#fbfcff;margin-top:18px;
+  display:grid;place-items:center;
+}
+.report-chart-box img{max-width:100%;max-height:100%;object-fit:contain}
+.report-insight-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.report-insight-grid>div{padding:13px 14px;border-radius:13px;background:#f8f9fc;border:1px solid #e7ebf2}
+.report-insight-grid span{display:block;font-size:9px;color:#8d97a6;margin-bottom:3px}
+.report-insight-grid strong{font-size:12px;color:#172033}
+.report-insight-grid p{font-size:10px!important;color:#7b8799!important;line-height:1.55!important}
+.report-table{width:100%;border-collapse:collapse;margin-top:18px;font-size:10px}
+.report-table th{background:#f5f7fb;color:#667286;text-align:left;padding:9px;border-bottom:1px solid #e4e9f1}
+.report-table td{padding:10px 9px;border-bottom:1px solid #edf0f5;color:#394657}
+.report-loss-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.report-loss-card{padding:18px;border-radius:15px;border:1px solid #e5e9f1}
+.report-loss-card.waste{background:#fff7f8}.report-loss-card.clearance{background:#fff8f1}
+.report-loss-card span{display:block;font-size:11px;font-weight:800;margin-bottom:4px}
+.report-loss-card.waste span{color:#d65361}.report-loss-card.clearance span{color:#df7b2d}
+.report-loss-card strong{display:block;font-size:22px!important;color:#172033!important}
+.report-loss-card small{color:#8b95a5;font-size:10px}
+.report-action-list{display:flex;flex-direction:column;gap:10px}
+.report-action-list>div{display:flex;gap:12px;padding:13px 14px;border-radius:13px;background:#f8f9fc;border:1px solid #e6eaf1}
+.report-action-list b{color:#5d63d8;font-size:11px}
+.report-action-list p{font-size:10px!important;color:#748095!important;margin:0!important;line-height:1.6!important}
+.report-action-list strong{font-size:11px;color:#172033}
+.report-final-note{
+  margin-top:22px;padding:16px;border-radius:14px;background:#172033;color:#fff;font-size:11px;line-height:1.65;
+}
+@media(max-width:760px){
+  .report-modal{padding:8px}
+  .report-toolbar{top:4px}
+  .report-page{padding:24px 18px;min-height:auto;border-radius:14px}
+  .report-cover-page{min-height:720px}
+  .report-cover-page h1{font-size:32px!important}
+  .report-cover-summary,.report-kpi-grid{grid-template-columns:1fr 1fr}
+  .report-insight-grid,.report-loss-grid{grid-template-columns:1fr}
+  .report-chart-box{height:270px}
+}
+@media print{
+  body.report-printing>*:not(#v6-27-report-modal){display:none!important}
+  body.report-printing #v6-27-report-modal{
+    display:block!important;position:static!important;background:#fff!important;padding:0!important;overflow:visible!important;
+  }
+  body.report-printing .report-modal-shell{max-width:none!important}
+  body.report-printing .report-toolbar{display:none!important}
+  body.report-printing .report-document{gap:0!important}
+  body.report-printing .report-page{
+    box-shadow:none!important;border-radius:0!important;
+    min-height:auto!important;height:273mm!important;
+    padding:16mm 14mm!important;margin:0!important;
+    page-break-after:always;break-after:page;
+  }
+  body.report-printing .report-page:last-child{page-break-after:auto;break-after:auto}
+  body.report-printing .report-chart-box{height:100mm!important}
+  @page{size:A4 portrait;margin:0}
+}
 </style></head><body><div class="w"><section class="report-cover">
 <div class="report-kicker">AI 門市營運助手</div>
 <h1>門市營運月報</h1>
@@ -970,13 +1155,48 @@ body{
 <div class="export-copy">
 <div class="export-icon">↗</div>
 <div>
-<h2>一鍵匯出月報</h2>
-<p class="muted">自動整理本月 KPI、營業額趨勢、Top 10、損耗分析與 AI 營運決策。</p>
+<h2>生成主管月報</h2>
+<p class="muted">不是直接列印網站，而是先整理成可直接報告的主管版月報，再匯出 PDF。</p>
 </div>
 </div>
 <div class="export-actions">
-<button class="export-primary" id="exportMonthlyPdf" type="button">匯出 PDF 月報</button>
-<button class="export-secondary" id="previewMonthlyReport" type="button">預覽月報</button>
+<button class="export-primary" id="exportMonthlyPdf" type="button">生成主管月報</button>
+<button class="export-secondary" id="previewMonthlyReport" type="button">預覽報告</button>
+</div>
+</section><section class="card import-card" id="smart-data-import">
+<div class="import-head">
+<div>
+<h2>智慧資料匯入</h2>
+<p class="muted">支援 Excel（.xlsx / .xls）與 CSV，自動讀取欄位並檢查基本資料格式。</p>
+</div>
+<div class="import-badges">
+<span>XLSX</span><span>XLS</span><span>CSV</span>
+</div>
+</div>
+<label class="import-dropzone" for="opsDataFile">
+<div class="import-drop-icon">＋</div>
+<div class="import-drop-copy">
+<strong>選擇營運報表</strong>
+<span>Excel / CSV｜可直接從 iPhone「檔案」選取</span>
+</div>
+<input accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" id="opsDataFile" type="file"/>
+</label>
+<div class="import-status" id="importStatus">
+<div class="status-dot"></div>
+<div>
+<strong>尚未匯入資料</strong>
+<span>系統會嘗試辨識：日期、品項、銷售量、營業額、出清、報廢、分類。</span>
+</div>
+</div>
+<div class="import-preview" hidden="" id="importPreview">
+<div class="preview-head">
+<strong>欄位辨識結果</strong>
+<span id="importRowCount"></span>
+</div>
+<div class="field-map" id="fieldMap"></div>
+<div class="preview-table-wrap">
+<table class="preview-table" id="previewTable"></table>
+</div>
 </div>
 </section><div class="card section-settings"><h2>自訂判斷標準</h2><div class="thresholds">
 <div><label class="waste-field-label" for="wasteThreshold">報廢率警戒值（%）</label><input id="wasteThreshold" inputmode="decimal" max="100" min="0" step="0.1" type="number" value="3.0"/></div>
@@ -1630,27 +1850,311 @@ function categoryVisual(itemName, category){
 
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",()=>setTimeout(bootCharts,80));
   else setTimeout(bootCharts,80);
-})();</script><script id="v6-25-report-script">
+})();</script><script id="v6-26-sheetjs" src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script><script id="v6-26-import-script">
 (function(){
-  function setReportDate(){
-    const el=document.getElementById("reportGeneratedDate");
-    if(!el) return;
-    const now=new Date();
-    el.textContent="產出日期："+now.toLocaleDateString("zh-TW");
+  const aliases={
+    date:["日期","date","交易日期","營業日期","銷售日期"],
+    item:["品項","品名","商品","商品名稱","產品","產品名稱","item","product"],
+    qty:["銷售量","銷量","售出數","售出數量","數量","qty","quantity"],
+    sales:["營業額","銷售額","銷售金額","營收","銷售淨額","sales","revenue"],
+    clearance:["出清","出清金額","折價","折扣金額","即期折扣","clearance"],
+    waste:["報廢","報廢金額","廢棄","廢棄金額","報損","報損金額","waste"],
+    category:["大分類","中分類","小分類","商品分類","品類","類別","category"],
+    department:["部門","課別","櫃別","department","section"]
+  };
+
+  const pretty={
+    date:"日期",item:"品項",qty:"銷售量",sales:"營業額",
+    clearance:"出清",waste:"報廢",category:"分類",department:"部門"
+  };
+
+  function norm(s){ return String(s??"").trim().toLowerCase().replace(/\s+/g,""); }
+
+  function detect(headers){
+    const out={};
+    Object.entries(aliases).forEach(([key,list])=>{
+      let found=null;
+      for(const h of headers){
+        const n=norm(h);
+        if(list.some(a=>norm(a)===n)){ found=h; break; }
+      }
+      if(!found){
+        for(const h of headers){
+          const n=norm(h);
+          if(list.some(a=>n.includes(norm(a)) || norm(a).includes(n))){
+            found=h; break;
+          }
+        }
+      }
+      out[key]=found;
+    });
+    return out;
   }
 
-  function prepareReport(){
-    setReportDate();
-    // Give Chart.js canvases a moment to finish drawing before print dialog.
-    setTimeout(()=>window.print(),180);
+  function esc(s){
+    return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+  }
+
+  function render(rows){
+    const status=document.getElementById("importStatus");
+    const preview=document.getElementById("importPreview");
+    const mapEl=document.getElementById("fieldMap");
+    const table=document.getElementById("previewTable");
+    const count=document.getElementById("importRowCount");
+
+    if(!rows || !rows.length){
+      status.className="import-status error";
+      status.querySelector("strong").textContent="找不到可讀取的資料";
+      status.querySelector("span").textContent="請確認檔案不是空白，且第一列為欄位名稱。";
+      preview.hidden=true;
+      return;
+    }
+
+    const headers=Object.keys(rows[0]);
+    const mapping=detect(headers);
+    const requiredOk=!!mapping.item && !!mapping.sales;
+
+    status.className="import-status "+(requiredOk?"ok":"error");
+    status.querySelector("strong").textContent=requiredOk ? "資料讀取成功" : "已讀取，但必要欄位不足";
+    status.querySelector("span").textContent=requiredOk
+      ? `已讀取 ${rows.length.toLocaleString()} 筆資料；目前先完成欄位辨識與預覽。`
+      : "至少需要辨識到「品項」與「營業額」；請確認欄位名稱。";
+
+    mapEl.innerHTML=Object.entries(mapping).map(([k,v])=>
+      `<span class="field-chip ${v?"hit":""}">${pretty[k]}：${v?esc(v):"未辨識"}</span>`
+    ).join("");
+
+    const shown=headers.slice(0,8);
+    const sample=rows.slice(0,8);
+    table.innerHTML=
+      "<thead><tr>"+shown.map(h=>`<th>${esc(h)}</th>`).join("")+"</tr></thead>"+
+      "<tbody>"+sample.map(r=>"<tr>"+shown.map(h=>`<td>${esc(r[h])}</td>`).join("")+"</tr>").join("")+"</tbody>";
+
+    count.textContent=`${rows.length.toLocaleString()} 筆｜${headers.length} 欄`;
+    preview.hidden=false;
+
+    // Keep parsed data accessible for the next step of wiring KPIs/charts.
+    window.__opsImportedRows=rows;
+    window.__opsFieldMapping=mapping;
+  }
+
+  function parseCsv(text){
+    if(typeof XLSX!=="undefined"){
+      const wb=XLSX.read(text,{type:"string"});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      return XLSX.utils.sheet_to_json(ws,{defval:""});
+    }
+    // Minimal CSV fallback
+    const lines=text.replace(/^\uFEFF/,"").split(/\r?\n/).filter(Boolean);
+    if(!lines.length) return [];
+    const split=line=>{
+      const a=[]; let cur="",q=false;
+      for(let i=0;i<line.length;i++){
+        const c=line[i];
+        if(c==='"'){
+          if(q && line[i+1]==='"'){cur+='"';i++}
+          else q=!q;
+        }else if(c==="," && !q){a.push(cur);cur=""}
+        else cur+=c;
+      }
+      a.push(cur); return a;
+    };
+    const hs=split(lines[0]).map(x=>x.trim());
+    return lines.slice(1).map(line=>{
+      const vals=split(line),o={};
+      hs.forEach((h,i)=>o[h]=vals[i]??"");
+      return o;
+    });
+  }
+
+  async function handle(file){
+    const status=document.getElementById("importStatus");
+    status.className="import-status";
+    status.querySelector("strong").textContent="正在讀取 "+file.name;
+    status.querySelector("span").textContent="請稍候，系統正在解析檔案內容。";
+
+    const ext=(file.name.split(".").pop()||"").toLowerCase();
+    try{
+      let rows=[];
+      if(ext==="csv"){
+        rows=parseCsv(await file.text());
+      }else if(ext==="xlsx" || ext==="xls"){
+        if(typeof XLSX==="undefined") throw new Error("Excel 解析元件尚未載入，請重新整理後再試。");
+        const buf=await file.arrayBuffer();
+        const wb=XLSX.read(buf,{type:"array",cellDates:true});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        rows=XLSX.utils.sheet_to_json(ws,{defval:"",raw:false});
+      }else{
+        throw new Error("目前僅支援 Excel（.xlsx / .xls）與 CSV。");
+      }
+      render(rows);
+    }catch(err){
+      status.className="import-status error";
+      status.querySelector("strong").textContent="檔案讀取失敗";
+      status.querySelector("span").textContent=err.message || "請改用 Excel 或 CSV 後再試。";
+      document.getElementById("importPreview").hidden=true;
+    }
   }
 
   document.addEventListener("DOMContentLoaded",()=>{
-    setReportDate();
-    const pdf=document.getElementById("exportMonthlyPdf");
-    const preview=document.getElementById("previewMonthlyReport");
-    if(pdf) pdf.addEventListener("click",prepareReport);
-    if(preview) preview.addEventListener("click",prepareReport);
+    const input=document.getElementById("opsDataFile");
+    if(input) input.addEventListener("change",e=>{
+      const f=e.target.files && e.target.files[0];
+      if(f) handle(f);
+    });
+  });
+})();
+</script><div class="report-modal" hidden="" id="v6-27-report-modal">
+<div class="report-modal-shell">
+<div class="report-toolbar">
+<div>
+<strong>主管月報預覽</strong>
+<span>已整理成報告版型</span>
+</div>
+<div class="report-toolbar-actions">
+<button id="reportPrintBtn" type="button">匯出 PDF</button>
+<button class="ghost" id="reportCloseBtn" type="button">關閉</button>
+</div>
+</div>
+<div class="report-document" id="reportDocument">
+<section class="report-page report-cover-page">
+<div class="report-brand">AI 門市營運助手</div>
+<div class="report-period">2026 / 08</div>
+<h1>門市營運月報</h1>
+<p>營業績效、商品趨勢、損耗與下月行動摘要</p>
+<div class="report-cover-line"></div>
+<div class="report-cover-summary">
+<div><span>本月營業額</span><strong>$15,325,768</strong></div>
+<div><span>報廢金額</span><strong>$432,619</strong></div>
+<div><span>出清金額</span><strong>$1,427,961</strong></div>
+</div>
+<div class="report-generated" id="reportGeneratedStamp"></div>
+</section>
+<section class="report-page">
+<div class="report-section-kicker">01｜管理摘要</div>
+<h2>本月營運結論</h2>
+<div class="report-summary-banner">
+<strong>整體營業維持穩定，但高營收品項仍存在損耗改善空間。</strong>
+<p>本月應優先處理「高營業額＋高報廢／出清」品項，而非全面縮減備貨。</p>
+</div>
+<div class="report-kpi-grid">
+<div class="report-kpi"><span>營業額</span><strong>$15,325,768</strong><small>30 日累計</small></div>
+<div class="report-kpi"><span>銷售量</span><strong>179,758</strong><small>30 日累計</small></div>
+<div class="report-kpi"><span>報廢率</span><strong>2.82%</strong><small>$432,619</small></div>
+<div class="report-kpi"><span>出清率</span><strong>9.31%</strong><small>$1,427,961</small></div>
+</div>
+<h3>本月三大重點</h3>
+<div class="report-priority-list">
+<div class="report-priority red"><b>1</b><div><strong>滷味｜優先減量</strong><p>銷售量下降 5.1%，但報廢率升至 5.2%，建議下週同星期備貨量先下修 5–10%。</p></div></div>
+<div class="report-priority amber"><b>2</b><div><strong>烤雞｜調整尾段生產</strong><p>需求仍成長，但報廢金額達 $44,684；不建議全面減量，優先縮小最後一批。</p></div></div>
+<div class="report-priority green"><b>3</b><div><strong>壽司｜維持供應</strong><p>營業額與銷售量維持成長，報廢率僅 0.67%，目前不需主動減量。</p></div></div>
+</div>
+</section>
+<section class="report-page">
+<div class="report-section-kicker">02｜營業額趨勢</div>
+<h2>平日 / 假日營運走勢</h2>
+<p class="report-lead">以每日營業額觀察量體，並將平日與假日拆開比較，避免週末高峰干擾判讀。</p>
+<div class="report-chart-box">
+<img alt="營業額趨勢圖" id="reportSalesChartImg"/>
+</div>
+<div class="report-insight-grid">
+<div><span>觀察</span><strong>假日營業額整體高於平日</strong><p>需求高峰集中在週末，備貨與人力不宜直接套用平日標準。</p></div>
+<div><span>管理重點</span><strong>平假日應使用不同基準</strong><p>後續 KPI、備貨與 Top 品項分析建議分開追蹤。</p></div>
+</div>
+</section>
+<section class="report-page">
+<div class="report-section-kicker">03｜主力商品</div>
+<h2>Top 10 品項與趨勢</h2>
+<p class="report-lead">主力品項不只看營業額排名，同時觀察平日與假日需求變化。</p>
+<div class="report-chart-box">
+<img alt="Top10 品項趨勢圖" id="reportProductChartImg"/>
+</div>
+<table class="report-table">
+<thead><tr><th>品項</th><th>營運判斷</th><th>本月建議</th></tr></thead>
+<tbody>
+<tr><td>炸雞</td><td>高營業額、需求成長</td><td>維持供應，缺貨時再小幅加量</td></tr>
+<tr><td>壽司</td><td>高營業額、低報廢</td><td>維持現行備貨</td></tr>
+<tr><td>烤雞</td><td>需求成長、絕對報廢高</td><td>調整最後一批生產時間與數量</td></tr>
+<tr><td>滷味</td><td>需求下降、報廢惡化</td><td>下週同星期備貨 -5～10%</td></tr>
+</tbody>
+</table>
+</section>
+<section class="report-page">
+<div class="report-section-kicker">04｜損耗與行動</div>
+<h2>本月損耗診斷</h2>
+<div class="report-loss-grid">
+<div class="report-loss-card waste"><span>報廢</span><strong>$432,619</strong><small>報廢率 2.82%</small></div>
+<div class="report-loss-card clearance"><span>出清</span><strong>$1,427,961</strong><small>出清率 9.31%</small></div>
+</div>
+<h3>下月三項具體行動</h3>
+<div class="report-action-list">
+<div><b>01</b><p><strong>滷味備貨下修 5–10%</strong><br/>先執行一週，再比較同星期銷售量與報廢率是否同步改善。</p></div>
+<div><b>02</b><p><strong>烤雞縮小尾段批次</strong><br/>保留需求成長空間，只調整最後一批的生產量與出爐時間。</p></div>
+<div><b>03</b><p><strong>建立平日 / 假日不同標準</strong><br/>Top 品項、備貨與人力配置分開追蹤，不再以單一平均值管理。</p></div>
+</div>
+<div class="report-final-note">
+<strong>主管一句話：</strong>
+          下月不做全面減量，優先針對「需求下降但損耗升高」的品項精準調整。
+        </div>
+</section>
+</div>
+</div>
+</div><script id="v6-27-report-script">
+(function(){
+  function refreshReportImages(){
+    try{
+      if(typeof Chart!=="undefined"){
+        const sales=Chart.getChart("dailySalesChart");
+        const prod=Chart.getChart("productTrendChart");
+        const sImg=document.getElementById("reportSalesChartImg");
+        const pImg=document.getElementById("reportProductChartImg");
+        if(sales && sImg) sImg.src=sales.toBase64Image("image/png",1);
+        if(prod && pImg) pImg.src=prod.toBase64Image("image/png",1);
+      }
+    }catch(e){}
+  }
+
+  function openReport(){
+    const modal=document.getElementById("v6-27-report-modal");
+    const stamp=document.getElementById("reportGeneratedStamp");
+    if(stamp) stamp.textContent="產出日期："+new Date().toLocaleDateString("zh-TW");
+    refreshReportImages();
+    if(modal){
+      modal.hidden=false;
+      document.documentElement.style.overflow="hidden";
+    }
+  }
+
+  function closeReport(){
+    const modal=document.getElementById("v6-27-report-modal");
+    if(modal) modal.hidden=true;
+    document.documentElement.style.overflow="";
+  }
+
+  function printReport(){
+    refreshReportImages();
+    document.body.classList.add("report-printing");
+    setTimeout(()=>window.print(),180);
+  }
+
+  window.addEventListener("afterprint",()=>document.body.classList.remove("report-printing"));
+
+  document.addEventListener("DOMContentLoaded",()=>{
+    const oldA=document.getElementById("exportMonthlyPdf");
+    const oldB=document.getElementById("previewMonthlyReport");
+    const close=document.getElementById("reportCloseBtn");
+    const print=document.getElementById("reportPrintBtn");
+
+    if(oldA){
+      const clone=oldA.cloneNode(true); oldA.replaceWith(clone);
+      clone.addEventListener("click",openReport);
+    }
+    if(oldB){
+      const clone=oldB.cloneNode(true); oldB.replaceWith(clone);
+      clone.addEventListener("click",openReport);
+    }
+    if(close) close.addEventListener("click",closeReport);
+    if(print) print.addEventListener("click",printReport);
   });
 })();
 </script></body></html>
