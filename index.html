@@ -38,7 +38,7 @@ textarea,input[type=date]{width:100%;border:1px solid var(--line);border-radius:
   <div class="grid3">
     <div class="metric"><div class="label">若報廢率壓到 3%</div><div class="value" id="savePotential">$0</div><div class="hint">以今日銷售額估算的可改善金額</div></div>
     <div class="metric"><div class="label">最高風險品項</div><div class="value" style="font-size:21px" id="topRisk">滷味</div><div class="hint" id="topRiskHint">5.0% 報廢率｜17.3% 出清率</div></div>
-    <div class="metric"><div class="label">7 日紀錄</div><div class="value" id="historyCount">7 天</div><div class="hint">資料只存在你的瀏覽器</div></div>
+    <div class="metric"><div class="label">7 日紀錄</div><div class="value" id="historyCount">30 天</div><div class="hint">資料只存在你的瀏覽器</div></div>
   </div>
 
   <div class="card"><div class="sectionHead"><div><h2 style="margin:0 0 4px">品項異常排行</h2><div class="small">同時看報廢與出清，避免只看「報廢低」就誤判。</div></div><select id="sortMode" style="padding:10px;border:1px solid var(--line);border-radius:10px"><option value="risk">風險排序</option><option value="waste">報廢金額</option><option value="wasteRate">報廢率</option><option value="clearRate">出清率</option></select></div><div class="scroll" style="margin-top:10px"><table><thead><tr><th>品項</th><th>銷售</th><th>出清</th><th>出清率</th><th>報廢</th><th>報廢率</th><th>可改善金額*</th><th>AI判讀</th></tr></thead><tbody id="rows">
@@ -50,9 +50,9 @@ textarea,input[type=date]{width:100%;border:1px solid var(--line);border-radius:
   <div class="grid2"><div class="card"><h2 style="margin-top:0">今日結論</h2><div id="summary" style="line-height:1.75">示範資料：總銷售額 <b>$209,000</b>，總報廢 <b>$5,950</b>，整體報廢率 <b>2.8%</b>。其中烤雞、滷味、沙拉為優先關注品項。</div></div><div class="card"><h2 style="margin-top:0">明日三項行動</h2><ol id="actions"><li>回查烤雞與滷味最後生產時段及數量。</li><li>沙拉報廢率偏高，確認閉店前庫存與末段生產量。</li><li>持續累積 7 日資料，確認 08/28 異常是否為單日事件。</li></ol></div></div>
 
   <div class="card">
-    <div class="sectionHead"><div><h2 style="margin:0 0 4px">7 日歷史與連續異常</h2><div class="small">連續 7 天逐日顯示異常程度；點開日期可查看當日高報廢 Top 3 與高出清 Top 3。</div></div><div class="actions" style="align-items:center"><input id="recordDate" type="date" style="width:auto"><button class="primary" id="saveDayBtn">儲存今日紀錄</button><button class="danger" id="clearHistoryBtn">清除紀錄</button></div></div>
+    <div class="sectionHead"><div><h2 style="margin:0 0 4px">30 日歷史與連續異常</h2><div class="small">連續 30 天紀錄，拆分整體／平日／假日報廢率與出清率，並保留每日 Top 3 異常品項。</div></div><div class="actions" style="align-items:center"><input id="recordDate" type="date" style="width:auto"><button class="primary" id="saveDayBtn">儲存今日紀錄</button><button class="danger" id="clearHistoryBtn">清除紀錄</button></div></div>
     <div id="mostAbnormal" class="metric" style="margin-top:14px"><div class="label">本週最異常日期</div><div class="value">08/28</div><div class="hint">報廢率 5.8%・出清率 16.4%・示範資料</div></div>
-    <div class="demoNote"><b>V2.2 示範模式：</b>目前內建「7 天 × 20 品項」虛構資料。點日期即可查看每日高報廢 Top 3 與高出清 Top 3；正式使用時會改由每天儲存的真實資料計算。</div>
+    <div class="demoNote"><b>V3 示範模式：</b>目前內建「30 天 × 20 品項」虛構資料。點日期即可查看每日高報廢 Top 3 與高出清 Top 3；正式使用時會改由每天儲存的真實資料計算。</div>
     <div id="historyArea">
       <div class="grid3" style="margin-top:14px">
         <div class="metric"><div class="label">最新報廢率</div><div class="value">3.7%</div></div>
@@ -88,7 +88,7 @@ const DEMO_BASE=[
 {name:'飯糰',sales:15500,clearance:1700,waste:680},{name:'甜點杯',sales:14000,clearance:2300,waste:950}
 ];
 const sample=DEMO_BASE;
-let data=JSON.parse(JSON.stringify(sample));const $=id=>document.getElementById(id);const fmt=n=>new Intl.NumberFormat('zh-TW').format(Math.round(n||0));const pct=n=>((n||0)*100).toFixed(1)+'%';const STORE_KEY='ai-store-history-v22-top3-test';
+let data=JSON.parse(JSON.stringify(sample));const $=id=>document.getElementById(id);const fmt=n=>new Intl.NumberFormat('zh-TW').format(Math.round(n||0));const pct=n=>((n||0)*100).toFixed(1)+'%';const STORE_KEY='ai-store-history-v3-30day-test';
 function demoDay(date,dayIndex){
  const salesFactors=[.94,1.02,1.00,.91,.98,.86,.96], clearFactors=[.82,.98,.90,1.22,.94,1.42,1.03], wasteFactors=[.78,.95,.86,1.28,1.02,1.62,1.12];
  const items=DEMO_BASE.map((b,i)=>{
@@ -105,7 +105,27 @@ function demoDay(date,dayIndex){
  const sales=items.reduce((a,b)=>a+b.sales,0),waste=items.reduce((a,b)=>a+b.waste,0),clearance=items.reduce((a,b)=>a+b.clearance,0);
  return {date,sales,waste,clearance,wasteRate:waste/sales,clearRate:clearance/sales,items};
 }
-const DEMO_HISTORY=['2026-08-23','2026-08-24','2026-08-25','2026-08-26','2026-08-27','2026-08-28','2026-08-29'].map(d=>demoDay(d,Number(d.slice(-2))-23));
+function dateISO(d){return d.toISOString().slice(0,10)}
+const DEMO_HISTORY=[];
+for(let i=0;i<30;i++){
+ const d=new Date(2026,7,1+i);
+ const day=demoDay(dateISO(d),i%7);
+ // Make weekends behavior visibly different in the demo.
+ const dow=d.getDay(), weekend=(dow===0||dow===6);
+ if(weekend){
+   day.items=day.items.map((x,j)=>{
+     const sales=Math.round(x.sales*(1.08+((j%3)*.015)));
+     const waste=Math.round(x.waste*(1.20+(j%4)*.04));
+     const clearance=Math.round(x.clearance*(1.14+(j%5)*.025));
+     return {...x,sales,waste,clearance,wasteRate:waste/sales,clearRate:clearance/sales};
+   });
+   day.sales=day.items.reduce((a,b)=>a+b.sales,0);
+   day.waste=day.items.reduce((a,b)=>a+b.waste,0);
+   day.clearance=day.items.reduce((a,b)=>a+b.clearance,0);
+   day.wasteRate=day.waste/day.sales;day.clearRate=day.clearance/day.sales;
+ }
+ DEMO_HISTORY.push(day);
+}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function enrich(x,totalWaste){const wasteRate=x.sales?x.waste/x.sales:0,clearRate=x.sales?x.clearance/x.sales:0,wasteShare=totalWaste?x.waste/totalWaste:0,risk=wasteRate*45+clearRate*25+wasteShare*30,improve=Math.max(0,x.waste-x.sales*.03);let label='相對健康',cls='good';if(wasteRate>=.04&&clearRate>=.12){label='高報廢＋高出清，疑似生產過量';cls='bad'}else if(wasteRate>=.04){label='報廢偏高，優先檢查生產量';cls='bad'}else if(clearRate>=.15){label='高度依賴出清';cls='warn'}else if(wasteRate>=.025||clearRate>=.10){label='需持續追蹤';cls='warn'}return {...x,wasteRate,clearRate,wasteShare,risk,improve,label,cls}}
 function totals(){const sales=data.reduce((a,b)=>a+b.sales,0),waste=data.reduce((a,b)=>a+b.waste,0),clearance=data.reduce((a,b)=>a+b.clearance,0);return {sales,waste,clearance}}
@@ -126,8 +146,46 @@ function top3Rows(items,kind){
    return `<div class="rankRow"><div class="rankNum">${i+1}</div><div><b>${escapeHtml(x.name)}</b></div><div class="rankValue">${val}</div></div>`;
  }).join('');
 }
+
+function isWeekend(dateStr){const d=new Date(dateStr+'T12:00:00');return d.getDay()===0||d.getDay()===6}
+function aggregateDays(days){
+ const sales=days.reduce((a,d)=>a+d.sales,0), waste=days.reduce((a,d)=>a+d.waste,0), clearance=days.reduce((a,d)=>a+d.clearance,0);
+ return {sales,waste,clearance,wasteRate:sales?waste/sales:0,clearRate:sales?clearance/sales:0,count:days.length};
+}
+function topByGroup(days,kind){
+ const map={};
+ days.forEach(d=>(d.items||[]).forEach(x=>{
+   if(!map[x.name])map[x.name]={name:x.name,sales:0,waste:0,clearance:0,days:0};
+   const m=map[x.name];m.sales+=x.sales;m.waste+=x.waste;m.clearance+=x.clearance;m.days++;
+ }));
+ return Object.values(map).map(x=>({...x,rate:kind==='waste'?x.waste/x.sales:x.clearance/x.sales}))
+   .sort((a,b)=>b.rate-a.rate).slice(0,5);
+}
+function groupTopHtml(arr,kind){
+ return arr.map((x,i)=>`<div class="rankRow"><div class="rankNum">${i+1}</div><div><b>${escapeHtml(x.name)}</b><div class="small">${x.days} 天資料</div></div><div class="rankValue">${kind==='waste'?'報廢':'出清'} ${pct(x.rate)}<br>$${fmt(kind==='waste'?x.waste:x.clearance)}</div></div>`).join('');
+}
+function renderMonthInsights(h){
+ const all=aggregateDays(h), weekdays=aggregateDays(h.filter(x=>!isWeekend(x.date))), weekends=aggregateDays(h.filter(x=>isWeekend(x.date)));
+ $('monthKpis').innerHTML=`
+ <div class="metric"><div class="label">30 日整體報廢率</div><div class="value">${pct(all.wasteRate)}</div><div class="hint">${all.count} 天加權</div></div>
+ <div class="metric"><div class="label">30 日整體出清率</div><div class="value">${pct(all.clearRate)}</div><div class="hint">總出清 ÷ 總銷售</div></div>
+ <div class="metric"><div class="label">平日報廢率</div><div class="value">${pct(weekdays.wasteRate)}</div><div class="hint">${weekdays.count} 天</div></div>
+ <div class="metric"><div class="label">平日出清率</div><div class="value">${pct(weekdays.clearRate)}</div><div class="hint">${weekdays.count} 天</div></div>
+ <div class="metric"><div class="label">假日報廢率</div><div class="value">${pct(weekends.wasteRate)}</div><div class="hint">${weekends.count} 天</div></div>
+ <div class="metric"><div class="label">假日出清率</div><div class="value">${pct(weekends.clearRate)}</div><div class="hint">${weekends.count} 天</div></div>`;
+ $('wasteGap').textContent=`${weekends.wasteRate>=weekdays.wasteRate?'+':''}${((weekends.wasteRate-weekdays.wasteRate)*100).toFixed(1)}%`;
+ $('clearGap').textContent=`${weekends.clearRate>=weekdays.clearRate?'+':''}${((weekends.clearRate-weekdays.clearRate)*100).toFixed(1)}%`;
+ const worst=[...h].sort((a,b)=>abnormalScore(b)-abnormalScore(a))[0];
+ $('monthWorst').textContent=worst?worst.date.slice(5).replace('-','/'):'—';
+ $('monthWorstHint').textContent=worst?`報廢 ${pct(worst.wasteRate)}・出清 ${pct(worst.clearRate)}・${isWeekend(worst.date)?'假日':'平日'}`:'';
+ $('weekdayWasteTop').innerHTML=groupTopHtml(topByGroup(h.filter(x=>!isWeekend(x.date)),'waste'),'waste');
+ $('weekendWasteTop').innerHTML=groupTopHtml(topByGroup(h.filter(x=>isWeekend(x.date)),'waste'),'waste');
+ $('weekdayClearTop').innerHTML=groupTopHtml(topByGroup(h.filter(x=>!isWeekend(x.date)),'clear'),'clear');
+ $('weekendClearTop').innerHTML=groupTopHtml(topByGroup(h.filter(x=>isWeekend(x.date)),'clear'),'clear');
+}
+
 function renderHistory(){
- const h=getHistory().slice(-7);$('historyCount').textContent=`${h.length} 天`;
+ const h=getHistory().slice(-30);renderMonthInsights(h);$('historyCount').textContent=`${h.length} 天`;
  if(!h.length){$('historyArea').innerHTML='<div class="historyEmpty">尚無歷史紀錄。先分析今天資料，再按「儲存今日紀錄」。</div>';$('mostAbnormal').querySelector('.value').textContent='—';return}
  const most=[...h].sort((a,b)=>abnormalScore(b)-abnormalScore(a))[0];
  const mostLevel=dayLevel(most),mostWaste=[...(most.items||[])].sort((a,b)=>b.waste-a.waste)[0],mostClear=[...(most.items||[])].sort((a,b)=>b.clearance-a.clearance)[0];
@@ -152,7 +210,7 @@ function renderHistory(){
    </details>`;
  }).join('');
  $('historyArea').innerHTML=`<div class="grid3" style="margin-top:14px"><div class="metric"><div class="label">最新報廢率</div><div class="value">${pct(last.wasteRate)}</div></div><div class="metric"><div class="label">相較首日</div><div class="value">${delta>0?'+':''}${(delta*100).toFixed(1)}%</div></div><div class="metric"><div class="label">高風險日期</div><div class="value">${badDates.length} 天</div><div class="hint">${badDates.join('、')||'無'}</div></div></div>
- <div class="trend">${bars}</div>
+ <div style="overflow:auto"><div class="trend" style="grid-template-columns:repeat(${h.length},minmax(38px,1fr));min-width:${Math.max(700,h.length*42)}px">${bars}</div></div>
  <div style="margin:14px 0"><b>重複異常：</b>${repeatHtml}</div>
  <div style="display:grid;gap:10px">${dayCards}</div>`;
 }
