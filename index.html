@@ -3,232 +3,64 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AI 門市營運分析</title>
+<title>AI 門市營運助手</title>
 <style>
-:root{
-  --bg:#f6f7fb; --card:#fff; --text:#172033; --muted:#6b7280; --line:#e5e7eb;
-  --primary:#315efb; --good:#118a55; --warn:#b7791f; --bad:#c0392b;
-}
-*{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;background:var(--bg);color:var(--text)}
-.container{max-width:1180px;margin:auto;padding:24px}
-.hero{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap}
-h1{margin:0;font-size:28px} .sub{color:var(--muted);margin-top:6px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:16px}
-.upload{border:2px dashed #cbd5e1;border-radius:16px;padding:24px;text-align:center;background:#fafbff}
-button,.btn{border:0;border-radius:12px;padding:11px 16px;font-weight:700;cursor:pointer;font-size:15px}
-.primary{background:var(--primary);color:#fff}.secondary{background:#eef2ff;color:#25346f}.ghost{background:#fff;border:1px solid var(--line)}
-.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.metric{padding:16px;border:1px solid var(--line);border-radius:14px;background:#fff}
-.metric .label{color:var(--muted);font-size:13px}.metric .value{font-size:25px;font-weight:800;margin-top:4px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:11px;border-bottom:1px solid var(--line);text-align:right}
-th:first-child,td:first-child{text-align:left}.badge{padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700;display:inline-block}
-.bad{background:#fdecea;color:var(--bad)}.warn{background:#fff6df;color:var(--warn)}.good{background:#eaf7f0;color:var(--good)}
-textarea{width:100%;min-height:150px;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit}
-.small{font-size:13px;color:var(--muted)} .actions{display:flex;gap:8px;flex-wrap:wrap}
-ol{padding-left:22px;line-height:1.7}.status{margin-top:10px;color:var(--muted);font-size:14px}
-@media(max-width:800px){.grid4{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.container{padding:14px}table{min-width:760px}.scroll{overflow:auto}}
+:root{--bg:#f6f7fb;--card:#fff;--text:#172033;--muted:#6b7280;--line:#e5e7eb;--primary:#315efb;--good:#118a55;--warn:#b7791f;--bad:#c0392b;--soft:#eef2ff}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;background:var(--bg);color:var(--text)}
+.container{max-width:1180px;margin:auto;padding:24px}.hero{display:flex;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap}
+h1{margin:0;font-size:30px}.sub{color:var(--muted);margin-top:6px;line-height:1.5}.pill{display:inline-block;background:var(--soft);color:#25346f;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:700;margin-bottom:8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:16px}.upload{border:2px dashed #cbd5e1;border-radius:16px;padding:24px;text-align:center;background:#fafbff}
+button,.btn{border:0;border-radius:12px;padding:11px 16px;font-weight:700;cursor:pointer;font-size:15px}.primary{background:var(--primary);color:#fff}.secondary{background:var(--soft);color:#25346f}.ghost{background:#fff;border:1px solid var(--line)}.danger{background:#fff1f0;color:var(--bad);border:1px solid #ffd8d4}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.metric{padding:16px;border:1px solid var(--line);border-radius:14px;background:#fff}.metric .label{color:var(--muted);font-size:13px}.metric .value{font-size:25px;font-weight:800;margin-top:4px}.metric .hint{font-size:12px;color:var(--muted);margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:11px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}.badge{padding:4px 8px;border-radius:999px;font-size:12px;font-weight:700;display:inline-block}.bad{background:#fdecea;color:var(--bad)}.warn{background:#fff6df;color:var(--warn)}.good{background:#eaf7f0;color:var(--good)}
+textarea,input[type=date]{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px;font:inherit}textarea{min-height:150px}.small{font-size:13px;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}.status{margin-top:10px;color:var(--muted);font-size:14px}.sectionHead{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}ol{padding-left:22px;line-height:1.7}.trend{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end;min-height:140px;margin-top:14px}.barWrap{text-align:center;font-size:11px;color:var(--muted)}.bar{background:#dbe4ff;border-radius:8px 8px 3px 3px;min-height:6px}.bar.badbar{background:#ffd7d2}.historyEmpty{padding:24px;text-align:center;color:var(--muted)}
+@media(max-width:800px){.grid4,.grid3{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.container{padding:14px}table{min-width:820px}.scroll{overflow:auto}.trend{gap:5px}}
 </style>
 </head>
 <body>
 <div class="container">
-  <div class="hero">
-    <div>
-      <h1>AI 門市營運分析</h1>
-      <div class="sub">PDF → 品項 → 報廢率 / 出清率 → 異常排行 → 管理建議</div>
-    </div>
-    <div class="actions">
-      <button class="secondary" id="sampleBtn">載入範例</button>
-      <button class="ghost" id="exportBtn">匯出分析 CSV</button>
-    </div>
+  <div class="hero"><div><div class="pill">V2 測試版</div><h1>AI 門市營運助手</h1><div class="sub">上傳每日報表，3 分鐘找出異常、損失與明日改善行動。</div></div><div class="actions"><button class="secondary" id="sampleBtn">載入範例</button><button class="ghost" id="exportBtn">匯出分析 CSV</button></div></div>
+
+  <div class="card"><div class="upload"><div style="font-size:20px;font-weight:800">上傳門市 PDF</div><p class="small">會嘗試辨識「品項、銷售額、出清金額、報廢金額」。目前仍是通用解析，實際報表可再做專用適配。</p><label class="btn primary">選擇 PDF<input id="pdfInput" type="file" accept="application/pdf" hidden></label><div class="status" id="status">目前已載入範例資料，可直接測試。</div></div></div>
+
+  <div class="grid4"><div class="metric"><div class="label">總銷售額</div><div class="value" id="salesTotal">—</div></div><div class="metric"><div class="label">總報廢</div><div class="value" id="wasteTotal">—</div></div><div class="metric"><div class="label">整體報廢率</div><div class="value" id="wasteRate">—</div></div><div class="metric"><div class="label">整體出清率</div><div class="value" id="clearRate">—</div></div></div>
+
+  <div class="grid3">
+    <div class="metric"><div class="label">若報廢率壓到 3%</div><div class="value" id="savePotential">—</div><div class="hint">以今日銷售額估算的可改善金額</div></div>
+    <div class="metric"><div class="label">最高風險品項</div><div class="value" style="font-size:21px" id="topRisk">—</div><div class="hint" id="topRiskHint">—</div></div>
+    <div class="metric"><div class="label">7 日紀錄</div><div class="value" id="historyCount">0 天</div><div class="hint">資料只存在你的瀏覽器</div></div>
   </div>
+
+  <div class="card"><div class="sectionHead"><div><h2 style="margin:0 0 4px">品項異常排行</h2><div class="small">同時看報廢與出清，避免只看「報廢低」就誤判。</div></div><select id="sortMode" style="padding:10px;border:1px solid var(--line);border-radius:10px"><option value="risk">風險排序</option><option value="waste">報廢金額</option><option value="wasteRate">報廢率</option><option value="clearRate">出清率</option></select></div><div class="scroll" style="margin-top:10px"><table><thead><tr><th>品項</th><th>銷售</th><th>出清</th><th>出清率</th><th>報廢</th><th>報廢率</th><th>可改善金額*</th><th>AI判讀</th></tr></thead><tbody id="rows"></tbody></table></div><div class="small" style="margin-top:10px">* 可改善金額：假設品項報廢率可降至 3% 的簡化估算；低於 3% 則顯示 0。</div></div>
+
+  <div class="grid2"><div class="card"><h2 style="margin-top:0">今日結論</h2><div id="summary" style="line-height:1.75"></div></div><div class="card"><h2 style="margin-top:0">明日三項行動</h2><ol id="actions"></ol></div></div>
 
   <div class="card">
-    <div class="upload">
-      <div style="font-size:20px;font-weight:800">上傳門市 PDF</div>
-      <p class="small">第一版會嘗試從 PDF 文字中辨識「品項、銷售額、出清金額、報廢金額」。實際報表欄位之後可再精準適配。</p>
-      <label class="btn primary">
-        選擇 PDF
-        <input id="pdfInput" type="file" accept="application/pdf" hidden>
-      </label>
-      <div class="status" id="status">目前已載入範例資料，可直接測試。</div>
-    </div>
+    <div class="sectionHead"><div><h2 style="margin:0 0 4px">7 日歷史與連續異常</h2><div class="small">每天按「儲存今日紀錄」，即可追蹤趨勢與重複出現的高風險品項。</div></div><div class="actions" style="align-items:center"><input id="recordDate" type="date" style="width:auto"><button class="primary" id="saveDayBtn">儲存今日紀錄</button><button class="danger" id="clearHistoryBtn">清除紀錄</button></div></div>
+    <div id="historyArea"></div>
   </div>
 
-  <div class="grid4" id="metrics">
-    <div class="metric"><div class="label">總銷售額</div><div class="value" id="salesTotal">—</div></div>
-    <div class="metric"><div class="label">總報廢</div><div class="value" id="wasteTotal">—</div></div>
-    <div class="metric"><div class="label">整體報廢率</div><div class="value" id="wasteRate">—</div></div>
-    <div class="metric"><div class="label">整體出清率</div><div class="value" id="clearRate">—</div></div>
-  </div>
-
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">
-      <div>
-        <h2 style="margin:0 0 4px">品項異常排行</h2>
-        <div class="small">同時看報廢與出清，避免只看「報廢低」就誤判。</div>
-      </div>
-      <select id="sortMode" style="padding:10px;border:1px solid var(--line);border-radius:10px">
-        <option value="risk">風險排序</option>
-        <option value="waste">報廢金額</option>
-        <option value="wasteRate">報廢率</option>
-        <option value="clearRate">出清率</option>
-      </select>
-    </div>
-    <div class="scroll" style="margin-top:10px">
-      <table>
-        <thead><tr><th>品項</th><th>銷售</th><th>出清</th><th>出清率</th><th>報廢</th><th>報廢率</th><th>AI判讀</th></tr></thead>
-        <tbody id="rows"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="grid2">
-    <div class="card">
-      <h2 style="margin-top:0">今日結論</h2>
-      <div id="summary" style="line-height:1.75"></div>
-    </div>
-    <div class="card">
-      <h2 style="margin-top:0">明日三項行動</h2>
-      <ol id="actions"></ol>
-    </div>
-  </div>
-
-  <div class="card">
-    <h2 style="margin-top:0">PDF 文字 / 手動貼上測試</h2>
-    <p class="small">若 PDF 解析不到，可先貼成每行一筆：品項 銷售額 出清金額 報廢金額。</p>
-    <textarea id="rawText" placeholder="例如：
-烤雞 30000 5000 1800
-炸雞 42000 8000 900
-便當 55000 1000 500"></textarea>
-    <div class="actions" style="margin-top:10px">
-      <button class="primary" id="parseBtn">解析文字</button>
-      <button class="ghost" id="resetBtn">清空</button>
-    </div>
-  </div>
+  <div class="card"><h2 style="margin-top:0">PDF 文字 / 手動貼上測試</h2><p class="small">若 PDF 解析不到，可先貼成每行一筆：品項 銷售額 出清金額 報廢金額。</p><textarea id="rawText" placeholder="例如：\n烤雞 30000 5000 1800\n炸雞 42000 8000 900\n便當 55000 1000 500"></textarea><div class="actions" style="margin-top:10px"><button class="primary" id="parseBtn">解析文字</button><button class="ghost" id="resetBtn">清空</button></div></div>
 </div>
-
 <script type="module">
-const sample=[
-{name:'烤雞',sales:30000,clearance:5000,waste:1800},
-{name:'炸雞',sales:42000,clearance:8000,waste:900},
-{name:'便當',sales:55000,clearance:1000,waste:500},
-{name:'滷味',sales:26000,clearance:4500,waste:1300},
-{name:'壽司',sales:38000,clearance:7200,waste:350},
-{name:'沙拉',sales:18000,clearance:900,waste:1100}
-];
-let data=structuredClone(sample);
-const $=id=>document.getElementById(id);
-const fmt=n=>new Intl.NumberFormat('zh-TW').format(Math.round(n||0));
-const pct=n=>((n||0)*100).toFixed(1)+'%';
-
-function enrich(x,totalWaste){
-  const wasteRate=x.sales?x.waste/x.sales:0;
-  const clearRate=x.sales?x.clearance/x.sales:0;
-  const wasteShare=totalWaste?x.waste/totalWaste:0;
-  const risk=wasteRate*45+clearRate*25+wasteShare*30;
-  let label='相對健康',cls='good';
-  if(wasteRate>=.04&&clearRate>=.12){label='高報廢＋高出清，疑似生產過量';cls='bad'}
-  else if(wasteRate>=.04){label='報廢偏高，優先檢查生產量';cls='bad'}
-  else if(clearRate>=.15){label='高度依賴出清';cls='warn'}
-  else if(wasteRate>=.025||clearRate>=.10){label='需持續追蹤';cls='warn'}
-  return {...x,wasteRate,clearRate,wasteShare,risk,label,cls};
-}
-
-function render(){
-  const sales=data.reduce((a,b)=>a+b.sales,0);
-  const waste=data.reduce((a,b)=>a+b.waste,0);
-  const clearance=data.reduce((a,b)=>a+b.clearance,0);
-  const e=data.map(x=>enrich(x,waste));
-  $('salesTotal').textContent='$'+fmt(sales);
-  $('wasteTotal').textContent='$'+fmt(waste);
-  $('wasteRate').textContent=pct(sales?waste/sales:0);
-  $('clearRate').textContent=pct(sales?clearance/sales:0);
-
-  const mode=$('sortMode').value;
-  const sorted=[...e].sort((a,b)=>{
-    if(mode==='waste')return b.waste-a.waste;
-    if(mode==='wasteRate')return b.wasteRate-a.wasteRate;
-    if(mode==='clearRate')return b.clearRate-a.clearRate;
-    return b.risk-a.risk;
-  });
-  $('rows').innerHTML=sorted.map((x,i)=>`<tr>
-    <td>${i<3?'⚠️ ':''}${escapeHtml(x.name)}</td>
-    <td>${fmt(x.sales)}</td><td>${fmt(x.clearance)}</td><td>${pct(x.clearRate)}</td>
-    <td>${fmt(x.waste)}</td><td>${pct(x.wasteRate)}</td>
-    <td style="text-align:left"><span class="badge ${x.cls}">${escapeHtml(x.label)}</span></td>
-  </tr>`).join('');
-
-  const top=[...e].sort((a,b)=>b.risk-a.risk).slice(0,3);
-  const topShare=waste?top.reduce((a,b)=>a+b.waste,0)/waste:0;
-  $('summary').innerHTML=`共分析 <b>${e.length}</b> 個品項。總報廢 <b>$${fmt(waste)}</b>，整體報廢率 <b>${pct(sales?waste/sales:0)}</b>，整體出清率 <b>${pct(sales?clearance/sales:0)}</b>。<br><br>
-  前三大風險品項為 <b>${top.map(x=>escapeHtml(x.name)).join('、')}</b>，合計占總報廢 <b>${pct(topShare)}</b>。<br><br>
-  ${top[0]?`優先關注 <b>${escapeHtml(top[0].name)}</b>：${escapeHtml(top[0].label)}。`:''}`;
-
-  const both=e.filter(x=>x.wasteRate>=.04&&x.clearRate>=.12).sort((a,b)=>b.risk-a.risk)[0];
-  const highWaste=[...e].sort((a,b)=>b.waste-a.waste)[0];
-  const highClear=[...e].sort((a,b)=>b.clearRate-a.clearRate)[0];
-  const acts=[];
-  if(both)acts.push(`優先回查「${both.name}」最後生產時段與數量，因同時高報廢、高出清。`);
-  if(highWaste)acts.push(`針對「${highWaste.name}」確認閉店前庫存與最後一批生產量。`);
-  if(highClear)acts.push(`檢查「${highClear.name}」是否過度依賴折價出清，必要時下修末段生產。`);
-  while(acts.length<3)acts.push('累積 7 日數據，比較各品項報廢率與出清率趨勢後再調整基準量。');
-  $('actions').innerHTML=acts.slice(0,3).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
-}
+const sample=[{name:'烤雞',sales:30000,clearance:5000,waste:1800},{name:'炸雞',sales:42000,clearance:8000,waste:900},{name:'便當',sales:55000,clearance:1000,waste:500},{name:'滷味',sales:26000,clearance:4500,waste:1300},{name:'壽司',sales:38000,clearance:7200,waste:350},{name:'沙拉',sales:18000,clearance:900,waste:1100}];
+let data=structuredClone(sample);const $=id=>document.getElementById(id);const fmt=n=>new Intl.NumberFormat('zh-TW').format(Math.round(n||0));const pct=n=>((n||0)*100).toFixed(1)+'%';const STORE_KEY='ai-store-history-v2';
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function parseText(text){
-  const out=[];
-  for(const raw of text.split(/\r?\n/)){
-    const line=raw.trim(); if(!line)continue;
-    const nums=[...line.matchAll(/-?\d[\d,]*(?:\.\d+)?/g)].map(m=>Number(m[0].replace(/,/g,''))).filter(Number.isFinite);
-    if(nums.length<3)continue;
-    const p=line.search(/-?\d/);
-    let name=p>0?line.slice(0,p).replace(/[|\t:：-]+$/g,'').trim():'';
-    if(!name)name='未命名品項 '+(out.length+1);
-    const [sales,clearance,waste]=nums.slice(-3);
-    if([sales,clearance,waste].some(n=>n<0))continue;
-    out.push({name,sales,clearance,waste});
-    if(out.length>=300)break;
-  }
-  return out;
-}
-$('sampleBtn').addEventListener('click',()=>{data=structuredClone(sample);$('status').textContent='已載入範例資料。';render()});
-$('sortMode').addEventListener('change',render);
-$('parseBtn').addEventListener('click',()=>{
-  const p=parseText($('rawText').value);
-  if(!p.length){$('status').textContent='沒有辨識到資料，請用「品項 銷售額 出清金額 報廢金額」每行一筆。';return}
-  data=p;$('status').textContent=`已解析 ${p.length} 個品項。`;render();
-});
-$('resetBtn').addEventListener('click',()=>{$('rawText').value='';});
-$('exportBtn').addEventListener('click',()=>{
-  const waste=data.reduce((a,b)=>a+b.waste,0);
-  const rows=[['品項','銷售額','出清金額','出清率','報廢金額','報廢率','AI判讀']];
-  data.map(x=>enrich(x,waste)).forEach(x=>rows.push([x.name,x.sales,x.clearance,pct(x.clearRate),x.waste,pct(x.wasteRate),x.label]));
-  const csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='AI門市分析.csv';a.click();URL.revokeObjectURL(a.href);
-});
-$('pdfInput').addEventListener('change',async e=>{
-  const file=e.target.files?.[0]; if(!file)return;
-  $('status').textContent='正在讀取 PDF…';
-  try{
-    const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/+esm');
-    pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
-    const pdf=await pdfjs.getDocument({data:await file.arrayBuffer()}).promise;
-    let text='';
-    for(let p=1;p<=Math.min(pdf.numPages,50);p++){
-      const page=await pdf.getPage(p), content=await page.getTextContent();
-      text+=content.items.map(i=>i.str).join(' ')+'\n';
-    }
-    $('rawText').value=text.slice(0,50000);
-    const parsed=parseText(text);
-    if(parsed.length){data=parsed;$('status').textContent=`PDF 已擷取，暫辨識 ${parsed.length} 個品項。`;render()}
-    else $('status').textContent='PDF 文字已擷取，但欄位格式尚未適配。可把實際 PDF 給我，我能做專用解析規則。';
-  }catch(err){
-    $('status').textContent='這份 PDF 無法由瀏覽器直接解析；可能是掃描影像 PDF 或格式特殊。';
-  }
-});
-render();
+function enrich(x,totalWaste){const wasteRate=x.sales?x.waste/x.sales:0,clearRate=x.sales?x.clearance/x.sales:0,wasteShare=totalWaste?x.waste/totalWaste:0,risk=wasteRate*45+clearRate*25+wasteShare*30,improve=Math.max(0,x.waste-x.sales*.03);let label='相對健康',cls='good';if(wasteRate>=.04&&clearRate>=.12){label='高報廢＋高出清，疑似生產過量';cls='bad'}else if(wasteRate>=.04){label='報廢偏高，優先檢查生產量';cls='bad'}else if(clearRate>=.15){label='高度依賴出清';cls='warn'}else if(wasteRate>=.025||clearRate>=.10){label='需持續追蹤';cls='warn'}return {...x,wasteRate,clearRate,wasteShare,risk,improve,label,cls}}
+function totals(){const sales=data.reduce((a,b)=>a+b.sales,0),waste=data.reduce((a,b)=>a+b.waste,0),clearance=data.reduce((a,b)=>a+b.clearance,0);return {sales,waste,clearance}}
+function getHistory(){try{return JSON.parse(localStorage.getItem(STORE_KEY)||'[]')}catch{return []}}
+function setHistory(h){localStorage.setItem(STORE_KEY,JSON.stringify(h.slice(-30)))}
+function render(){const {sales,waste,clearance}=totals(),e=data.map(x=>enrich(x,waste));$('salesTotal').textContent='$'+fmt(sales);$('wasteTotal').textContent='$'+fmt(waste);$('wasteRate').textContent=pct(sales?waste/sales:0);$('clearRate').textContent=pct(sales?clearance/sales:0);$('savePotential').textContent='$'+fmt(Math.max(0,waste-sales*.03));const top=[...e].sort((a,b)=>b.risk-a.risk).slice(0,3);$('topRisk').textContent=top[0]?.name||'—';$('topRiskHint').textContent=top[0]?`${pct(top[0].wasteRate)} 報廢率｜${pct(top[0].clearRate)} 出清率`:'—';
+const mode=$('sortMode').value,sorted=[...e].sort((a,b)=>mode==='waste'?b.waste-a.waste:mode==='wasteRate'?b.wasteRate-a.wasteRate:mode==='clearRate'?b.clearRate-a.clearRate:b.risk-a.risk);$('rows').innerHTML=sorted.map((x,i)=>`<tr><td>${i<3?'⚠️ ':''}${escapeHtml(x.name)}</td><td>${fmt(x.sales)}</td><td>${fmt(x.clearance)}</td><td>${pct(x.clearRate)}</td><td>${fmt(x.waste)}</td><td>${pct(x.wasteRate)}</td><td>${fmt(x.improve)}</td><td style="text-align:left"><span class="badge ${x.cls}">${escapeHtml(x.label)}</span></td></tr>`).join('');
+const topShare=waste?top.reduce((a,b)=>a+b.waste,0)/waste:0;$('summary').innerHTML=`共分析 <b>${e.length}</b> 個品項。總報廢 <b>$${fmt(waste)}</b>，整體報廢率 <b>${pct(sales?waste/sales:0)}</b>，整體出清率 <b>${pct(sales?clearance/sales:0)}</b>。<br><br>前三大風險品項為 <b>${top.map(x=>escapeHtml(x.name)).join('、')}</b>，合計占總報廢 <b>${pct(topShare)}</b>。<br><br>${top[0]?`優先關注 <b>${escapeHtml(top[0].name)}</b>：${escapeHtml(top[0].label)}。若整體報廢率可降至 3%，今日簡化估算可少損失約 <b>$${fmt(Math.max(0,waste-sales*.03))}</b>。`:''}`;
+const both=e.filter(x=>x.wasteRate>=.04&&x.clearRate>=.12).sort((a,b)=>b.risk-a.risk)[0],highWaste=[...e].sort((a,b)=>b.waste-a.waste)[0],highClear=[...e].sort((a,b)=>b.clearRate-a.clearRate)[0],acts=[];if(both)acts.push(`優先回查「${both.name}」最後生產時段與數量，因同時高報廢、高出清。`);if(highWaste)acts.push(`針對「${highWaste.name}」確認閉店前庫存與最後一批生產量；若可降至 3% 報廢率，約可改善 $${fmt(highWaste.improve)}。`);if(highClear)acts.push(`檢查「${highClear.name}」是否過度依賴折價出清，必要時下修末段生產。`);while(acts.length<3)acts.push('累積 7 日數據，比較各品項報廢率與出清率趨勢後再調整基準量。');$('actions').innerHTML=acts.slice(0,3).map(x=>`<li>${escapeHtml(x)}</li>`).join('');renderHistory()}
+function parseText(text){const out=[];for(const raw of text.split(/\r?\n/)){const line=raw.trim();if(!line)continue;const nums=[...line.matchAll(/-?\d[\d,]*(?:\.\d+)?/g)].map(m=>Number(m[0].replace(/,/g,''))).filter(Number.isFinite);if(nums.length<3)continue;const p=line.search(/-?\d/);let name=p>0?line.slice(0,p).replace(/[|\t:：-]+$/g,'').trim():'';if(!name)name='未命名品項 '+(out.length+1);const [sales,clearance,waste]=nums.slice(-3);if([sales,clearance,waste].some(n=>n<0))continue;out.push({name,sales,clearance,waste});if(out.length>=300)break}return out}
+function saveDay(){const date=$('recordDate').value||new Date().toISOString().slice(0,10),{sales,waste,clearance}=totals(),items=data.map(x=>({name:x.name,sales:x.sales,clearance:x.clearance,waste:x.waste,wasteRate:x.sales?x.waste/x.sales:0,clearRate:x.sales?x.clearance/x.sales:0}));let h=getHistory().filter(x=>x.date!==date);h.push({date,sales,waste,clearance,wasteRate:sales?waste/sales:0,clearRate:sales?clearance/sales:0,items});h.sort((a,b)=>a.date.localeCompare(b.date));setHistory(h);$('status').textContent=`已儲存 ${date} 的營運紀錄。`;renderHistory()}
+function renderHistory(){const h=getHistory().slice(-7);$('historyCount').textContent=`${h.length} 天`;if(!h.length){$('historyArea').innerHTML='<div class="historyEmpty">尚無歷史紀錄。先分析今天資料，再按「儲存今日紀錄」。</div>';return}const maxSales=Math.max(...h.map(x=>x.sales),1),bars=h.map(x=>`<div class="barWrap"><div style="height:100px;display:flex;align-items:flex-end"><div class="bar" style="width:100%;height:${Math.max(8,x.sales/maxSales*100)}px"></div></div><div>${x.date.slice(5)}</div><div>${pct(x.wasteRate)}</div></div>`).join('');const count={};for(const day of h){for(const it of day.items||[]){if(it.wasteRate>=.04||it.clearRate>=.15)count[it.name]=(count[it.name]||0)+1}}const repeat=Object.entries(count).filter(([,n])=>n>=2).sort((a,b)=>b[1]-a[1]).slice(0,5);const first=h[0],last=h[h.length-1],delta=last.wasteRate-first.wasteRate;const repeatHtml=repeat.length?repeat.map(([name,n])=>`<span class="badge ${n>=3?'bad':'warn'}" style="margin:4px">${escapeHtml(name)} ${n} 天異常</span>`).join(''):'<span class="small">目前沒有連續 2 天以上的重複異常。</span>';$('historyArea').innerHTML=`<div class="grid3" style="margin-top:14px"><div class="metric"><div class="label">最新報廢率</div><div class="value">${pct(last.wasteRate)}</div></div><div class="metric"><div class="label">相較首日</div><div class="value">${delta>0?'+':''}${(delta*100).toFixed(1)}%</div></div><div class="metric"><div class="label">連續異常品項</div><div class="value">${repeat.length}</div></div></div><div class="trend">${bars}</div><div style="margin-top:12px"><b>重複異常：</b>${repeatHtml}</div>`}
+$('sampleBtn').addEventListener('click',()=>{data=structuredClone(sample);$('status').textContent='已載入範例資料。';render()});$('sortMode').addEventListener('change',render);$('parseBtn').addEventListener('click',()=>{const p=parseText($('rawText').value);if(!p.length){$('status').textContent='沒有辨識到資料，請用「品項 銷售額 出清金額 報廢金額」每行一筆。';return}data=p;$('status').textContent=`已解析 ${p.length} 個品項。`;render()});$('resetBtn').addEventListener('click',()=>{$('rawText').value=''});$('saveDayBtn').addEventListener('click',saveDay);$('clearHistoryBtn').addEventListener('click',()=>{if(confirm('確定清除瀏覽器中的所有歷史紀錄？')){localStorage.removeItem(STORE_KEY);renderHistory()}});
+$('exportBtn').addEventListener('click',()=>{const waste=data.reduce((a,b)=>a+b.waste,0),rows=[['品項','銷售額','出清金額','出清率','報廢金額','報廢率','可改善金額','AI判讀']];data.map(x=>enrich(x,waste)).forEach(x=>rows.push([x.name,x.sales,x.clearance,pct(x.clearRate),x.waste,pct(x.wasteRate),Math.round(x.improve),x.label]));const csv='\ufeff'+rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\n'),blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='AI門市分析_V2.csv';a.click();URL.revokeObjectURL(a.href)});
+$('pdfInput').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;$('status').textContent='正在讀取 PDF…';try{const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/+esm');pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';const pdf=await pdfjs.getDocument({data:await file.arrayBuffer()}).promise;let text='';for(let p=1;p<=Math.min(pdf.numPages,50);p++){const page=await pdf.getPage(p),content=await page.getTextContent();text+=content.items.map(i=>i.str).join(' ')+'\n'}$('rawText').value=text.slice(0,50000);const parsed=parseText(text);if(parsed.length){data=parsed;$('status').textContent=`PDF 已擷取，暫辨識 ${parsed.length} 個品項。`;render()}else $('status').textContent='PDF 文字已擷取，但欄位格式尚未適配。可再做專用解析規則。'}catch(err){$('status').textContent='這份 PDF 無法由瀏覽器直接解析；可能是掃描影像 PDF 或格式特殊。'}});
+$('recordDate').value=new Date().toISOString().slice(0,10);render();
 </script>
-</body>
-</html>
+</body></html>
