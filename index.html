@@ -2785,6 +2785,139 @@ tbody tr:nth-child(even) td{
 }
 </style>
 
+
+<style id="readability-font-fix-v3">
+/* ===== Readability pass: larger type for phone use ===== */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{font-size:16px!important;line-height:1.6!important}
+
+/* General secondary text */
+.muted,
+.summaryline,
+.weekhead .muted,
+.decision-reason,
+.evidence,
+.action,
+.footnote,
+.verify{
+  font-size:14px!important;
+  line-height:1.65!important;
+}
+
+/* Form/control labels */
+label,
+.thresholds label{
+  font-size:14px!important;
+  line-height:1.45!important;
+}
+
+/* KPI readability */
+.kpi span,
+.kpi small,
+#monthly-ai-priority .kpi small,
+#monthly-ai-priority .metric small{
+  font-size:13px!important;
+  line-height:1.4!important;
+}
+.kpi b,
+.kpi strong{
+  font-size:21px!important;
+  line-height:1.25!important;
+}
+#monthly-ai-priority .kpi strong,
+#monthly-ai-priority .metric strong{
+  font-size:18px!important;
+}
+
+/* AI / decision content */
+.ai h3{font-size:17px!important}
+.ai .focus,
+.ai li{
+  font-size:15px!important;
+  line-height:1.7!important;
+}
+#monthly-ai-priority .itemname{font-size:19px!important}
+#monthly-ai-priority .decision-title{font-size:17px!important;line-height:1.55!important}
+#monthly-ai-priority .evidence{font-size:14px!important}
+#monthly-ai-priority .action{font-size:15px!important}
+#monthly-ai-priority .footnote,
+#monthly-ai-priority .verify{font-size:13px!important}
+
+/* Ranking / weekly / daily cards */
+.trend h3,
+.weekhead>b{font-size:16px!important}
+.top10-item{font-size:15px!important}
+.right{font-size:13px!important}
+.box{font-size:14px!important;line-height:1.5!important}
+.daytops h3{font-size:16px!important}
+details summary{font-size:15px!important;line-height:1.45!important}
+.pill,
+#monthly-ai-priority .tag,
+.monthly-priority-badge{
+  font-size:12px!important;
+}
+
+/* Supporting helper cards */
+.emoji-logic-note{font-size:14px!important}
+.emoji-demo-row b,
+.industry-item b{font-size:14px!important}
+.emoji-demo-row small{font-size:12px!important}
+
+@media(max-width:760px){
+  body{font-size:17px!important}
+  .w{width:min(100% - 14px,1180px)!important}
+  .hero .muted{font-size:15px!important}
+  .w>.card>h2,
+  .w>.card>div>h2{font-size:20px!important}
+
+  .muted,
+  .summaryline,
+  .weekhead .muted,
+  #monthly-ai-priority > .monthly-priority-header p{
+    font-size:15px!important;
+  }
+
+  .kpi span,
+  .kpi small,
+  #monthly-ai-priority .kpi small,
+  #monthly-ai-priority .metric small{
+    font-size:14px!important;
+  }
+  .kpi b,
+  .kpi strong{
+    font-size:23px!important;
+  }
+  #monthly-ai-priority .kpi strong,
+  #monthly-ai-priority .metric strong{
+    font-size:20px!important;
+  }
+
+  .ai .focus,
+  .ai li,
+  #monthly-ai-priority .action{
+    font-size:16px!important;
+  }
+  #monthly-ai-priority .evidence{
+    font-size:15px!important;
+  }
+  #monthly-ai-priority .footnote,
+  #monthly-ai-priority .verify{
+    font-size:14px!important;
+  }
+
+  .trendrow,
+  .top10-item,
+  .box,
+  details summary{
+    font-size:15px!important;
+  }
+
+  input,select,textarea,button{
+    font-size:16px!important;
+  }
+}
+</style>
+
 </head><body><div class="w"><section class="report-cover">
 <div class="report-kicker">AI 門市營運助手</div>
 <h1>門市營運月報</h1>
