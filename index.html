@@ -3801,6 +3801,109 @@ body.data-ready .page-stage{
 }
 </style>
 
+
+<style id="v3-contrast-navtop-fix">
+/* Improve contrast inside the anomaly executive hero */
+.anomaly-executive-hero .anomaly-hero-stat{
+  background:rgba(255,255,255,.12)!important;
+  border:1px solid rgba(255,255,255,.16)!important;
+}
+.anomaly-executive-hero .anomaly-hero-stat span,
+.anomaly-executive-hero .anomaly-hero-stat small{
+  color:#E7EEF6!important;
+  opacity:1!important;
+}
+.anomaly-executive-hero .anomaly-hero-stat b{
+  color:#FFFFFF!important;
+  opacity:1!important;
+}
+.anomaly-executive-hero .anomaly-hero-note,
+.anomaly-executive-hero .anomaly-hero-kicker,
+.anomaly-executive-hero .anomaly-hero-money-label{
+  color:#D8E3EF!important;
+  opacity:1!important;
+}
+.anomaly-executive-hero .anomaly-hero-money{
+  color:#FFFFFF!important;
+  text-shadow:0 1px 0 rgba(0,0,0,.06);
+}
+
+/* Mobile: stronger readability for pale stat cards */
+@media(max-width:760px){
+  .anomaly-executive-hero .anomaly-hero-side{
+    background:rgba(255,255,255,.035)!important;
+  }
+  .anomaly-executive-hero .anomaly-hero-stat{
+    background:rgba(255,255,255,.14)!important;
+  }
+  .anomaly-executive-hero .anomaly-hero-stat span{
+    font-size:10px!important;
+    font-weight:800!important;
+    color:#E8EFF7!important;
+  }
+  .anomaly-executive-hero .anomaly-hero-stat b{
+    font-size:18px!important;
+    font-weight:900!important;
+    color:#FFFFFF!important;
+  }
+  .anomaly-executive-hero .anomaly-hero-stat small{
+    font-size:9px!important;
+    color:#D7E2EE!important;
+  }
+}
+</style>
+
+
+<style id="v3-demo-button-compact">
+/* Secondary action: demo data should not compete with the primary import action */
+#useDemoData{
+  min-height:34px!important;
+  height:34px!important;
+  width:auto!important;
+  padding:0 12px!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  border-radius:9px!important;
+}
+@media(max-width:760px){
+  #useDemoData{
+    min-height:32px!important;
+    height:32px!important;
+    padding:0 11px!important;
+    font-size:11px!important;
+  }
+}
+</style>
+
+
+<style id="weekday-weekend-ui">
+.weekday-weekend-card{overflow:hidden!important}
+.section-eyebrow{font-size:9px!important;font-weight:950!important;letter-spacing:.14em!important;color:#8a96a8!important}
+.weekday-weekend-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ww-col{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fafbfd}
+.ww-col.weekend{background:#f3f7fc}
+.ww-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.ww-title span{font-size:14px;font-weight:900;color:var(--ink)}
+.ww-title b{font-size:11px;color:#7b8798;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 8px}
+.ww-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ww-metrics>div{background:#fff;border:1px solid #edf0f4;border-radius:11px;padding:10px}
+.ww-metrics span{display:block;font-size:10px;font-weight:800;color:#7c899a;margin-bottom:4px}
+.ww-metrics strong{font-size:18px;color:var(--ink);letter-spacing:-.03em}
+.ww-delta-strip{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.ww-delta-strip span{font-size:11px;font-weight:850;color:#53647a;background:#f5f7fa;border:1px solid var(--line);border-radius:999px;padding:6px 9px}
+.ww-insight{margin-top:10px;padding:12px 13px;border-radius:12px;background:#162a45;color:#eef4fb;font-size:13px;font-weight:750;line-height:1.55}
+@media(max-width:760px){
+ .weekday-weekend-grid{grid-template-columns:1fr!important;gap:8px!important}
+ .ww-col{padding:12px!important}
+ .ww-metrics{grid-template-columns:1fr 1fr!important;gap:7px!important}
+ .ww-metrics span{font-size:11px!important}
+ .ww-metrics strong{font-size:17px!important}
+ .ww-delta-strip{gap:5px!important}
+ .ww-delta-strip span{font-size:10px!important;padding:5px 7px!important}
+ .ww-insight{font-size:13px!important}
+}
+</style>
+
 </head><body>
 <div class="app-shell">
 <aside class="app-sidebar">
@@ -5810,57 +5913,284 @@ handleFiles(files);
  const top=items.map(x=>({item:x.item||"未命名",loss:n(x.waste)+n(x.clearance)})).filter(x=>x.loss>0).sort((a,b)=>b.loss-a.loss).slice(0,3);
  const host=document.getElementById("moneyPriority");if(host)host.innerHTML=top.length?`<div class="money-priority-title"><b>先處理哪裡最有價值</b><span>依已發生損耗排序</span></div>${top.map((x,i)=>`<div class="money-priority-row"><div class="money-rank">0${i+1}</div><div class="money-item"><b>${esc(x.item)}</b><small>本期損耗 ${m(x.loss)}｜占總損耗 ${loss?(x.loss/loss*100).toFixed(1):0}%</small></div><div class="money-range"><span>改善情境*</span><b>${m(x.loss*.10)}～${m(x.loss*.20)}</b></div></div>`).join("")}`:"";
 }
+
+function renderWeekdayWeekendCompare(a){
+ const root=$("#weekdayWeekendCompare"); if(!root) return;
+ const dates=a.allDates||[];
+ const rows=dates.map(d=>{
+   const day=a.byDate?.[d];
+   if(!day?.rows?.length) return null;
+   const rs=day.rows;
+   const sales=sum(rs,"sales"), waste=sum(rs,"waste"), clearance=sum(rs,"clearance");
+   const sku=new Set(rs.filter(r=>num(r.sales)>0).map(r=>r.item)).size;
+   return {d,weekend:isWeekend(d),sales,waste,clearance,sku,
+     wr:sales?waste/sales*100:0, cr:sales?clearance/sales*100:0};
+ }).filter(Boolean);
+ const avg=v=>v.length?v.reduce((s,n)=>s+n,0)/v.length:0;
+ const wd=rows.filter(x=>!x.weekend), we=rows.filter(x=>x.weekend);
+ const set=(id,v)=>{const el=$("#"+id); if(el) el.textContent=v};
+ const fill=(prefix,arr)=>{
+   set(prefix+"Days",arr.length?`${arr.length} 天`:"—");
+   set(prefix+"Sku",arr.length?avg(arr.map(x=>x.sku)).toFixed(1):"—");
+   set(prefix+"Sales",arr.length?money(avg(arr.map(x=>x.sales))):"—");
+   set(prefix+"WasteRate",arr.length?avg(arr.map(x=>x.wr)).toFixed(1)+"%":"—");
+   set(prefix+"ClearRate",arr.length?avg(arr.map(x=>x.cr)).toFixed(1)+"%":"—");
+ };
+ fill("wwWeekday",wd); fill("wwWeekend",we);
+
+ const delta=$("#wwDeltaStrip"), insight=$("#wwInsight");
+ if(!wd.length||!we.length){
+   if(delta) delta.textContent="平日或假日樣本不足，暫時無法比較。";
+   if(insight) insight.textContent="至少需要 1 個平日與 1 個假日樣本；若要產生較可靠建議，建議至少 5 個平日＋2 個假日。";
+   return;
+ }
+ const wdSku=avg(wd.map(x=>x.sku)), weSku=avg(we.map(x=>x.sku));
+ const wdSales=avg(wd.map(x=>x.sales)), weSales=avg(we.map(x=>x.sales));
+ const wdWr=avg(wd.map(x=>x.wr)), weWr=avg(we.map(x=>x.wr));
+ const wdCr=avg(wd.map(x=>x.cr)), weCr=avg(we.map(x=>x.cr));
+ const skuLift=wdSku?(weSku-wdSku)/wdSku*100:0;
+ const salesLift=wdSales?(weSales-wdSales)/wdSales*100:0;
+ const wrGap=weWr-wdWr, crGap=weCr-wdCr;
+
+ if(delta) delta.innerHTML=
+   `<span>SKU ${skuLift>=0?"+":""}${skuLift.toFixed(1)}%</span>`+
+   `<span>營業額 ${salesLift>=0?"+":""}${salesLift.toFixed(1)}%</span>`+
+   `<span>報廢率 ${wrGap>=0?"+":""}${wrGap.toFixed(1)}pp</span>`+
+   `<span>出清率 ${crGap>=0?"+":""}${crGap.toFixed(1)}pp</span>`;
+
+ let text="";
+ if(salesLift>=10 && skuLift>=5 && crGap<=1 && wrGap<=1){
+   text=`假日不只營業額較高，售出 SKU 也增加，且損耗沒有明顯惡化。建議假日優先做高峰前增量測試，而不是全天加量。`;
+ }else if(salesLift>=10 && (crGap>=2 || wrGap>=2)){
+   const bad=crGap>=wrGap?"出清":"報廢";
+   text=`假日需求確實較高，但${bad}率同時比平日高，代表假日「有量、也有損耗」。建議只調整高峰後或末段供給，不要整天一起增加。`;
+ }else if(salesLift<5 && (crGap>=2 || wrGap>=2)){
+   const bad=crGap>=wrGap?"出清":"報廢";
+   text=`假日營業額沒有明顯高於平日，但${bad}率反而偏高，優先方向應是縮減假日尾段供給，而不是追求增量。`;
+ }else if(skuLift>=8 && salesLift<5){
+   text=`假日售出 SKU 變多，但營業額沒有同步增加，可能是銷售更分散。建議先看品項結構，不要只用總量加減做決策。`;
+ }else{
+   text=`目前平日與假日差異不算明顯，建議維持分開監控，累積更多樣本後再決定是否建立不同供給策略。`;
+ }
+ if(insight) insight.textContent=text;
+}
+
 function renderGrowthOpportunity(a){
+ renderWeekdayWeekendCompare(a);
  renderMoneyImpact(a);
  const host=$("#growthOpportunity");if(!host)return;
  const wt=num($("#wasteThreshold")?.value||3),ct=num($("#clearThreshold")?.value||10),dq=window.__opsDataQualityScore??100,ds=[];
  const avg=v=>v.length?v.reduce((s,n)=>s+n,0)/v.length:0;
+ const pct=(a,b)=>b?(a-b)/b*100:0;
+
  Object.values(a.byItem||{}).forEach(x=>{
-  const obs=a.allDates.map(d=>{const day=a.byDate[d];if(!day?.rows?.length)return null;const rs=day.rows.filter(r=>r.item===x.item);if(!rs.length)return null;
+  const obs=a.allDates.map(d=>{
+   const day=a.byDate[d];if(!day?.rows?.length)return null;
+   const rs=day.rows.filter(r=>r.item===x.item);if(!rs.length)return null;
    const sales=sum(rs,"sales"),waste=sum(rs,"waste"),clearance=sum(rs,"clearance");
-   return {d,sales,waste,clearance,weekend:isWeekend(d),wr:sales?waste/sales*100:0,cr:sales?clearance/sales*100:0};
-  }).filter(Boolean); if(obs.length<4)return;
-  const sales=obs.reduce((s,o)=>s+o.sales,0),waste=obs.reduce((s,o)=>s+o.waste,0),clearance=obs.reduce((s,o)=>s+o.clearance,0),loss=waste+clearance;
-  const lossRate=sales?loss/sales*100:0,wrBad=obs.filter(o=>o.wr>=wt),crBad=obs.filter(o=>o.cr>=ct),repeat=Math.max(wrBad.length,crBad.length);
-  const wd=obs.filter(o=>!o.weekend),we=obs.filter(o=>o.weekend),wdSales=avg(wd.map(o=>o.sales)),weSales=avg(we.map(o=>o.sales)),lift=wdSales?(weSales-wdSales)/wdSales*100:0;
+   return {d,sales,waste,clearance,weekend:isWeekend(d),
+    wr:sales?waste/sales*100:0,cr:sales?clearance/sales*100:0,
+    lr:sales?(waste+clearance)/sales*100:0};
+  }).filter(Boolean);
+  if(obs.length<4)return;
+
+  const sales=obs.reduce((s,o)=>s+o.sales,0),
+        waste=obs.reduce((s,o)=>s+o.waste,0),
+        clearance=obs.reduce((s,o)=>s+o.clearance,0),
+        loss=waste+clearance,
+        lossRate=sales?loss/sales*100:0;
+
+  const wrBad=obs.filter(o=>o.wr>=wt), crBad=obs.filter(o=>o.cr>=ct);
+  const repeatW=wrBad.length, repeatC=crBad.length, repeat=Math.max(repeatW,repeatC);
   const dominant=waste>=clearance?"報廢":"出清";
+  const dominantAmt=dominant==="報廢"?waste:clearance;
+  const dominantShare=loss?dominantAmt/loss*100:0;
+
+  const wd=obs.filter(o=>!o.weekend), we=obs.filter(o=>o.weekend);
+  const wdSales=avg(wd.map(o=>o.sales)), weSales=avg(we.map(o=>o.sales));
+  const lift=wdSales?(weSales-wdSales)/wdSales*100:0;
+  const wdLoss=avg(wd.map(o=>o.lr)), weLoss=avg(we.map(o=>o.lr));
+  const weekendLossGap=weLoss-wdLoss;
+
+  const cut=Math.max(2,Math.floor(obs.length/2));
+  const early=obs.slice(0,cut), recent=obs.slice(-cut);
+  const earlyLoss=avg(early.map(o=>o.lr)), recentLoss=avg(recent.map(o=>o.lr));
+  const recentChange=recentLoss-earlyLoss;
+
+  const meanSales=avg(obs.map(o=>o.sales));
+  const salesVol=meanSales?Math.sqrt(avg(obs.map(o=>Math.pow(o.sales-meanSales,2))))/meanSales*100:0;
+
   let d=null;
-  if(repeat>=2&&loss>0){
-   d={type:"止損測試",cls:"stop",score:loss*(1+repeat*.15),item:x.item,impact:Math.round(loss*.15),severity:repeat>=4||lossRate>=12?"高":"中",
-    reason:`${dominant}超標 ${repeat} 次；本期總損耗 ${money(loss)}，損耗率 ${lossRate.toFixed(1)}%。`,
-    evidence:[["本期損耗",money(loss)],["損耗率",lossRate.toFixed(1)+"%"],["超標次數",repeat+" 次"],["有效天數",obs.length+" 天"]],
-    judgement:`資料只能確認「${dominant}反覆偏高」，不能證明是人員、排班、設備或備貨量造成。`,
-    action:"下一個相同營運週期只改一個變因：末段追加量 -5%，其他條件維持。",
-    verify:`連續測試 2 個相同週期；${dominant}率下降至少 1 個百分點，且營業額跌幅不超過 3%。`,
-    stop:"若營業額跌幅 >3% 或缺貨明顯增加，立即恢復原設定。",
-    need:"若要定位真正原因，需增加時段銷量、每批生產/補貨時間與數量。"};
-  }else if(we.length>=3&&wd.length>=5&&lift>=15&&lossRate<6&&dq>=80){
-   d={type:"增量測試",cls:"grow",score:(weSales-wdSales)*we.length,item:x.item,impact:0,severity:"觀察",
-    reason:`假日平均營業額較平日高 ${lift.toFixed(1)}%，已有 ${we.length} 個假日樣本；損耗率 ${lossRate.toFixed(1)}%。`,
-    evidence:[["假日差異","+"+lift.toFixed(1)+"%"],["假日樣本",we.length+" 天"],["損耗率",lossRate.toFixed(1)+"%"],["資料品質",dq+"/100"]],
-    judgement:"資料支持假日需求較高，但不能直接推論最適增量。",
-    action:"下一個假日只在高峰前批次增加 3%，末段尾量不增加。",
-    verify:"營業額提升且損耗率惡化不超過 1 個百分點才採用。",
-    stop:"若新增量轉成報廢/出清，下一次取消增量。",
-    need:"若要精準決定增量時段，需加入每小時銷量。"};
-  }else if(repeat>=2||Math.abs(lift)>=10){
-   d={type:"先補資料",cls:"watch",score:Math.max(loss,Math.abs(lift)*100),item:x.item,impact:0,severity:"資料不足",
-    reason:repeat>=2?`已有 ${repeat} 次異常，但目前資料不足以定位發生時段。`:`平假日差異 ${lift.toFixed(1)}%，但樣本不足。`,
-    evidence:[["有效天數",obs.length+" 天"],["資料品質",dq+"/100"],["假日樣本",we.length+" 天"],["損耗率",lossRate.toFixed(1)+"%"]],
-    judgement:"現在直接改備貨量屬於猜測，不建議執行。",action:"維持現況，先補一個完整週期資料。",verify:"資料補齊後再判斷。",stop:"—",need:"優先補時段銷量與批次資料。"};
+
+  /* 1. 最近惡化：不要再給固定 -5%，先處理趨勢反轉 */
+  if(loss>0 && repeat>=2 && recentChange>=2){
+    d={
+      type:"惡化阻斷",cls:"stop",score:loss*(1.45+recentChange/20),item:x.item,
+      metric:dominant,baselineRate:dominant==="報廢"?(sales?waste/sales*100:0):(sales?clearance/sales*100:0),
+      impact:Math.round(loss*.15),severity:recentChange>=4?"高":"中",
+      reason:`最近半段損耗率比前半段高 ${recentChange.toFixed(1)} 個百分點；${dominant}占本期損耗 ${dominantShare.toFixed(0)}%。`,
+      evidence:[["近期損耗率",recentLoss.toFixed(1)+"%"],["前期損耗率",earlyLoss.toFixed(1)+"%"],["惡化幅度","+"+recentChange.toFixed(1)+"pp"],["本期損耗",money(loss)]],
+      judgement:`可以確認異常正在惡化，而且主要由${dominant}貢獻；目前資料仍不能證明是哪個時段或哪一批造成。`,
+      action:dominant==="報廢"
+        ?"下一個相同週期先取消額外加量，末段維持前半期的平均供給水準，不再往上追量。"
+        :"下一個相同週期把最後一次補量提前一個批次停止，先阻止尾段庫存繼續累積。",
+      verify:`連續 2 個相同週期後，整體損耗率至少回落 1 個百分點，且營業額跌幅不超過 3%。`,
+      stop:"若營業額跌幅 >3% 或出現明顯缺貨，恢復原設定並改做時段資料拆解。",
+      need:"需要時段銷量與每批生產/補貨時間，才能確認惡化集中在哪一段。"
+    };
   }
+
+  /* 2. 假日型損耗：只改假日，不碰平日 */
+  else if(loss>0 && repeat>=2 && we.length>=2 && weekendLossGap>=2){
+    d={
+      type:"假日供給校正",cls:"stop",score:loss*(1.25+weekendLossGap/20),item:x.item,
+      metric:dominant,baselineRate:dominant==="報廢"?(sales?waste/sales*100:0):(sales?clearance/sales*100:0),
+      impact:Math.round(loss*.12),severity:weekendLossGap>=4?"高":"中",
+      reason:`假日平均營業額 ${money(weSales)}、平日 ${money(wdSales)}；假日損耗率比平日高 ${weekendLossGap.toFixed(1)} 個百分點，問題集中在假日而不是整週。`,
+      evidence:[["假日營業額",money(weSales)],["平日營業額",money(wdSales)],["假日損耗率",weLoss.toFixed(1)+"%"],["平日損耗率",wdLoss.toFixed(1)+"%"]],
+      judgement:`資料支持「假日供給與需求匹配較差」，因此不應把平日一起調整。`,
+      action:dominant==="報廢"
+        ?"只在下一個假日測試：最後一批生產量 -5%，平日完全不改。"
+        :"只在下一個假日測試：高峰後停止追加一次補量，平日完全不改。",
+      verify:`假日${dominant}率下降至少 1 個百分點，且假日營業額跌幅不超過 3%。`,
+      stop:"若假日營業額明顯下滑或缺貨增加，立即取消這項假日設定。",
+      need:"若要知道該減哪一個時段，需要假日每小時銷量與最後兩批供給量。"
+    };
+  }
+
+  /* 3. 報廢主導：做末段量測試 */
+  else if(repeatW>=2 && waste>0 && waste>=clearance*1.15){
+    d={
+      type:"末段減量",cls:"stop",score:waste*(1+repeatW*.16),item:x.item,
+      metric:"報廢",baselineRate:sales?waste/sales*100:0,
+      impact:Math.round(waste*.15),severity:repeatW>=4||lossRate>=12?"高":"中",
+      reason:`報廢超標 ${repeatW} 次，而且報廢占總損耗 ${dominantShare.toFixed(0)}%，比出清更值得先處理。`,
+      evidence:[["報廢金額",money(waste)],["報廢超標",repeatW+" 次"],["報廢占損耗",dominantShare.toFixed(0)+"%"],["有效天數",obs.length+" 天"]],
+      judgement:"資料支持供給有過量跡象，但無法判定是全天過量還是只發生在末段。",
+      action:"下一個相同週期只測末段：最後一批生產量 -5%，前段與高峰前供給維持不變。",
+      verify:"報廢率下降至少 1 個百分點，營業額跌幅不超過 3%。",
+      stop:"若缺貨增加或營業額跌幅 >3%，恢復最後一批原量。",
+      need:"補上每批生產時間與數量後，可把 -5% 改成真正的批次數量建議。"
+    };
+  }
+
+  /* 4. 出清主導：不是再減生產，而是提前停止尾段補量 */
+  else if(repeatC>=2 && clearance>0 && clearance>=waste*1.15){
+    d={
+      type:"尾段補量收斂",cls:"stop",score:clearance*(1+repeatC*.16),item:x.item,
+      metric:"出清",baselineRate:sales?clearance/sales*100:0,
+      impact:Math.round(clearance*.15),severity:repeatC>=4||lossRate>=12?"高":"中",
+      reason:`出清超標 ${repeatC} 次，而且出清是主要損耗來源，代表尾段仍有庫存需要靠折價消化。`,
+      evidence:[["出清金額",money(clearance)],["出清超標",repeatC+" 次"],["出清占損耗",dominantShare.toFixed(0)+"%"],["損耗率",lossRate.toFixed(1)+"%"]],
+      judgement:"資料支持尾段庫存壓力偏高，但不能直接證明是定價、陳列或補量哪一項造成。",
+      action:"下一個相同週期不動前段產量，只把最後一次補量提早一個批次結束，觀察尾段出清是否下降。",
+      verify:"出清率下降至少 1 個百分點，且營業額跌幅不超過 3%。",
+      stop:"若尾段缺貨增加或營業額跌幅 >3%，恢復最後一次補量。",
+      need:"需要出清發生時段與每批補量時間，才能進一步判斷是補量過晚還是折價過早。"
+    };
+  }
+
+  /* 5. 銷售波動很大：不要亂改量，先固定規則 */
+  else if(repeat>=2 && salesVol>=35){
+    d={
+      type:"先穩定規則",cls:"watch",score:loss*(1+salesVol/100),item:x.item,
+      metric:dominant,baselineRate:dominant==="報廢"?(sales?waste/sales*100:0):(sales?clearance/sales*100:0),
+      impact:0,severity:"觀察",
+      reason:`營業額日波動約 ${salesVol.toFixed(0)}%，目前若直接固定減量，容易把需求波動誤判成供給問題。`,
+      evidence:[["營業額波動",salesVol.toFixed(0)+"%"],["異常次數",repeat+" 次"],["損耗率",lossRate.toFixed(1)+"%"],["有效天數",obs.length+" 天"]],
+      judgement:"目前最大的問題不是缺一個減量比例，而是每日條件差異太大，直接調量不利於驗證。",
+      action:"先連續 1 個完整週期固定同一套補量規則，不再臨時加量；只記錄例外情況。",
+      verify:"固定規則後，若損耗波動縮小，再進入減量測試。",
+      stop:"若固定規則造成明顯缺貨，記錄缺貨日並停止執行。",
+      need:"需要促銷、天氣、活動或缺貨標記，才能解釋高波動來源。"
+    };
+  }
+
+  /* 6. 低損耗但假日需求高：才做增量 */
+  else if(we.length>=3&&wd.length>=5&&lift>=15&&lossRate<6&&dq>=80){
+    d={
+      type:"假日增量",cls:"grow",score:(weSales-wdSales)*we.length,item:x.item,
+      metric:"損耗",baselineRate:lossRate,impact:0,severity:"機會",
+      reason:`假日平均營業額比平日高 ${lift.toFixed(1)}%，同時損耗率只有 ${lossRate.toFixed(1)}%。`,
+      evidence:[["假日差異","+"+lift.toFixed(1)+"%"],["假日樣本",we.length+" 天"],["損耗率",lossRate.toFixed(1)+"%"],["資料品質",dq+"/100"]],
+      judgement:"資料支持假日需求較高，而且目前損耗仍在可控範圍，可以做小幅增量實驗。",
+      action:"下一個假日只在高峰前一批增加 3%，末段與最後一批完全不增加。",
+      verify:"假日營業額提升，且損耗率惡化不超過 1 個百分點。",
+      stop:"新增量若轉成報廢或出清，下一個假日取消增量。",
+      need:"加入每小時銷量後，可決定增量應落在哪一個高峰前時段。"
+    };
+  }
+
+  /* 7. 有訊號但證據不足：說清楚到底缺什麼，不再一律同一句 */
+  else if(repeat>=2||Math.abs(lift)>=10||lossRate>=5){
+    let action,need,reason;
+    if(obs.length<7){
+      reason=`目前只有 ${obs.length} 個有效營業日，樣本不足以做穩定政策判斷。`;
+      action="維持現況，先補到至少 7 個有效營業日，再重新判斷。";
+      need="優先補足完整一週，至少涵蓋平日與假日。";
+    }else if(we.length<2){
+      reason=`已有 ${obs.length} 個有效日，但假日樣本只有 ${we.length} 天，平假日比較不可靠。`;
+      action="暫不調整假日策略，先補足至少 2 個假日樣本。";
+      need="補足假日資料；若有活動日，也要加上活動標記。";
+    }else{
+      reason=`本期損耗率 ${lossRate.toFixed(1)}%，但目前只有日級資料，無法判斷異常集中在哪個時段。`;
+      action="先維持量不變，下一週開始補記時段銷量與每批供給量。";
+      need="時段銷量、每批生產/補貨時間與數量。";
+    }
+    d={
+      type:"資料補強",cls:"watch",score:Math.max(loss,Math.abs(lift)*100),item:x.item,
+      metric:dominant,baselineRate:dominant==="報廢"?(sales?waste/sales*100:0):(sales?clearance/sales*100:0),
+      impact:0,severity:"資料不足",
+      reason,
+      evidence:[["有效天數",obs.length+" 天"],["資料品質",dq+"/100"],["假日樣本",we.length+" 天"],["損耗率",lossRate.toFixed(1)+"%"]],
+      judgement:"現在直接給固定減量比例會是猜測，因此不執行供給調整。",
+      action,verify:"資料補齊後重新判斷。",stop:"—",need
+    };
+  }
+
   if(d)ds.push(d);
  });
- ds.sort((p,q)=>q.score-p.score);const picked=ds.slice(0,3),actionable=picked.filter(d=>d.type!=="先補資料");
+
+ ds.sort((p,q)=>q.score-p.score);
+
+ /* 避免前三張都是同一類：優先挑不同 playbook，再補分數最高者 */
+ const picked=[],used=new Set();
+ for(const d of ds){
+   if(!used.has(d.type)&&picked.length<3){picked.push(d);used.add(d.type);}
+ }
+ for(const d of ds){
+   if(picked.length>=3)break;
+   if(!picked.includes(d))picked.push(d);
+ }
+
+ const actionable=picked.filter(d=>!["資料補強","先穩定規則"].includes(d.type));
  if($("#decisionCount"))$("#decisionCount").textContent=actionable.length+" 件";
- if($("#decisionImpact")){const v=actionable.reduce((s,d)=>s+(d.impact||0),0);$("#decisionImpact").textContent=v?money(v):"—";}
- host.innerHTML=picked.length?picked.map((d,i)=>`<article class="decision-card"><div class="decision-head"><div class="decision-rank">0${i+1}</div><div><div class="decision-title">${esc(d.item)}</div><div class="decision-reason">${esc(d.reason)}</div></div><span class="decision-type ${d.cls}">${esc(d.type)}</span></div><div class="decision-evidence">${d.evidence.map(e=>`<div><span>${esc(e[0])}</span><b>${esc(e[1])}</b></div>`).join("")}</div><div class="decision-action"><strong>判斷｜</strong>${esc(d.judgement)}<br><strong>行動｜</strong>${esc(d.action)}<br><strong>成功標準｜</strong>${esc(d.verify)}<br><strong>停止條件｜</strong>${esc(d.stop)}<br><strong>還缺資料｜</strong>${esc(d.need)}</div></article>`).join(""):`<div class="decision-abstain">本期沒有足夠證據支持政策調整。系統不會為了產生建議而硬猜原因。</div>`;
+ if($("#decisionImpact")){
+   const v=actionable.reduce((s,d)=>s+(d.impact||0),0);
+   $("#decisionImpact").textContent=v?money(v):"—";
+ }
+
+ host.innerHTML=picked.length?picked.map((d,i)=>`<article class="decision-card">
+  <div class="decision-head">
+   <div class="decision-rank">0${i+1}</div>
+   <div><div class="decision-title">${esc(d.item)}</div><div class="decision-reason">${esc(d.reason)}</div></div>
+   <span class="decision-type ${d.cls}">${esc(d.type)}</span>
+  </div>
+  <div class="decision-evidence">${d.evidence.map(e=>`<div><span>${esc(e[0])}</span><b>${esc(e[1])}</b></div>`).join("")}</div>
+  <div class="decision-action">
+   <strong>判斷｜</strong>${esc(d.judgement)}<br>
+   <strong>行動｜</strong>${esc(d.action)}<br>
+   <strong>成功標準｜</strong>${esc(d.verify)}<br>
+   <strong>停止條件｜</strong>${esc(d.stop)}<br>
+   <strong>還缺資料｜</strong>${esc(d.need)}
+  </div>
+ </article>`).join(""):`<div class="decision-abstain">本期沒有足夠證據支持政策調整。系統不會為了產生建議而硬猜原因。</div>`;
+
  window.__opsDecisionCenter=picked;
 }
-
   function renderManagementFocus(a){
  const host=$("#managementFocus");if(!host)return;const ds=window.__opsDecisionCenter||[];
- host.innerHTML=ds.slice(0,3).map((d,i)=>`<div class="focus-item"><span class="focus-icon">${String(i+1).padStart(2,"0")}</span><div><b>${esc(d.item)}｜${esc(d.type)}</b><p>${esc(d.action)} ${d.type!=="先補資料"?"成功標準："+esc(d.verify):""}</p></div><span class="focus-tag">${esc(d.severity||"觀察")}</span></div>`).join("")||'<div class="ai-policy-empty">本期沒有足夠證據需要調整政策。</div>';
+ host.innerHTML=ds.slice(0,3).map((d,i)=>`<div class="focus-item"><span class="focus-icon">${String(i+1).padStart(2,"0")}</span><div><b>${esc(d.item)}｜${esc(d.type)}</b><p>${esc(d.action)} ${!["資料補強","先穩定規則"].includes(d.type)?"成功標準："+esc(d.verify):""}</p></div><span class="focus-tag">${esc(d.severity||"觀察")}</span></div>`).join("")||'<div class="ai-policy-empty">本期沒有足夠證據需要調整政策。</div>';
 }
 
   function savePolicySnapshot(item,metric,rate,policy,rangeEnd){
@@ -5878,7 +6208,7 @@ function renderGrowthOpportunity(a){
     host.innerHTML=hist.slice().reverse().slice(0,8).map(h=>{
       const x=a.byItem?.[h.item]; let current=null;
       if(x){
-        const s=x.sales||0, loss=h.metric==="報廢"?(x.waste||0):(x.clearance||0);
+        const s=x.sales||0, loss=h.metric==="報廢"?(x.waste||0):h.metric==="出清"?(x.clearance||0):(x.waste||0)+(x.clearance||0);
         current=s?loss/s*100:null;
       }
       let result="等待新的資料期間";
@@ -5893,10 +6223,48 @@ function renderGrowthOpportunity(a){
   }
 
   function renderAIDiagnosis(a){
- const host=$("#aiPolicyStack");if(!host)return;const ds=window.__opsDecisionCenter||[],dq=window.__opsDataQualityScore??100;
- if(!ds.length){host.innerHTML='<div class="ai-policy-empty">目前沒有足夠證據提出決策建議。系統不猜原因。</div>';renderPolicyTracker(a);return;}
- host.innerHTML=ds.map((d,i)=>`<article class="ai-policy-card"><div class="ai-policy-head"><div><div class="ai-policy-title">${i+1}. ${esc(d.item)}｜${esc(d.type)}</div><div class="ai-policy-sub">只根據已載入資料｜資料品質 ${dq}/100</div></div><span class="ai-confidence ${d.type==="先補資料"?"":"high"}">${d.type==="先補資料"?"資料不足":"可測試"}</span></div><div class="ai-policy-grid"><div class="ai-policy-box wide"><span>問題</span><p>${esc(d.reason)}</p></div><div class="ai-policy-box wide"><span>資料能證明什麼</span><p>${esc(d.judgement)}</p></div><div class="ai-policy-box"><span>下一步只做一件事</span><p>${esc(d.action)}</p></div><div class="ai-policy-box"><span>成功標準</span><p>${esc(d.verify)}</p></div><div class="ai-policy-box"><span>停止條件</span><p>${esc(d.stop)}</p></div><div class="ai-policy-box"><span>還缺什麼資料</span><p>${esc(d.need)}</p></div></div><div class="ai-policy-status">這不是原因判定，而是可驗證的營運實驗。</div>${d.type!=="先補資料"?`<button class="policy-save-btn" type="button" data-save-policy="${esc(d.item)}" data-metric="損耗" data-rate="0" data-policy="${esc(d.action)}">採用並追蹤</button>`:""}</article>`).join("");
- host.querySelectorAll("[data-save-policy]").forEach(btn=>btn.addEventListener("click",()=>{savePolicySnapshot(btn.dataset.savePolicy,btn.dataset.metric,num(btn.dataset.rate),btn.dataset.policy,a.maxDate);btn.textContent="已加入追蹤";btn.disabled=true;}));renderPolicyTracker(a);
+ const host=$("#aiPolicyStack");if(!host)return;
+ const ds=window.__opsDecisionCenter||[],dq=window.__opsDataQualityScore??100;
+ if(!ds.length){
+   host.innerHTML='<div class="ai-policy-empty">目前沒有足夠證據提出決策建議。系統不猜原因。</div>';
+   renderPolicyTracker(a);return;
+ }
+ const nonAction=new Set(["資料補強","先穩定規則"]);
+ host.innerHTML=ds.map((d,i)=>{
+   const isHold=nonAction.has(d.type);
+   const status=isHold?(d.type==="先穩定規則"?"先觀察":"資料不足"):"可測試";
+   const footer=d.type==="惡化阻斷"?"先阻止惡化，再找根因。":
+                d.type==="假日供給校正"?"只改假日，避免傷到平日。":
+                d.type==="末段減量"?"只測最後一批，不動高峰前供給。":
+                d.type==="尾段補量收斂"?"先收尾段補量，不直接砍全天產量。":
+                d.type==="假日增量"?"低損耗前提下才允許增量。":
+                isHold?"目前不執行供給調整。":"這是一個可驗證的營運實驗。";
+   return `<article class="ai-policy-card">
+    <div class="ai-policy-head"><div>
+      <div class="ai-policy-title">${i+1}. ${esc(d.item)}｜${esc(d.type)}</div>
+      <div class="ai-policy-sub">依目前資料型態自動選擇處理策略｜資料品質 ${dq}/100</div>
+    </div><span class="ai-confidence ${isHold?"":"high"}">${status}</span></div>
+    <div class="ai-policy-grid">
+      <div class="ai-policy-box wide"><span>問題</span><p>${esc(d.reason)}</p></div>
+      <div class="ai-policy-box wide"><span>資料能證明什麼</span><p>${esc(d.judgement)}</p></div>
+      <div class="ai-policy-box"><span>下一步</span><p>${esc(d.action)}</p></div>
+      <div class="ai-policy-box"><span>成功標準</span><p>${esc(d.verify)}</p></div>
+      <div class="ai-policy-box"><span>停止條件</span><p>${esc(d.stop)}</p></div>
+      <div class="ai-policy-box"><span>還缺什麼資料</span><p>${esc(d.need)}</p></div>
+    </div>
+    <div class="ai-policy-status">${esc(footer)}</div>
+    ${!isHold?`<button class="policy-save-btn" type="button"
+      data-save-policy="${esc(d.item)}"
+      data-metric="${esc(d.metric||"損耗")}"
+      data-rate="${Number(d.baselineRate||0).toFixed(4)}"
+      data-policy="${esc(d.action)}">採用並追蹤</button>`:""}
+   </article>`;
+ }).join("");
+ host.querySelectorAll("[data-save-policy]").forEach(btn=>btn.addEventListener("click",()=>{
+   savePolicySnapshot(btn.dataset.savePolicy,btn.dataset.metric,num(btn.dataset.rate),btn.dataset.policy,a.maxDate);
+   btn.textContent="已加入追蹤";btn.disabled=true;
+ }));
+ renderPolicyTracker(a);
 }
 
   function renderDirectorReport(a){
@@ -6231,4 +6599,23 @@ document.addEventListener("DOMContentLoaded",()=>{
     setup.hidden=false;
   }
 });
-</script></body></html>
+</script>
+<script id="v3-nav-scroll-top">
+document.addEventListener("DOMContentLoaded",()=>{
+  const tabs=[...document.querySelectorAll("#main-dashboard-nav .dashboard-tab")];
+  tabs.forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      // Wait for legacy tab-switch logic to finish, then return the newly selected page to its top.
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(()=>{
+          window.scrollTo({top:0,left:0,behavior:"smooth"});
+          const main=document.querySelector(".app-main");
+          if(main && main.scrollTop>0) main.scrollTo({top:0,behavior:"smooth"});
+        });
+      });
+    });
+  });
+});
+</script>
+
+</body></html>
