@@ -157,6 +157,72 @@ td strong{font-size:12px}.cell-money{font-weight:850}
 @media(max-width:600px){.data-trust{font-size:10px;margin-bottom:10px}}
 </style>
 
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script>if(window.pdfjsLib){pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";}</script>
+
+
+<style id="smart-import-ui-v1">
+.import-modal[hidden]{display:none!important}
+.import-modal{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:18px}
+.import-backdrop{position:absolute;inset:0;background:rgba(11,23,40,.58);backdrop-filter:blur(7px)}
+.import-sheet{
+  position:relative;z-index:1;width:min(880px,100%);max-height:min(860px,92dvh);overflow:auto;
+  background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:0 30px 80px rgba(11,23,40,.28);
+  padding:22px
+}
+.import-sheet-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
+.import-sheet-head h2{font-size:24px;letter-spacing:-.04em;margin:5px 0 4px}
+.import-sheet-head p{margin:0;color:var(--muted);font-size:12px;line-height:1.55;max-width:650px}
+.import-close{width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--muted);font-size:22px;line-height:1}
+.import-dropzone{
+  display:flex;align-items:center;gap:13px;margin-top:17px;padding:18px;border:1.5px dashed #C8D3E0;
+  border-radius:16px;background:#F8FAFC;cursor:pointer
+}
+.import-dropzone:hover{border-color:#8EABD2;background:#F4F7FB}
+.import-dropzone input{display:none}
+.import-plus{width:42px;height:42px;border-radius:12px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:24px;flex:0 0 auto}
+.import-dropzone strong{display:block;font-size:14px}
+.import-dropzone span{display:block;color:var(--muted);font-size:10px;margin-top:4px}
+.import-capabilities{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
+.import-capabilities span{font-size:9px;font-weight:850;color:#526175;background:#F6F8FA;border:1px solid var(--line);border-radius:999px;padding:5px 8px}
+.import-status{display:flex;align-items:flex-start;gap:9px;padding:11px 12px;border-radius:12px;background:#F8FAFC;border:1px solid var(--line)}
+.import-status i{width:8px;height:8px;border-radius:50%;background:#98A2B3;margin-top:4px;flex:0 0 auto}
+.import-status strong{display:block;font-size:11px}.import-status span{display:block;color:var(--muted);font-size:10px;margin-top:2px}
+.import-status.ok i{background:var(--green)}.import-status.warn i{background:var(--amber)}.import-status.error i{background:var(--red)}
+.import-result{margin-top:12px}
+.import-result-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:9px}
+.import-result-head strong{display:block;font-size:13px}.import-result-head span{font-size:9px;color:var(--muted)}
+.import-health{border-radius:999px;padding:5px 8px;background:#F6F8FA;border:1px solid var(--line);font-weight:850!important}
+.import-health.ok{background:var(--greenbg);color:var(--green)!important;border-color:#CBE8DC}
+.import-health.warn{background:var(--amberbg);color:var(--amber)!important;border-color:#EED7AB}
+.detect-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:9px}
+.detect-summary>div{padding:10px;border:1px solid var(--line);border-radius:11px;background:#F8FAFC}
+.detect-summary span{display:block;font-size:9px;color:var(--muted);font-weight:800}.detect-summary strong{display:block;margin-top:4px;font-size:13px}
+.field-map{display:flex;flex-wrap:wrap;gap:6px}
+.field-chip{font-size:9px;font-weight:800;border-radius:999px;padding:5px 8px;background:#F7F8FA;color:#7B8797;border:1px solid var(--line)}
+.field-chip.hit{background:#EEF4FF;color:#2457AA;border-color:#D5E2F8}
+.file-summary{font-size:9px;color:var(--muted);line-height:1.5;margin:9px 0}
+.preview-wrap{max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:12px}
+.import-preview-table{width:100%;border-collapse:collapse;min-width:650px}
+.import-preview-table th,.import-preview-table td{padding:8px 9px;border-bottom:1px solid var(--line);text-align:left;font-size:9px;white-space:nowrap}
+.import-preview-table th{position:sticky;top:0;background:#F7F9FB;color:var(--muted);z-index:1}
+.trust-note{margin-top:9px;padding:9px 10px;border-radius:10px;background:#F8FAFC;color:#526175;font-size:9px;line-height:1.5}
+.trust-note b{color:var(--ink)}
+.import-confirm{display:flex;align-items:center;gap:10px;justify-content:flex-end;margin-top:11px}
+.import-confirm span{font-size:9px;color:var(--muted)}
+@media(max-width:600px){
+ .import-modal{padding:0;place-items:end center}
+ .import-sheet{width:100%;max-height:94dvh;border-radius:20px 20px 0 0;padding:16px}
+ .import-sheet-head h2{font-size:21px}
+ .import-dropzone{padding:14px}
+ .detect-summary{grid-template-columns:1fr 1fr}
+ .import-confirm{align-items:stretch;flex-direction:column}
+ .import-confirm .btn{width:100%}
+}
+</style>
+
 </head>
 <body>
 <div class="app">
@@ -165,8 +231,7 @@ td strong{font-size:12px}.cell-money{font-weight:850}
       <div class="brand"><div class="logo">O</div><div><strong>OpsPilot Executive</strong><small>營運決策系統</small></div></div>
       <div class="actions">
         <button class="btn" id="demoBtn">示範資料</button>
-        <label class="btn primary" for="fileInput">載入資料</label>
-        <input class="file-input" id="fileInput" type="file" accept=".csv,.json">
+        <button class="btn primary" id="openImport" type="button">匯入營運資料</button>
       </div>
     </div>
   </header>
@@ -271,6 +336,63 @@ If data is absent, show "無資料" or hide the metric.
     <button data-go="report"><span class="ico">▤</span>報告</button>
   </nav>
 </div>
+
+<div class="import-modal" id="importModal" hidden>
+  <div class="import-backdrop" data-close-import></div>
+  <section class="import-sheet" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+    <div class="import-sheet-head">
+      <div>
+        <div class="eyebrow">SMART DATA IMPORT</div>
+        <h2 id="importTitle">智慧資料匯入</h2>
+        <p>可直接放入原始營運報表。系統會尋找標題列、辨識中英文欄位、合併多個檔案，確認後才進入分析。</p>
+      </div>
+      <button class="import-close" type="button" data-close-import aria-label="關閉">×</button>
+    </div>
+
+    <label class="import-dropzone" for="smartFileInput">
+      <div class="import-plus">＋</div>
+      <div>
+        <strong>選擇一個或多個報表</strong>
+        <span>XLSX / XLS / XLSM / XLSB / ODS / CSV / TSV / TXT / PDF</span>
+      </div>
+      <input id="smartFileInput" type="file" multiple
+        accept=".xlsx,.xls,.xlsm,.xlsb,.ods,.csv,.tsv,.txt,.pdf,text/csv,text/tab-separated-values,text/plain,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+    </label>
+
+    <div class="import-capabilities">
+      <span>自動尋找標題列</span><span>中英文欄位辨識</span><span>多檔合併</span><span>日期完整度檢查</span>
+    </div>
+
+    <div class="import-status" id="smartImportStatus">
+      <i></i><div><strong>等待檔案</strong><span>原始資料不需要先改成固定模板。</span></div>
+    </div>
+
+    <div class="import-result" id="smartImportResult" hidden>
+      <div class="import-result-head">
+        <div><strong>自動辨識結果</strong><span id="smartImportCount">—</span></div>
+        <span class="import-health" id="smartImportHealth">等待檢查</span>
+      </div>
+
+      <div class="detect-summary" id="detectSummary"></div>
+      <div class="field-map" id="smartFieldMap"></div>
+      <div class="file-summary" id="smartFileSummary"></div>
+
+      <div class="preview-wrap">
+        <table class="import-preview-table" id="smartPreviewTable"></table>
+      </div>
+
+      <div class="trust-note">
+        <b>資料鐵則</b>｜只分析實際辨識到的資料。未辨識欄位不自行補值；缺少資料會直接標示「無資料」。
+      </div>
+
+      <div class="import-confirm">
+        <button class="btn primary" id="confirmSmartImport" type="button">確認並開始分析</button>
+        <span id="smartImportHint">確認欄位辨識與日期範圍後再進入決策頁。</span>
+      </div>
+    </div>
+  </section>
+</div>
+
 <div class="toast" id="toast">已更新</div>
 
 <script>
@@ -403,23 +525,9 @@ function render(){
   $("#reportRisks").innerHTML=risks.map(x=>`<li>${esc(x.item)}：損耗 ${money(x.loss)}，占總損耗 ${pct(a.loss?x.loss/a.loss*100:0)}。</li>`).join("");
   $("#reportActions").innerHTML=risks.map(x=>`<li>${esc(x.item)}：${x.clearance>x.waste?"出清為主要損耗來源":"報廢為主要損耗來源"}；目前資料不足以直接判定根因。</li>`).join("");
 }
-function loadDemo(){state.rows=demoRows();state.target=null;state.source="示範資料（模擬，僅供操作展示）";render();toast("已載入模擬示範資料")}
+function loadDemo(){state.rows=demoRows();state.target=null;state.source="模擬示範資料｜非實際營運數據";render();toast("已載入模擬示範資料")}
 function toast(t){const x=$("#toast");x.textContent=t;x.classList.add("show");setTimeout(()=>x.classList.remove("show"),1400)}
 $("#demoBtn").onclick=loadDemo;
-$("#fileInput").addEventListener("change",async e=>{
-  const f=e.target.files?.[0];if(!f)return;
-  try{
-    const txt=await f.text();let rows=[];
-    if(f.name.toLowerCase().endsWith(".json")) rows=JSON.parse(txt);
-    else{
-      const lines=txt.trim().split(/\r?\n/);const head=lines.shift().split(",").map(x=>x.trim());
-      rows=lines.map(line=>{const v=line.split(",");const o={};head.forEach((h,i)=>o[h]=v[i]);return o});
-    }
-    rows=rows.map(r=>({date:r.date||r.日期,item:r.item||r.品項,sales:+(r.sales||r.營業額||0),waste:+(r.waste||r.報廢||0),clearance:+(r.clearance||r.出清||0)})).filter(r=>r.date&&r.item);
-    if(!rows.length)throw new Error("沒有可辨識資料");
-    state={rows,target:null,source:f.name};render();toast("資料已載入");
-  }catch(err){alert("目前新版先支援 CSV / JSON，欄位：date,item,sales,waste,clearance（或 日期、品項、營業額、報廢、出清）。")}
-});
 $("#nav").addEventListener("click",e=>{
   const b=e.target.closest("button[data-go]");if(!b)return;
   $$(".nav button").forEach(x=>x.classList.toggle("active",x===b));
@@ -431,5 +539,256 @@ $("#copyReport").onclick=async()=>{
 };
 loadDemo();
 </script>
+
+<script id="smart-import-engine-v1">
+(function(){
+  const aliases={
+    date:["日期","date","交易日期","營業日期","銷售日期","訂單日期","年月日","day"],
+    store:["門市","店別","店名","分店","store","branch","location"],
+    department:["部門","課別","櫃別","單位","department","section","dept"],
+    category:["大分類","中分類","小分類","商品分類","品類","類別","category","class"],
+    sku:["sku","商品編號","商品代碼","品號","貨號","料號","itemno","productcode"],
+    item:["品項","品名","商品","商品名稱","產品","產品名稱","item","product","description"],
+    qty:["銷售量","銷量","售出數","售出數量","數量","件數","qty","quantity","units"],
+    sales:["營業額","銷售額","銷售金額","營收","銷售淨額","sales","revenue","amount","netsales"],
+    cost:["成本","銷貨成本","cost","cogs"],
+    grossProfit:["毛利","毛利額","grossprofit","gp"],
+    grossMargin:["毛利率","grossmargin","gm"],
+    inventory:["庫存","庫存量","期末庫存","inventory","stock","onhand"],
+    clearance:["出清","出清金額","折價","折扣金額","即期折扣","markdown","discount","clearance"],
+    waste:["報廢","報廢金額","廢棄","廢棄金額","報損","報損金額","waste","shrink","shrinkage"],
+    returns:["退貨","退貨金額","退款","returns","refund"],
+    transactions:["交易筆數","訂單數","來客筆數","transactions","orders","receipts"],
+    traffic:["來客數","客流","入店人數","traffic","visitors","customers"],
+    hours:["工時","總工時","人時","laborhours","labourhours","hours"],
+    laborCost:["人事成本","人力成本","laborcost","labourcost"]
+  };
+  const pretty={
+    date:"日期",store:"門市",department:"部門",category:"分類",sku:"SKU",item:"品項",
+    qty:"銷售量",sales:"營業額",cost:"成本",grossProfit:"毛利額",grossMargin:"毛利率",
+    inventory:"庫存",clearance:"出清/折扣",waste:"報廢/損耗",returns:"退貨",
+    transactions:"交易筆數",traffic:"來客數",hours:"工時",laborCost:"人力成本"
+  };
+
+  let parsedRows=[], parsedFiles=[], parsedMap={}, coverage=null;
+
+  const modal=document.getElementById("importModal");
+  const status=document.getElementById("smartImportStatus");
+  const result=document.getElementById("smartImportResult");
+  const input=document.getElementById("smartFileInput");
+
+  function norm(v){return String(v??"").trim().toLowerCase().replace(/[\s_\-－—（）()【】\[\]\/\\.:：%％$＄]/g,"")}
+  function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+  function n(v){
+    if(typeof v==="number")return Number.isFinite(v)?v:0;
+    let s=String(v??"").trim().replace(/[,$＄,%％\s]/g,"");
+    const neg=/^\(.*\)$/.test(s);s=s.replace(/[()]/g,"");
+    const x=Number(s);return Number.isFinite(x)?(neg?-x:x):0;
+  }
+  function ymd(v){
+    if(v==null||v==="")return null;
+    if(v instanceof Date&&!isNaN(v))return `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,"0")}-${String(v.getDate()).padStart(2,"0")}`;
+    const s=String(v).trim();
+    let m=s.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})/);
+    if(m)return `${m[1]}-${String(+m[2]).padStart(2,"0")}-${String(+m[3]).padStart(2,"0")}`;
+    m=s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
+    if(m)return `${m[3]}-${String(+m[1]).padStart(2,"0")}-${String(+m[2]).padStart(2,"0")}`;
+    return null;
+  }
+  function scoreHeaderRow(row){
+    const vals=(row||[]).map(norm).filter(Boolean);if(!vals.length)return -1;
+    let hits=0;
+    for(const v of vals){
+      if(Object.values(aliases).some(list=>list.some(a=>norm(a)===v||v.includes(norm(a))||norm(a).includes(v))))hits++;
+    }
+    return hits*100+Math.min(vals.length,20);
+  }
+  function detectHeaderIndex(matrix){
+    let best={i:0,score:-1};
+    for(let i=0;i<Math.min(matrix.length,25);i++){const sc=scoreHeaderRow(matrix[i]);if(sc>best.score)best={i,score:sc}}
+    return best.i;
+  }
+  function uniqueHeaders(arr){
+    const seen={};
+    return arr.map((v,i)=>{let h=String(v??"").trim()||`欄位${i+1}`;if(seen[h]){seen[h]++;h=h+"_"+seen[h]}else seen[h]=1;return h})
+  }
+  function matrixToRows(matrix){
+    if(!matrix?.length)return {headers:[],rows:[]};
+    const hi=detectHeaderIndex(matrix),headers=uniqueHeaders(matrix[hi]||[]),rows=[];
+    for(let r=hi+1;r<matrix.length;r++){
+      const row=matrix[r]||[];if(!row.some(v=>String(v??"").trim()!==""))continue;
+      const o={};headers.forEach((h,i)=>o[h]=row[i]??"");rows.push(o);
+    }
+    return {headers,rows};
+  }
+  function detect(headers){
+    const out={};
+    for(const [key,list] of Object.entries(aliases)){
+      let best=null,bestScore=0;
+      for(const h of headers){
+        const nh=norm(h);
+        for(const a of list){
+          const na=norm(a);const sc=nh===na?100:(nh.includes(na)||na.includes(nh)?72:0);
+          if(sc>bestScore){best=h;bestScore=sc}
+        }
+      }
+      out[key]=best;
+    }
+    return out;
+  }
+
+  async function readSpreadsheet(file){
+    if(typeof XLSX==="undefined")throw new Error("Excel 解析元件尚未載入，請重新整理後再試。");
+    const buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:"array",cellDates:true});
+    let best={matrix:[],score:-1,sheet:""};
+    for(const sn of wb.SheetNames){
+      const ws=wb.Sheets[sn],matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:"",raw:false});
+      let sc=-1;for(let i=0;i<Math.min(matrix.length,25);i++)sc=Math.max(sc,scoreHeaderRow(matrix[i]));
+      if(sc>best.score)best={matrix,score:sc,sheet:sn};
+    }
+    return {...matrixToRows(best.matrix),source:file.name,sheet:best.sheet};
+  }
+  async function readTextTable(file){
+    const text=(await file.text()).replace(/^\uFEFF/,"");
+    if(typeof XLSX!=="undefined"){
+      const wb=XLSX.read(text,{type:"string",FS:(/\.tsv$/i.test(file.name)?"\t":undefined)}),ws=wb.Sheets[wb.SheetNames[0]];
+      return {...matrixToRows(XLSX.utils.sheet_to_json(ws,{header:1,defval:"",raw:false})),source:file.name};
+    }
+    const lines=text.split(/\r?\n/).filter(x=>x.trim()),tab=(lines[0]?.match(/\t/g)||[]).length,comma=(lines[0]?.match(/,/g)||[]).length;
+    return {...matrixToRows(lines.map(line=>line.split(tab>comma?"\t":","))),source:file.name};
+  }
+  async function readPdf(file){
+    if(!window.pdfjsLib)throw new Error("PDF 解析元件尚未載入。");
+    const pdf=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise,lines=[];
+    for(let p=1;p<=Math.min(pdf.numPages,80);p++){
+      const page=await pdf.getPage(p),tc=await page.getTextContent(),groups={};
+      for(const it of tc.items){const y=Math.round((it.transform?.[5]||0)/3)*3;(groups[y]??=[]).push(it)}
+      Object.keys(groups).sort((a,b)=>Number(b)-Number(a)).forEach(y=>{
+        const words=groups[y].sort((a,b)=>(a.transform?.[4]||0)-(b.transform?.[4]||0)).map(x=>x.str);
+        if(words.length)lines.push(words);
+      });
+    }
+    if(!lines.length)throw new Error("此 PDF 沒有可讀取文字，可能是掃描影像 PDF。");
+    return {...matrixToRows(lines),source:file.name,pdf:true};
+  }
+  async function parseFile(file){
+    const x=file.name.toLowerCase();
+    if(/\.(xlsx|xls|xlsm|xlsb|ods)$/.test(x))return readSpreadsheet(file);
+    if(/\.(csv|tsv|txt)$/.test(x))return readTextTable(file);
+    if(/\.pdf$/.test(x)||file.type==="application/pdf")return readPdf(file);
+    throw new Error("不支援的檔案格式："+file.name);
+  }
+
+  function checkCoverage(){
+    if(!parsedMap.date)return {ok:false,message:"未辨識到日期欄位"};
+    const present=new Set(parsedRows.map(r=>ymd(r[parsedMap.date])).filter(Boolean));
+    const dates=[...present].sort();if(!dates.length)return {ok:false,message:"日期欄位沒有可辨識日期"};
+    const start=dates[0],end=dates.at(-1),sd=new Date(start+"T00:00:00"),ed=new Date(end+"T00:00:00"),missing=[];
+    for(const d=new Date(sd);d<=ed;d.setDate(d.getDate()+1)){
+      const s=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      if(!present.has(s))missing.push(s);
+    }
+    return {ok:true,start,end,present:present.size,expected:Math.round((ed-sd)/86400000)+1,missing};
+  }
+
+  function renderPreview(){
+    const headers=Object.keys(parsedRows[0]||{});parsedMap=detect(headers);coverage=checkCoverage();
+    const hits=Object.values(parsedMap).filter(Boolean).length;
+    status.className="import-status "+(parsedMap.sales?"ok":"error");
+    status.querySelector("strong").textContent=parsedMap.sales?"資料讀取完成":"已讀取，但找不到營業額欄位";
+    status.querySelector("span").textContent=`${parsedFiles.length} 個檔案｜${parsedRows.length.toLocaleString()} 筆｜辨識 ${hits} 個欄位`;
+    document.getElementById("smartImportCount").textContent=`${parsedRows.length.toLocaleString()} 筆｜${headers.length} 欄`;
+    document.getElementById("smartFieldMap").innerHTML=Object.entries(parsedMap).map(([k,v])=>`<span class="field-chip ${v?"hit":""}">${pretty[k]}：${v?esc(v):"未辨識"}</span>`).join("");
+    document.getElementById("smartFileSummary").innerHTML=parsedFiles.length>1?`已合併 ${parsedFiles.length} 個檔案：${parsedFiles.map(esc).join("、")}`:`來源：${esc(parsedFiles[0]||"—")}`;
+
+    const health=document.getElementById("smartImportHealth"),summary=document.getElementById("detectSummary");
+    if(coverage.ok){
+      health.textContent=coverage.missing.length?`缺 ${coverage.missing.length} 天`:"日期完整";
+      health.className="import-health "+(coverage.missing.length?"warn":"ok");
+      summary.innerHTML=`<div><span>分析期間</span><strong>${coverage.start}<br>${coverage.end}</strong></div>
+        <div><span>實際天數</span><strong>${coverage.present} 天</strong></div>
+        <div><span>區間天數</span><strong>${coverage.expected} 天</strong></div>
+        <div><span>缺少日期</span><strong>${coverage.missing.length} 天</strong></div>`;
+    }else{
+      health.textContent="日期需確認";health.className="import-health warn";
+      summary.innerHTML=`<div><span>日期檢查</span><strong>無法確認</strong></div><div><span>原因</span><strong>${esc(coverage.message)}</strong></div>`;
+    }
+
+    const shown=headers.slice(0,9),sample=parsedRows.slice(0,7);
+    document.getElementById("smartPreviewTable").innerHTML="<thead><tr>"+shown.map(h=>`<th>${esc(h)}</th>`).join("")+"</tr></thead>"+
+      "<tbody>"+sample.map(r=>"<tr>"+shown.map(h=>`<td>${esc(r[h])}</td>`).join("")+"</tr>").join("")+"</tbody>";
+    result.hidden=false;
+  }
+
+  async function handleFiles(files){
+    parsedRows=[];parsedFiles=[];parsedMap={};coverage=null;result.hidden=true;
+    status.className="import-status";status.querySelector("strong").textContent="正在讀取報表…";
+    status.querySelector("span").textContent=`共 ${files.length} 個檔案，正在自動尋找標題列與欄位。`;
+    try{
+      for(const file of files){
+        const data=await parseFile(file);
+        if(!data.rows?.length)continue;
+        const fm=detect(data.headers||Object.keys(data.rows[0]||{}));
+        const normalized=data.rows.map(r=>{
+          const o={};
+          for(const [key,src] of Object.entries(fm))if(src)o[pretty[key]]=r[src]??"";
+          o.__來源檔案=file.name;return o;
+        });
+        parsedRows.push(...normalized);parsedFiles.push(file.name);
+      }
+      if(!parsedRows.length)throw new Error("沒有找到可分析的資料列。");
+      renderPreview();
+    }catch(err){
+      status.className="import-status error";status.querySelector("strong").textContent="資料讀取失敗";
+      status.querySelector("span").textContent=err.message||"請確認報表內容。";
+    }
+  }
+
+  function canonicalRows(){
+    if(!parsedMap.sales)return [];
+    return parsedRows.map(r=>({
+      date:parsedMap.date?ymd(r[parsedMap.date]):null,
+      item:parsedMap.item?String(r[parsedMap.item]??"").trim():"未分類",
+      sales:n(r[parsedMap.sales]),
+      waste:parsedMap.waste?n(r[parsedMap.waste]):0,
+      clearance:parsedMap.clearance?n(r[parsedMap.clearance]):0,
+      qty:parsedMap.qty?n(r[parsedMap.qty]):null,
+      category:parsedMap.category?String(r[parsedMap.category]??""):"",
+      store:parsedMap.store?String(r[parsedMap.store]??""):"",
+      sku:parsedMap.sku?String(r[parsedMap.sku]??""):"",
+      source:r.__來源檔案||""
+    })).filter(r=>r.date&&r.sales>=0);
+  }
+
+  document.getElementById("openImport").addEventListener("click",()=>{modal.hidden=false;document.body.style.overflow="hidden"});
+  document.querySelectorAll("[data-close-import]").forEach(b=>b.addEventListener("click",()=>{modal.hidden=true;document.body.style.overflow=""}));
+  input.addEventListener("change",e=>{const files=[...(e.target.files||[])];if(files.length)handleFiles(files)});
+  document.getElementById("confirmSmartImport").addEventListener("click",()=>{
+    if(!parsedRows.length)return;
+    if(!parsedMap.sales){
+      status.className="import-status error";status.querySelector("strong").textContent="無法開始分析";
+      status.querySelector("span").textContent="至少需要辨識到「營業額 / 銷售額」欄位。";return;
+    }
+    if(!parsedMap.date){
+      status.className="import-status error";status.querySelector("strong").textContent="無法開始時間分析";
+      status.querySelector("span").textContent="目前決策版需要日期欄位，系統不會自行捏造日期。";return;
+    }
+    const rows=canonicalRows();
+    if(!rows.length){
+      status.className="import-status error";status.querySelector("strong").textContent="沒有可分析的有效資料";
+      status.querySelector("span").textContent="請確認日期與營業額欄位內容。";return;
+    }
+    window.__opsImportedRows=parsedRows;
+    window.__opsFieldMapping=parsedMap;
+    window.__opsCoverage=coverage;
+    state={rows,target:null,source:`${parsedFiles.length} 個檔案｜${rows.length.toLocaleString()} 筆`};
+    render();
+    modal.hidden=true;document.body.style.overflow="";
+    toast("資料已確認並載入");
+    window.scrollTo({top:0,behavior:"smooth"});
+  });
+})();
+</script>
+
 </body>
 </html>
