@@ -384,7 +384,7 @@ html.has-hash .page.active:not(:target){display:none!important}
         <h3>拖曳檔案到這裡</h3>
         <p>XLSX / XLS / XLSM / XLSB / ODS / CSV / TSV / TXT / PDF，可一次選多個檔案。</p>
         <input type="file" id="fileInput" multiple accept=".xlsx,.xls,.xlsm,.xlsb,.ods,.csv,.tsv,.txt,.pdf">
-        <div style="margin-top:12px"><button class="primary-btn" id="pickFiles">選擇檔案</button></div>
+        <div style="margin-top:12px"><label class="primary-btn" id="pickFiles" for="fileInput" role="button" tabindex="0">選擇檔案</label></div>
       </div>
       <div class="file-list" id="fileList"></div>
       <div class="mapping" id="mappingBox" style="display:none"><h3>自動辨識欄位</h3><div class="map-grid" id="mappingGrid"></div></div>
@@ -527,7 +527,7 @@ function normalize(raw,map){
  })).filter(r=>r.date||r.item||r.sku||r.sales||r.waste||r.clearance||r.qty)
 }
 function parseDelimited(text,name){
- const sep=name.toLowerCase().endsWith('.tsv')?'\\t':(text.includes('\\t')?'\\t':',');
+ const sep=name.toLowerCase().endsWith('.tsv')?'\t':(text.includes('\t')?'\t':',');
  const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());
  const cells=lines.map(l=>{let a=[],cur='',q=false;for(let i=0;i<l.length;i++){const c=l[i];if(c==='"'){if(q&&l[i+1]==='"'){cur+='"';i++}else q=!q}else if(c===sep&&!q){a.push(cur.trim());cur=''}else cur+=c}a.push(cur.trim());return a});
  if(!cells.length)return [];
@@ -555,7 +555,7 @@ async function parseFile(file){
 }
 function showDrawer(){ $('#importDrawer').classList.add('open') }
 function hideDrawer(){ $('#importDrawer').classList.remove('open') }
-$('#openImport').onclick=showDrawer; $$('[data-close]').forEach(x=>x.onclick=hideDrawer); $('#pickFiles').onclick=()=>$('#fileInput').click();
+$('#openImport').onclick=showDrawer; $$('[data-close]').forEach(x=>x.onclick=hideDrawer);
 $('#dropzone').ondragover=e=>{e.preventDefault();e.currentTarget.classList.add('drag')};$('#dropzone').ondragleave=e=>e.currentTarget.classList.remove('drag');$('#dropzone').ondrop=e=>{e.preventDefault();e.currentTarget.classList.remove('drag');handleFiles([...e.dataTransfer.files])};
 $('#fileInput').onchange=e=>handleFiles([...e.target.files]);
 async function handleFiles(files){
@@ -631,16 +631,7 @@ function renderAnomalies(stats,a){
  const total=a.waste+a.clearance;if(!total){$('#anomalyList').innerHTML='<div class="empty">目前沒有可判讀的損耗資料</div>';return}
  const arr=stats.filter(x=>x.loss>0).slice(0,5);$('#anomalyList').innerHTML=arr.map((x,i)=>{const share=x.loss/total;return `<div class="anomaly ${share>=.25?'high':''}"><div class="anomaly-dot"></div><div><b>${esc(x.name)}</b><p>規則：依本期損耗金額排序；目前占總損耗 ${(share*100).toFixed(1)}%。這不是根因判定。</p></div><div class="money">${money(x.loss)}</div></div>`}).join('');
 }
-$('#addPlan').onclick=()=>{
- const name=$('#planName').value.trim(),status=$('#planStatus').value,sav=$('#planSaving').value.trim(),evidence=$('#planEvidence').value.trim(),action=$('#planAction').value.trim();
- if(!name){toast('請輸入計畫名稱');return}
- const saving=sav===''?null:Number(sav.replace(/,/g,''));if(sav!==''&&!Number.isFinite(saving)){toast('節省金額格式不正確');return}
- const p={id:Date.now(),name,status,saving,evidence,action,created:new Date().toISOString()};const list=getPlans();list.unshift(p);localStorage.setItem('opsImprovementPlansV2',JSON.stringify(list));['planName','planSaving','planEvidence','planAction'].forEach(id=>$('#'+id).value='');renderPlans();if(confirmed)renderAll();toast('已新增改善計畫')
-}
-function renderPlans(){
- const list=getPlans();$('#planList').innerHTML=list.map(x=>`<div class="plan"><div class="plan-head"><b>${esc(x.name)}</b><button class="icon-btn" style="width:30px;height:30px" onclick="deletePlan(${x.id})"><svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3M8 10v8M12 10v8M16 10v8M7 7l1 14h8l1-14"/></svg></button></div><p>${esc(x.action||'未填寫行動內容')}</p><div class="plan-meta"><span class="chip ${x.status==='成功'?'success':''}">${esc(x.status)}</span><span class="chip">已驗證節省：${x.saving==null?'未填寫':money(x.saving)}</span><span class="chip">依據：${esc(x.evidence||'未填寫')}</span></div></div>`).join('')||'<div class="empty">尚未建立改善計畫</div>';
-}
-window.deletePlan=id=>{const list=getPlans().filter(x=>x.id!==id);localStorage.setItem('opsImprovementPlansV2',JSON.stringify(list));renderPlans();if(confirmed)renderAll()}
+function renderPlans(){}
 function renderReport(){
  if(!confirmed)return;const a=aggregate(rows),loss=a.waste+a.clearance, gs=groupBy(rows,r=>r.item||r.sku||'未命名品項'),st=[...gs].map(([name,rr])=>({name,...aggregate(rr)})).map(x=>({...x,loss:x.waste+x.clearance})).sort((a,b)=>b.loss-a.loss),top=st[0],plans=getPlans(),success=plans.filter(x=>x.status==='成功');
  const parts=[
@@ -653,7 +644,6 @@ function renderReport(){
 }
 $('#copyReport').onclick=async()=>{const txt=$('#reportCard').innerText;try{await navigator.clipboard.writeText(txt);toast('已複製報告')}catch{toast('無法存取剪貼簿')}}
 
-});
 $('#openInfo').onclick=()=>toast(confirmed?`目前已確認 ${rows.length.toLocaleString()} 筆資料`:'尚未確認任何資料');
 renderPlans();
 </script>
@@ -896,6 +886,21 @@ Object.defineProperty(window,'rows',{get:()=>rows});
 
   window.addEventListener('hashchange',fromHash);
   fromHash();
+})();
+</script>
+
+
+<script id="upload-accessibility-v7">
+(function(){
+  const pick=document.getElementById('pickFiles');
+  if(pick){
+    pick.addEventListener('keydown',function(e){
+      if(e.key==='Enter'||e.key===' '){
+        e.preventDefault();
+        document.getElementById('fileInput')?.click();
+      }
+    });
+  }
 })();
 </script>
 
