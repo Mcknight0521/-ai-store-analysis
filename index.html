@@ -3059,7 +3059,10 @@ details summary{font-size:15px!important;line-height:1.45!important}
 }
 </style>
 
-</head><body><div class="w"><section class="report-cover">
+<style id="decision-engine-v5">
+.ai-policy-box span{font-size:12px!important}.ai-policy-box p{font-size:14px!important;line-height:1.7!important}.ai-policy-sub,.ai-policy-status{font-size:12px!important;line-height:1.55!important}.decision-action,.decision-reason{font-size:14px!important;line-height:1.75!important}.decision-evidence span{font-size:11px!important}.decision-evidence b{font-size:14px!important}
+@media(max-width:760px){.ai-policy-title{font-size:18px!important}.ai-policy-box span{font-size:14px!important}.ai-policy-box p{font-size:16px!important;line-height:1.75!important}.ai-policy-sub,.ai-policy-status{font-size:14px!important}.decision-title{font-size:18px!important}.decision-reason,.decision-action{font-size:16px!important}.decision-evidence span{font-size:13px!important}.decision-evidence b{font-size:16px!important}.policy-save-btn{font-size:15px!important;padding:11px 14px!important}}
+</style>\n</head><body><div class="w"><section class="report-cover">
 <div class="report-kicker">AI 門市營運助手</div>
 <h1>門市營運月報</h1>
 <div class="report-line"></div>
@@ -3331,12 +3334,12 @@ details summary{font-size:15px!important;line-height:1.45!important}
 <div id="anomalyTrendList"><div class="real-empty">匯入資料並開始分析後，這裡會顯示異常趨勢。</div></div>
 </section>
 </section><section class="dashboard-page page-ai analysis-gated" data-page="ai"><div class="page-heading"><div><h1>營運政策</h1><p>只留下需要處理的異常與行動</p></div></div><div class="card" id="aiOpsDiagnosisPanel">
-<h2>AI 營運診斷</h2>
-<div class="muted">只針對重複異常提出可驗證政策；資料不足時不強行判定原因。</div>
+<h2>決策建議</h2>
+<div class="muted">只根據已載入資料提出可驗證行動；資料不足就明確說不足，不猜原因。</div>
 <div class="ai-policy-stack" id="aiPolicyStack"><div class="ai-policy-empty">匯入資料後產生診斷。</div></div>
 </div><div class="card" id="policyTrackerPanel">
-<h2>AI 政策追蹤</h2>
-<div class="muted">本機保存政策；下次匯入新一期資料時，自動比較是否有效。</div>
+<h2>改善追蹤</h2>
+<div class="muted">採用建議後保存基準；下次匯入新一期資料，自動比較改善前後。</div>
 <div id="policyTracker" class="policy-tracker"><div class="ai-policy-empty">尚未建立政策紀錄。</div></div>
 </div><div class="card section-weekly view-ai dashboard-view-section" id="real-weekly"><h2>每週營運異常摘要</h2><div class="muted">彙整每週銷售與損耗變化，優先指出需要調整的品項。</div><div class="week"><div class="weekhead"><b>第 1 週｜08/01–08/07</b><span class="muted">銷售量 41,596 件｜<span class="inline-waste-metric"><span class="loss-label-waste">報廢</span><span class="loss-number"> 2.7%</span></span>｜<span class="inline-clear-metric"><span class="loss-label-clear">出清</span><span class="loss-number"> 8.7%</span></span></span></div><div class="ai"><h3>🤖 本週重點</h3><div class="focus">本週最高報廢品項：沙拉（5.7%）；本週最高出清品項：壽司（13.6%）</div><ul><li>優先檢查 沙拉 的分時備貨與最後一批生產時間，降低尾段剩餘。</li><li>檢查 壽司 是否過早進入折價，避免把備貨過量變成高出清。</li></ul></div></div><div class="week"><div class="weekhead"><b>第 2 週｜08/08–08/14</b><span class="muted">銷售量 41,385 件｜<span class="inline-waste-metric"><span class="loss-label-waste">報廢</span><span class="loss-number"> 2.9%</span></span>｜<span class="inline-clear-metric"><span class="loss-label-clear">出清</span><span class="loss-number"> 9.3%</span></span></span></div><div class="ai"><h3>🤖 本週重點</h3><div class="focus down" data-trend="down">整體銷售量較前一週 下降 0.5%；本週最高報廢品項：沙拉（6.3%）；本週最高出清品項：壽司（14.9%）</div><ul><li>甜點杯 銷售量成長 11.0%，建議下週小幅增加備貨 5–10%，並觀察報廢是否同步上升。</li><li>滷味 銷售量下降 10.2%，建議先下修備貨，不要只靠出清消化。</li><li>優先檢查 沙拉 的分時備貨與最後一批生產時間，降低尾段剩餘。</li></ul></div></div><div class="week"><div class="weekhead"><b>第 3 週｜08/15–08/21</b><span class="muted">銷售量 42,434 件｜<span class="inline-waste-metric"><span class="loss-label-waste">報廢</span><span class="loss-number"> 3.0%</span></span>｜<span class="inline-clear-metric"><span class="loss-label-clear">出清</span><span class="loss-number"> 9.7%</span></span></span></div><div class="ai"><h3>🤖 本週重點</h3><div class="focus up" data-trend="up">整體銷售量較前一週 上升 2.5%；本週最高報廢品項：沙拉（6.4%）；本週最高出清品項：壽司（15.3%）</div><ul><li>燒肉便當 銷售量成長 5.6%，建議下週小幅增加備貨 5–10%，並觀察報廢是否同步上升。</li><li>優先檢查 沙拉 的分時備貨與最後一批生產時間，降低尾段剩餘。</li><li>檢查 壽司 是否過早進入折價，避免把備貨過量變成高出清。</li></ul></div></div><div class="week"><div class="weekhead"><b>第 4 週｜08/22–08/28</b><span class="muted">銷售量 41,778 件｜<span class="inline-waste-metric"><span class="loss-label-waste">報廢</span><span class="loss-number"> 2.9%</span></span>｜<span class="inline-clear-metric"><span class="loss-label-clear">出清</span><span class="loss-number"> 9.7%</span></span></span></div><div class="ai"><h3>🤖 本週重點</h3><div class="focus down" data-trend="down">整體銷售量較前一週 下降 1.5%；本週最高報廢品項：水果盒（6.6%）；本週最高出清品項：壽司（14.5%）</div><ul><li>烤雞 銷售量成長 13.1%，建議下週小幅增加備貨 5–10%，並觀察報廢是否同步上升。</li><li>水果盒 銷售量下降 10.6%，建議先下修備貨，不要只靠出清消化。</li><li>優先檢查 水果盒 的分時備貨與最後一批生產時間，降低尾段剩餘。</li></ul></div></div><div class="week"><div class="weekhead"><b>第 5 週｜08/29–08/30</b><span class="muted">銷售量 12,565 件｜<span class="inline-waste-metric"><span class="loss-label-waste">報廢</span><span class="loss-number"> 2.4%</span></span>｜<span class="inline-clear-metric"><span class="loss-label-clear">出清</span><span class="loss-number"> 8.8%</span></span></span></div><div class="ai"><h3>🤖 本週重點</h3><div class="focus down" data-trend="down">整體銷售量較前一週 下降 69.9%；本週最高報廢品項：沙拉（4.6%）；本週最高出清品項：壽司（14.9%）</div><ul><li>滷味 銷售量下降 71.6%，建議先下修備貨，不要只靠出清消化。</li><li>優先檢查 沙拉 的分時備貨與最後一批生產時間，降低尾段剩餘。</li><li>檢查 壽司 是否過早進入折價，避免把備貨過量變成高出清。</li></ul></div></div></div><section class="card view-ai dashboard-view-section" id="monthly-ai-priority">
 <div class="monthly-priority-header">
@@ -5014,113 +5017,56 @@ handleFiles(files);
   }
 
   function renderGrowthOpportunity(a){
-    const host=$("#growthOpportunity"); if(!host)return;
-    const wt=num($("#wasteThreshold")?.value||3), ct=num($("#clearThreshold")?.value||10);
-    const dq=window.__opsDataQualityScore??100;
-    const decisions=[];
-
-    Object.values(a.byItem||{}).forEach(x=>{
-      const obs=a.allDates.map(d=>{
-        const day=a.byDate[d]; if(!day?.rows?.length)return null;
-        const rs=day.rows.filter(r=>r.item===x.item); if(!rs.length)return null;
-        const sales=sum(rs,"sales"), waste=sum(rs,"waste"), clearance=sum(rs,"clearance"), qty=sum(rs,"qty");
-        return {d,sales,waste,clearance,qty,weekend:isWeekend(d),
-          wr:sales?waste/sales*100:0, cr:sales?clearance/sales*100:0};
-      }).filter(Boolean);
-      if(obs.length<4)return;
-
-      const avg=v=>v.length?v.reduce((s,n)=>s+n,0)/v.length:0;
-      const wd=obs.filter(o=>!o.weekend), we=obs.filter(o=>o.weekend);
-      const wdSales=avg(wd.map(o=>o.sales)), weSales=avg(we.map(o=>o.sales));
-      const lift=wdSales?(weSales-wdSales)/wdSales*100:0;
-      const sales=obs.reduce((s,o)=>s+o.sales,0);
-      const waste=obs.reduce((s,o)=>s+o.waste,0);
-      const clearance=obs.reduce((s,o)=>s+o.clearance,0);
-      const loss=waste+clearance, lossRate=sales?loss/sales*100:0;
-      const wasteBad=obs.filter(o=>o.wr>=wt).length;
-      const clearBad=obs.filter(o=>o.cr>=ct).length;
-      const repeat=Math.max(wasteBad,clearBad);
-
-      // Conservative improvement amount: only 25% of observed avoidable loss, never claimed as guaranteed savings.
-      const improvable=Math.round(loss*.25);
-      let d=null;
-
-      if(repeat>=3 && loss>0){
-        const wasteDom=waste>=clearance;
-        d={
-          type:"止損", cls:"stop", score:loss*(1+repeat*.12),
-          item:x.item, impact:improvable,
-          reason:`${wasteDom?"報廢":"出清"}異常重複 ${repeat} 次，累計損失 ${money(loss)}。`,
-          evidence:[["累計損失",money(loss)],["損耗率",lossRate.toFixed(1)+"%"],["重複異常",repeat+" 次"]],
-          action:wasteDom
-            ?"先處理末段備貨與追加節奏；不要全面砍量。下一個相同週期做小幅調整後再驗證。"
-            :"先調整末段追加與出清時點；總備貨量暫不直接下修。",
-          verify:wasteDom?"報廢率下降且銷量跌幅 <3%":"出清率下降且營業額沒有明顯惡化"
-        };
-      }else if(we.length>=3 && wd.length>=5 && lift>=15 && lossRate<6 && dq>=80){
-        d={
-          type:"增量測試", cls:"grow", score:(weSales-wdSales)*we.length*.55,
-          item:x.item, impact:Math.round(Math.max(0,(weSales-wdSales)*we.length*.05)),
-          reason:`至少 ${we.length} 個假日樣本，假日平均營業額較平日高 ${lift.toFixed(1)}%，且損耗率 ${lossRate.toFixed(1)}%。`,
-          evidence:[["假日增幅","+"+lift.toFixed(1)+"%"],["假日樣本",we.length+" 天"],["損耗率",lossRate.toFixed(1)+"%"]],
-          action:"只做一次 3% 小規模增量測試，優先增加高峰前批次；末段尾量不增加。",
-          verify:"營業額成長且損耗率惡化不超過 1 個百分點"
-        };
-      }else if((lift>=10 || repeat>=2) && (we.length<3 || dq<80)){
-        d={
-          type:"先觀察", cls:"watch", score:Math.max(loss,Math.abs(lift)*100),
-          item:x.item, impact:0,
-          reason:dq<80?`資料品質 ${dq}/100，不足以支持高信心調整。`:`目前只有 ${we.length} 個假日樣本，趨勢尚不足以當成固定需求。`,
-          evidence:[["假日差異",(lift>=0?"+":"")+lift.toFixed(1)+"%"],["資料品質",dq+"/100"],["假日樣本",we.length+" 天"]],
-          action:"暫不調整固定備貨政策，先累積下一個完整週期。",
-          verify:"樣本增加後仍維持同方向，才升級為可執行政策"
-        };
-      }else if(lossRate<4 && Math.abs(lift)<10){
-        d={
-          type:"維持", cls:"hold", score:50,
-          item:x.item, impact:0,
-          reason:`營運波動有限，損耗率 ${lossRate.toFixed(1)}%，目前沒有足夠理由改變政策。`,
-          evidence:[["損耗率",lossRate.toFixed(1)+"%"],["假日差異",(lift>=0?"+":"")+lift.toFixed(1)+"%"],["有效天數",obs.length+" 天"]],
-          action:"維持現行策略，不為了產生 AI 建議而強行調整。",
-          verify:"若後續連續出現異常，再重新評估"
-        };
-      }
-      if(d)decisions.push(d);
-    });
-
-    // Business impact first, then avoid filling all three with the same decision type when alternatives exist.
-    decisions.sort((p,q)=>q.score-p.score);
-    const picked=[];
-    for(const d of decisions){
-      if(picked.length>=3)break;
-      if(!picked.some(x=>x.type===d.type) || picked.length>=2) picked.push(d);
-    }
-    for(const d of decisions){
-      if(picked.length>=3)break;
-      if(!picked.includes(d))picked.push(d);
-    }
-
-    const actionable=picked.filter(d=>d.type==="止損"||d.type==="增量測試");
-    const impact=actionable.reduce((s,d)=>s+d.impact,0);
-    const count=$("#decisionCount"), impactEl=$("#decisionImpact");
-    if(count)count.textContent=actionable.length+" 件";
-    if(impactEl)impactEl.textContent=impact?money(impact):"—";
-
-    host.innerHTML=picked.length?picked.map((d,i)=>`<article class="decision-card">
-      <div class="decision-head"><div class="decision-rank">0${i+1}</div><div><div class="decision-title">${esc(d.item)}</div><div class="decision-reason">${esc(d.reason)}</div></div><span class="decision-type ${d.cls}">${d.type}</span></div>
-      <div class="decision-evidence">${d.evidence.map(e=>`<div><span>${e[0]}</span><b>${e[1]}</b></div>`).join("")}</div>
-      <div class="decision-action"><strong>建議：</strong>${esc(d.action)}<br><strong>驗證：</strong>${esc(d.verify)}</div>
-    </article>`).join(""):`<div class="decision-abstain">本期沒有足夠證據需要調整政策，建議維持現況並持續觀察。</div>`;
-
-    window.__opsDecisionCenter=picked;
+ const host=$("#growthOpportunity");if(!host)return;
+ const wt=num($("#wasteThreshold")?.value||3),ct=num($("#clearThreshold")?.value||10),dq=window.__opsDataQualityScore??100,ds=[];
+ const avg=v=>v.length?v.reduce((s,n)=>s+n,0)/v.length:0;
+ Object.values(a.byItem||{}).forEach(x=>{
+  const obs=a.allDates.map(d=>{const day=a.byDate[d];if(!day?.rows?.length)return null;const rs=day.rows.filter(r=>r.item===x.item);if(!rs.length)return null;
+   const sales=sum(rs,"sales"),waste=sum(rs,"waste"),clearance=sum(rs,"clearance");
+   return {d,sales,waste,clearance,weekend:isWeekend(d),wr:sales?waste/sales*100:0,cr:sales?clearance/sales*100:0};
+  }).filter(Boolean); if(obs.length<4)return;
+  const sales=obs.reduce((s,o)=>s+o.sales,0),waste=obs.reduce((s,o)=>s+o.waste,0),clearance=obs.reduce((s,o)=>s+o.clearance,0),loss=waste+clearance;
+  const lossRate=sales?loss/sales*100:0,wrBad=obs.filter(o=>o.wr>=wt),crBad=obs.filter(o=>o.cr>=ct),repeat=Math.max(wrBad.length,crBad.length);
+  const wd=obs.filter(o=>!o.weekend),we=obs.filter(o=>o.weekend),wdSales=avg(wd.map(o=>o.sales)),weSales=avg(we.map(o=>o.sales)),lift=wdSales?(weSales-wdSales)/wdSales*100:0;
+  const dominant=waste>=clearance?"報廢":"出清";
+  let d=null;
+  if(repeat>=2&&loss>0){
+   d={type:"止損測試",cls:"stop",score:loss*(1+repeat*.15),item:x.item,impact:Math.round(loss*.15),severity:repeat>=4||lossRate>=12?"高":"中",
+    reason:`${dominant}超標 ${repeat} 次；本期總損耗 ${money(loss)}，損耗率 ${lossRate.toFixed(1)}%。`,
+    evidence:[["本期損耗",money(loss)],["損耗率",lossRate.toFixed(1)+"%"],["超標次數",repeat+" 次"],["有效天數",obs.length+" 天"]],
+    judgement:`資料只能確認「${dominant}反覆偏高」，不能證明是人員、排班、設備或備貨量造成。`,
+    action:"下一個相同營運週期只改一個變因：末段追加量 -5%，其他條件維持。",
+    verify:`連續測試 2 個相同週期；${dominant}率下降至少 1 個百分點，且營業額跌幅不超過 3%。`,
+    stop:"若營業額跌幅 >3% 或缺貨明顯增加，立即恢復原設定。",
+    need:"若要定位真正原因，需增加時段銷量、每批生產/補貨時間與數量。"};
+  }else if(we.length>=3&&wd.length>=5&&lift>=15&&lossRate<6&&dq>=80){
+   d={type:"增量測試",cls:"grow",score:(weSales-wdSales)*we.length,item:x.item,impact:0,severity:"觀察",
+    reason:`假日平均營業額較平日高 ${lift.toFixed(1)}%，已有 ${we.length} 個假日樣本；損耗率 ${lossRate.toFixed(1)}%。`,
+    evidence:[["假日差異","+"+lift.toFixed(1)+"%"],["假日樣本",we.length+" 天"],["損耗率",lossRate.toFixed(1)+"%"],["資料品質",dq+"/100"]],
+    judgement:"資料支持假日需求較高，但不能直接推論最適增量。",
+    action:"下一個假日只在高峰前批次增加 3%，末段尾量不增加。",
+    verify:"營業額提升且損耗率惡化不超過 1 個百分點才採用。",
+    stop:"若新增量轉成報廢/出清，下一次取消增量。",
+    need:"若要精準決定增量時段，需加入每小時銷量。"};
+  }else if(repeat>=2||Math.abs(lift)>=10){
+   d={type:"先補資料",cls:"watch",score:Math.max(loss,Math.abs(lift)*100),item:x.item,impact:0,severity:"資料不足",
+    reason:repeat>=2?`已有 ${repeat} 次異常，但目前資料不足以定位發生時段。`:`平假日差異 ${lift.toFixed(1)}%，但樣本不足。`,
+    evidence:[["有效天數",obs.length+" 天"],["資料品質",dq+"/100"],["假日樣本",we.length+" 天"],["損耗率",lossRate.toFixed(1)+"%"]],
+    judgement:"現在直接改備貨量屬於猜測，不建議執行。",action:"維持現況，先補一個完整週期資料。",verify:"資料補齊後再判斷。",stop:"—",need:"優先補時段銷量與批次資料。"};
   }
+  if(d)ds.push(d);
+ });
+ ds.sort((p,q)=>q.score-p.score);const picked=ds.slice(0,3),actionable=picked.filter(d=>d.type!=="先補資料");
+ if($("#decisionCount"))$("#decisionCount").textContent=actionable.length+" 件";
+ if($("#decisionImpact")){const v=actionable.reduce((s,d)=>s+(d.impact||0),0);$("#decisionImpact").textContent=v?money(v):"—";}
+ host.innerHTML=picked.length?picked.map((d,i)=>`<article class="decision-card"><div class="decision-head"><div class="decision-rank">0${i+1}</div><div><div class="decision-title">${esc(d.item)}</div><div class="decision-reason">${esc(d.reason)}</div></div><span class="decision-type ${d.cls}">${esc(d.type)}</span></div><div class="decision-evidence">${d.evidence.map(e=>`<div><span>${esc(e[0])}</span><b>${esc(e[1])}</b></div>`).join("")}</div><div class="decision-action"><strong>判斷｜</strong>${esc(d.judgement)}<br><strong>行動｜</strong>${esc(d.action)}<br><strong>成功標準｜</strong>${esc(d.verify)}<br><strong>停止條件｜</strong>${esc(d.stop)}<br><strong>還缺資料｜</strong>${esc(d.need)}</div></article>`).join(""):`<div class="decision-abstain">本期沒有足夠證據支持政策調整。系統不會為了產生建議而硬猜原因。</div>`;
+ window.__opsDecisionCenter=picked;
+}
 
   function renderManagementFocus(a){
-    const host=$("#managementFocus"); if(!host)return;
-    const ds=window.__opsDecisionCenter||[];
-    const icon={止損:"🔴",增量測試:"🟢",先觀察:"🟠",維持:"⚪"};
-    host.innerHTML=ds.slice(0,3).map(d=>`<div class="focus-item"><span class="focus-icon">${icon[d.type]||"•"}</span><div><b>${esc(d.item)}</b><p>${esc(d.reason)} ${esc(d.action)}</p></div><span class="focus-tag">${d.type}</span></div>`).join("")||`<div class="ai-policy-empty">目前沒有足夠資料形成管理重點。</div>`;
-  }
+ const host=$("#managementFocus");if(!host)return;const ds=window.__opsDecisionCenter||[];
+ host.innerHTML=ds.slice(0,3).map((d,i)=>`<div class="focus-item"><span class="focus-icon">${String(i+1).padStart(2,"0")}</span><div><b>${esc(d.item)}｜${esc(d.type)}</b><p>${esc(d.action)} ${d.type!=="先補資料"?"成功標準："+esc(d.verify):""}</p></div><span class="focus-tag">${esc(d.severity||"觀察")}</span></div>`).join("")||'<div class="ai-policy-empty">本期沒有足夠證據需要調整政策。</div>';
+}
 
   function savePolicySnapshot(item,metric,rate,policy,rangeEnd){
     const hist=getPolicyHistory();
@@ -5152,92 +5098,11 @@ handleFiles(files);
   }
 
   function renderAIDiagnosis(a){
-    const host=$("#aiPolicyStack"); if(!host)return;
-    const wt=num($("#wasteThreshold")?.value||3), ct=num($("#clearThreshold")?.value||10);
-    const candidates=[];
-    Object.values(a.byItem||{}).forEach(x=>{
-      const obs=a.allDates.map(d=>{
-        const day=a.byDate[d];
-        if(!day?.rows?.length)return null;
-        const rs=day.rows.filter(r=>r.item===x.item);
-        if(!rs.length)return null;
-        const sales=sum(rs,"sales"),waste=sum(rs,"waste"),clearance=sum(rs,"clearance"),qty=sum(rs,"qty");
-        return {d,sales,waste,clearance,qty,wr:sales?waste/sales*100:0,cr:sales?clearance/sales*100:0,weekend:isWeekend(d)};
-      }).filter(Boolean);
-      if(obs.length<2)return;
-
-      const wr=obs.filter(z=>z.wr>=wt), cr=obs.filter(z=>z.cr>=ct);
-      const wd=obs.filter(z=>!z.weekend), we=obs.filter(z=>z.weekend);
-      const avg=v=>v.length?v.reduce((s,x)=>s+x,0)/v.length:0;
-      const wdSales=avg(wd.map(z=>z.sales)), weSales=avg(we.map(z=>z.sales));
-      const wdWr=avg(wd.map(z=>z.wr)), weWr=avg(we.map(z=>z.wr));
-      const wdCr=avg(wd.map(z=>z.cr)), weCr=avg(we.map(z=>z.cr));
-
-      let pattern=null;
-      if(wr.length>=2 && cr.length>=2) pattern="雙損耗";
-      else if(wr.length>=2 && weWr>wdWr*1.35 && we.length>=2) pattern="假日高報廢";
-      else if(cr.length>=2 && weCr>wdCr*1.35 && we.length>=2) pattern="假日高出清";
-      else if(wr.length>=2) pattern="重複高報廢";
-      else if(cr.length>=2) pattern="重複高出清";
-      else if(weSales>wdSales*1.15 && (x.waste+x.clearance)/(x.sales||1)*100<8) pattern="成長機會";
-      if(!pattern)return;
-
-      candidates.push({x,obs,wr,cr,wdSales,weSales,wdWr,weWr,wdCr,weCr,pattern,impact:(x.waste||0)+(x.clearance||0)});
-    });
-
-    candidates.sort((p,q)=>q.impact-p.impact);
-    const cards=candidates.slice(0,3).map(c=>{
-      const dq=window.__opsDataQualityScore??100;
-      const repeat=Math.max(c.wr.length,c.cr.length);
-      let conf=repeat>=4?"高信心":repeat>=3?"中信心":"低信心", cls=repeat>=4?"high":repeat>=3?"medium":"";
-      if(dq<80 && conf==="高信心"){conf="中信心";cls="medium"}
-      if(dq<60){conf="低信心";cls=""}
-
-      let title="", diag="", policy="", verify="", metric="報廢", rate=0;
-      const rangeEnd=a.maxDate;
-      if(c.pattern==="雙損耗"){
-        title=`${c.x.item}｜報廢與出清同時偏高`; metric="報廢";
-        rate=(c.x.waste+c.x.clearance)/(c.x.sales||1)*100;
-        diag=`同一品項同時出現報廢與出清異常，較不像單一批次偶發。代表目前備貨量與末段銷售消化之間存在落差，但資料不足以直接判定是排班、人員或設備造成。`;
-        policy=`先拆成「首批／追加／末批」三段檢視；優先縮減最後一段供給 5%，並把出清啟動時點提前一個觀察區間。`;
-        verify=`觀察 2 個相同週期；若總損耗率下降、營業額跌幅不超過 3%，再維持。若只下降出清但報廢上升，代表調整方向錯誤。`;
-      }else if(c.pattern==="假日高報廢"){
-        title=`${c.x.item}｜假日需求高但報廢也被放大`; metric="報廢"; rate=c.weWr;
-        diag=`假日報廢率平均高於平日，表示假日備貨放大量可能超過實際需求增幅。這不是單純「賣得多所以報廢多」，因為損耗率本身也同步上升。`;
-        policy=`保留假日增量，但不要全面減量；先把假日最後一批備貨下修 5–8%，首批維持。`;
-        verify=`連續比較 2 個假日週期；若假日營業額維持、報廢率下降至少 1 個百分點，判定政策有效。`;
-      }else if(c.pattern==="假日高出清"){
-        title=`${c.x.item}｜假日出清偏高`; metric="出清"; rate=c.weCr;
-        diag=`假日營業額較高，但出清率也明顯高於平日，代表銷售高峰後仍留下較多尾量，問題更接近「末段節奏」而非整體需求不足。`;
-        policy=`假日總量先不動，改調整追加批次與最後補貨時間；最後補貨量先減少約 5%。`;
-        verify=`若出清率下降、假日營業額與銷量維持，表示問題在末段補貨節奏；若營收明顯下降，再恢復原補貨量。`;
-      }else if(c.pattern==="重複高報廢"){
-        title=`${c.x.item}｜重複高報廢`; metric="報廢"; rate=(c.x.waste/(c.x.sales||1))*100;
-        diag=`報廢超標重複出現，已經不是單日波動。現有資料最能支持的是「供給量高於實際消化量」，但不能直接歸因到特定人員或作業問題。`;
-        policy=`下一個相同營運週期先將末段備貨下修約 5%，首批不動，避免一次砍量造成缺貨。`;
-        verify=`觀察 2 個相同週期；若報廢率下降且銷售量跌幅未超過 3%，才視為有效。`;
-      }else if(c.pattern==="重複高出清"){
-        title=`${c.x.item}｜重複高出清`; metric="出清"; rate=(c.x.clearance/(c.x.sales||1))*100;
-        diag=`出清率重複偏高，表示商品能賣但常需要靠折價完成消化。這通常比「直接減量」更適合先檢查出清時點與末段追加節奏。`;
-        policy=`先調整出清啟動時點與最後補貨時間，不先砍總備貨量；優先降低最後一批追加量。`;
-        verify=`觀察 2 個相同週期；若出清率下降且營業額維持，再考慮固定新節奏。`;
-      }else{
-        title=`${c.x.item}｜假日成長機會`; metric="營業額"; rate=(c.weSales/(c.wdSales||1)-1)*100;
-        diag=`假日平均營業額明顯高於平日，而且整體損耗仍受控，表示目前較像需求機會，而不是庫存問題。`;
-        policy=`下一個假日小幅增加 3–5% 備貨，優先增加高峰前可快速銷售的批次，不調整末段尾量。`;
-        verify=`若假日營業額持續成長且損耗率沒有惡化超過 1 個百分點，再考慮維持增量。`;
-      }
-
-      return `<article class="ai-policy-card"><div class="ai-policy-head"><div><div class="ai-policy-title">${esc(title)}</div><div class="ai-policy-sub">${esc(c.pattern)}｜資料品質 ${dq}/100</div></div><span class="ai-confidence ${cls}">${conf}</span></div><div class="ai-policy-grid"><div class="ai-policy-box wide"><span>AI 診斷</span><p>${diag}</p></div><div class="ai-policy-box"><span>建議政策</span><p>${policy}</p></div><div class="ai-policy-box"><span>驗證條件</span><p>${verify}</p></div></div><div class="ai-policy-status">狀態｜等待下一期資料驗證</div><button class="policy-save-btn" type="button" data-save-policy="${esc(c.x.item)}" data-metric="${metric}" data-rate="${rate.toFixed(4)}" data-policy="${esc(policy)}">儲存這項政策</button></article>`;
-    }).join("");
-
-    host.innerHTML=cards||`<div class="ai-policy-empty">目前沒有足夠證據建立差異化營運政策。AI 先不強行下結論。</div>`;
-    host.querySelectorAll("[data-save-policy]").forEach(btn=>btn.addEventListener("click",()=>{
-      savePolicySnapshot(btn.dataset.savePolicy,btn.dataset.metric,num(btn.dataset.rate),btn.dataset.policy,a.maxDate);
-      btn.textContent="已儲存";btn.disabled=true;
-    }));
-    renderPolicyTracker(a);
-  }
+ const host=$("#aiPolicyStack");if(!host)return;const ds=window.__opsDecisionCenter||[],dq=window.__opsDataQualityScore??100;
+ if(!ds.length){host.innerHTML='<div class="ai-policy-empty">目前沒有足夠證據提出決策建議。系統不猜原因。</div>';renderPolicyTracker(a);return;}
+ host.innerHTML=ds.map((d,i)=>`<article class="ai-policy-card"><div class="ai-policy-head"><div><div class="ai-policy-title">${i+1}. ${esc(d.item)}｜${esc(d.type)}</div><div class="ai-policy-sub">只根據已載入資料｜資料品質 ${dq}/100</div></div><span class="ai-confidence ${d.type==="先補資料"?"":"high"}">${d.type==="先補資料"?"資料不足":"可測試"}</span></div><div class="ai-policy-grid"><div class="ai-policy-box wide"><span>問題</span><p>${esc(d.reason)}</p></div><div class="ai-policy-box wide"><span>資料能證明什麼</span><p>${esc(d.judgement)}</p></div><div class="ai-policy-box"><span>下一步只做一件事</span><p>${esc(d.action)}</p></div><div class="ai-policy-box"><span>成功標準</span><p>${esc(d.verify)}</p></div><div class="ai-policy-box"><span>停止條件</span><p>${esc(d.stop)}</p></div><div class="ai-policy-box"><span>還缺什麼資料</span><p>${esc(d.need)}</p></div></div><div class="ai-policy-status">這不是原因判定，而是可驗證的營運實驗。</div>${d.type!=="先補資料"?`<button class="policy-save-btn" type="button" data-save-policy="${esc(d.item)}" data-metric="損耗" data-rate="0" data-policy="${esc(d.action)}">採用並追蹤</button>`:""}</article>`).join("");
+ host.querySelectorAll("[data-save-policy]").forEach(btn=>btn.addEventListener("click",()=>{savePolicySnapshot(btn.dataset.savePolicy,btn.dataset.metric,num(btn.dataset.rate),btn.dataset.policy,a.maxDate);btn.textContent="已加入追蹤";btn.disabled=true;}));renderPolicyTracker(a);
+}
 
   function renderDirectorReport(a){
     const sales=$("#directorSales"), avgEl=$("#directorDailyAvg"), lossEl=$("#directorLoss"), lossRate=$("#directorLossRate"),
