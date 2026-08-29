@@ -184,6 +184,24 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
 }
 </style>
 
+
+<style id="bottom-nav-hard-fix-v6">
+.bottom-nav{pointer-events:auto!important}
+.bottom-nav .nav-btn{
+  text-decoration:none!important;
+  pointer-events:auto!important;
+  position:relative;
+  z-index:2;
+  -webkit-user-select:none;
+  user-select:none;
+}
+.bottom-nav .nav-btn svg,.bottom-nav .nav-btn span{pointer-events:none!important}
+
+/* Native hash fallback: even if the app JS fails, tapping a nav item still opens its section. */
+.page:target{display:block!important}
+html.has-hash .page.active:not(:target){display:none!important}
+</style>
+
 </head>
 <body>
 <div class="app">
@@ -201,7 +219,7 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
   </div>
 
   <main class="content">
-    <section class="page active" data-page="executive">
+    <section class="page active" id="executive" data-page="executive">
       <div class="page-head">
         <div><div class="eyebrow">EXECUTIVE COCKPIT</div><h1>經營決策</h1><p>現在發生什麼、影響多少、要不要介入。</p></div>
         <div class="status-pill" id="sourceStatus">等待資料</div>
@@ -228,7 +246,7 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
       </div>
     </section>
 
-    <section class="page" data-page="overview">
+    <section class="page" id="overview" data-page="overview">
       <div class="page-head"><div><div class="eyebrow">OPERATIONS OVERVIEW</div><h1>營運總覽</h1><p>把今天最需要注意的營運結果放在第一眼。</p></div><div class="status-pill" id="overviewStatus">等待資料</div></div>
       <div class="overview-grid">
         <section class="panel">
@@ -246,7 +264,7 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
       </div>
     </section>
 
-    <section class="page" data-page="analysis">
+    <section class="page" id="analysis" data-page="analysis">
       <div class="page-head"><div><div class="eyebrow">ANALYSIS</div><h1>分析中心</h1><p>把損耗拆到品項、日期與平假日，直接看結構。</p></div></div>
       <div class="toolbar"><div class="segmented" id="analysisTabs"><button class="active" data-mode="sku">品項</button><button data-mode="day">日期</button></div></div>
       <div class="analysis-layout">
@@ -276,12 +294,12 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
       </section>
     </section>
 
-    <section class="page" data-page="anomaly">
+    <section class="page" id="anomaly" data-page="anomaly">
       <div class="page-head"><div><div class="eyebrow">ANOMALY CENTER</div><h1>異常</h1><p>把真正偏離目前資料結構的項目集中起來。</p></div></div>
       <section class="panel"><div class="panel-head"><div><div class="panel-kicker">WATCHLIST</div><h3>需要檢查的項目</h3><p>異常判斷規則會直接顯示，不使用黑箱原因。</p></div></div><div id="anomalyList" class="anomaly-list"><div class="empty">等待資料</div></div></section>
     </section>
 
-    <section class="page" data-page="improve">
+    <section class="page" id="improve" data-page="improve">
       <div class="page-head">
         <div>
           <div class="eyebrow">IMPROVEMENT LOOP</div>
@@ -340,19 +358,19 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
     </section>
 
 
-    <section class="page" data-page="report">
+    <section class="page" id="report" data-page="report">
       <div class="page-head"><div><div class="eyebrow">MANAGEMENT REPORT</div><h1>報告</h1><p>把本期結果、異常與改善紀錄整理成可直接閱讀的管理摘要。</p></div><button class="ghost-btn" id="copyReport"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg><span>複製</span></button></div>
       <div class="report-card" id="reportCard"><div class="empty">匯入並確認資料後產生報告。</div></div>
     </section>
   </main>
 
-  <nav class="bottom-nav" id="bottomNav">
-    <button class="nav-btn active" data-page="executive"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg><span>經營</span></button>
-    <button class="nav-btn" data-page="overview"><svg viewBox="0 0 24 24"><path d="M4 11.5 12 5l8 6.5"/><path d="M6.5 10.5V20h11V10.5"/></svg><span>總覽</span></button>
-    <button class="nav-btn" data-page="analysis"><svg viewBox="0 0 24 24"><path d="M4 16l5-5 4 4 7-8"/><path d="M16 7h4v4"/></svg><span>分析</span></button>
-    <button class="nav-btn" data-page="anomaly"><svg viewBox="0 0 24 24"><path d="M12 4v9"/><circle cx="12" cy="18" r="1"/></svg><span>異常</span></button>
-    <button class="nav-btn" data-page="improve"><svg viewBox="0 0 24 24"><path d="m5 12 4 4 10-10"/></svg><span>改善</span></button>
-    <button class="nav-btn" data-page="report"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>報告</span></button>
+  <nav class="bottom-nav" id="bottomNav" aria-label="主要導覽">
+    <a class="nav-btn active" href="#executive" data-page="executive"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg><span>經營</span></a>
+    <a class="nav-btn" href="#overview" data-page="overview"><svg viewBox="0 0 24 24"><path d="M4 11.5 12 5l8 6.5"/><path d="M6.5 10.5V20h11V10.5"/></svg><span>總覽</span></a>
+    <a class="nav-btn" href="#analysis" data-page="analysis"><svg viewBox="0 0 24 24"><path d="M4 16l5-5 4 4 7-8"/><path d="M16 7h4v4"/></svg><span>分析</span></a>
+    <a class="nav-btn" href="#anomaly" data-page="anomaly"><svg viewBox="0 0 24 24"><path d="M12 4v9"/><circle cx="12" cy="18" r="1"/></svg><span>異常</span></a>
+    <a class="nav-btn" href="#improve" data-page="improve"><svg viewBox="0 0 24 24"><path d="m5 12 4 4 10-10"/></svg><span>改善</span></a>
+    <a class="nav-btn" href="#report" data-page="report"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>報告</span></a>
   </nav>
 </div>
 
@@ -634,18 +652,7 @@ function renderReport(){
  $('#reportCard').innerHTML=parts.map(([h,p])=>`<div class="report-section"><h4>${h}</h4><p>${esc(p)}</p></div>`).join('');
 }
 $('#copyReport').onclick=async()=>{const txt=$('#reportCard').innerText;try{await navigator.clipboard.writeText(txt);toast('已複製報告')}catch{toast('無法存取剪貼簿')}}
-function switchMainPage(page,button){
-  $$('.nav-btn').forEach(x=>x.classList.toggle('active',x===button));
-  $$('.page').forEach(p=>p.classList.toggle('active',p.dataset.page===page));
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-$$('#bottomNav .nav-btn').forEach(b=>{
-  b.type='button';
-  b.addEventListener('click',()=>switchMainPage(b.dataset.page,b));
-  b.addEventListener('touchend',e=>{
-    e.preventDefault();
-    switchMainPage(b.dataset.page,b);
-  },{passive:false});
+
 });
 $('#openInfo').onclick=()=>toast(confirmed?`目前已確認 ${rows.length.toLocaleString()} 筆資料`:'尚未確認任何資料');
 renderPlans();
@@ -842,7 +849,7 @@ renderPlans();
     };
   }
 
-  document.querySelector('[data-page="analysis"]')?.addEventListener('click',()=>setTimeout(renderSalesTop10,0));
+  
 
   window.renderSalesTop10=renderSalesTop10;
 })();
@@ -852,6 +859,44 @@ renderPlans();
 <script id="state-expose-v3">
 Object.defineProperty(window,'confirmed',{get:()=>confirmed});
 Object.defineProperty(window,'rows',{get:()=>rows});
+</script>
+
+
+<script id="bottom-nav-router-v6">
+(function(){
+  const validPages=new Set(['executive','overview','analysis','anomaly','improve','report']);
+
+  function showPage(page){
+    if(!validPages.has(page)) page='executive';
+    document.querySelectorAll('.page[data-page]').forEach(function(el){
+      el.classList.toggle('active', el.dataset.page===page);
+    });
+    document.querySelectorAll('#bottomNav .nav-btn').forEach(function(el){
+      el.classList.toggle('active', el.dataset.page===page);
+      el.setAttribute('aria-current', el.dataset.page===page ? 'page' : 'false');
+    });
+    document.documentElement.classList.toggle('has-hash', location.hash.length>1);
+    if(page==='analysis' && typeof window.renderSalesTop10==='function'){
+      setTimeout(window.renderSalesTop10,0);
+    }
+  }
+
+  function fromHash(){
+    const page=(location.hash||'#executive').slice(1);
+    showPage(page);
+  }
+
+  document.getElementById('bottomNav')?.addEventListener('click',function(e){
+    const link=e.target.closest('a[data-page]');
+    if(!link) return;
+    const page=link.dataset.page;
+    // Do not prevent default: href hash is the fallback.
+    showPage(page);
+  });
+
+  window.addEventListener('hashchange',fromHash);
+  fromHash();
+})();
 </script>
 
 </body>
