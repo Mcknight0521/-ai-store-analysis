@@ -3062,7 +3062,13 @@ details summary{font-size:15px!important;line-height:1.45!important}
 <style id="decision-engine-v5">
 .ai-policy-box span{font-size:12px!important}.ai-policy-box p{font-size:14px!important;line-height:1.7!important}.ai-policy-sub,.ai-policy-status{font-size:12px!important;line-height:1.55!important}.decision-action,.decision-reason{font-size:14px!important;line-height:1.75!important}.decision-evidence span{font-size:11px!important}.decision-evidence b{font-size:14px!important}
 @media(max-width:760px){.ai-policy-title{font-size:18px!important}.ai-policy-box span{font-size:14px!important}.ai-policy-box p{font-size:16px!important;line-height:1.75!important}.ai-policy-sub,.ai-policy-status{font-size:14px!important}.decision-title{font-size:18px!important}.decision-reason,.decision-action{font-size:16px!important}.decision-evidence span{font-size:13px!important}.decision-evidence b{font-size:16px!important}.policy-save-btn{font-size:15px!important;padding:11px 14px!important}}
-</style>\n</head><body><div class="w"><section class="report-cover">
+</style>\n<style id="money-impact-style-v1">
+.money-center-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:16px}.money-center-head h2{margin:2px 0 5px}.money-center-head p{margin:0;color:#7b8798}.money-eyebrow{font-size:10px;font-weight:900;letter-spacing:.14em;color:#6d5ed3}.money-badge{padding:6px 10px;border-radius:999px;background:#eeeaff;color:#6757c5;font-size:11px;font-weight:900;white-space:nowrap}
+.money-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.money-kpi{padding:16px;border:1px solid #e8ebf2;border-radius:16px}.money-kpi span{display:block;font-size:11px;font-weight:800;color:#697588;margin-bottom:7px}.money-kpi strong{display:block;font-size:24px;color:#182235}.money-kpi small{display:block;margin-top:7px;font-size:11px;color:#8a95a5}.money-kpi.danger{background:#fff7f7}.money-kpi.opportunity{background:#fffaf0}.money-kpi.saved{background:#f2fbf7}.money-kpi.remain{background:#f6f5ff}
+.money-priority{margin-top:14px;border:1px solid #e8ebf2;border-radius:16px;overflow:hidden}.money-priority-title,.money-priority-row{padding:13px 15px;border-bottom:1px solid #edf0f5}.money-priority-title{display:flex;justify-content:space-between}.money-priority-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center}.money-priority-row:last-child{border-bottom:0}.money-item b,.money-item small,.money-range span,.money-range b{display:block}.money-item small,.money-range span,.money-priority-title span{color:#8a95a5;font-size:11px}.money-range{text-align:right}.money-disclaimer{margin-top:10px;font-size:11px;line-height:1.55;color:#8a95a5}
+@media(max-width:760px){.money-center-head h2{font-size:22px!important}.money-center-head p{font-size:15px!important}.money-eyebrow{font-size:12px!important}.money-badge{font-size:13px!important}.money-kpis{grid-template-columns:1fr 1fr!important}.money-kpi span{font-size:14px!important}.money-kpi strong{font-size:24px!important}.money-kpi small{font-size:13px!important}.money-priority-title b{font-size:16px!important}.money-priority-title span{font-size:13px!important}.money-priority-row{grid-template-columns:28px minmax(0,1fr)!important}.money-item b{font-size:16px!important}.money-item small{font-size:14px!important;line-height:1.5!important}.money-range{grid-column:2;text-align:left}.money-range span{font-size:13px!important}.money-range b{font-size:16px!important}.money-disclaimer{font-size:13px!important}}
+</style>
+</head><body><div class="w"><section class="report-cover">
 <div class="report-kicker">AI 門市營運助手</div>
 <h1>門市營運月報</h1>
 <div class="report-line"></div>
@@ -5016,7 +5022,20 @@ handleFiles(files);
     host.innerHTML=`<div class="heatmap-table">${cells}</div>`;
   }
 
-  function renderGrowthOpportunity(a){
+  function renderMoneyImpact(a){
+ const items=Object.values(a.byItem||{}),n=v=>Number(v)||0,m=v=>"$"+Math.round(v).toLocaleString("zh-TW");
+ const sales=items.reduce((s,x)=>s+n(x.sales),0),loss=items.reduce((s,x)=>s+n(x.waste)+n(x.clearance),0),rate=sales?loss/sales*100:0;
+ const low=loss*.10,high=loss*.20;let saved=0;
+ try{const arr=JSON.parse(localStorage.getItem("opsPolicySnapshots")||"[]");if(Array.isArray(arr))saved=arr.reduce((s,x)=>s+Math.max(0,n(x.verifiedSaving??x.savedAmount??x.saving)),0)}catch(e){}
+ const set=(id,t)=>{const e=document.getElementById(id);if(e)e.textContent=t};
+ set("moneyTotalLoss",m(loss));set("moneyLossRate",sales?`占營業額 ${rate.toFixed(1)}%`:"尚無營業額基準");
+ set("moneyOpportunity",loss?`${m(low)}～${m(high)}`:"—");set("moneyVerifiedSaved",m(saved));
+ set("moneyRemaining",loss?`${m(Math.max(0,low-saved))}～${m(Math.max(0,high-saved))}`:"—");
+ const top=items.map(x=>({item:x.item||"未命名",loss:n(x.waste)+n(x.clearance)})).filter(x=>x.loss>0).sort((a,b)=>b.loss-a.loss).slice(0,3);
+ const host=document.getElementById("moneyPriority");if(host)host.innerHTML=top.length?`<div class="money-priority-title"><b>先處理哪裡最有價值</b><span>依已發生損耗排序</span></div>${top.map((x,i)=>`<div class="money-priority-row"><div class="money-rank">0${i+1}</div><div class="money-item"><b>${esc(x.item)}</b><small>本期損耗 ${m(x.loss)}｜占總損耗 ${loss?(x.loss/loss*100).toFixed(1):0}%</small></div><div class="money-range"><span>改善情境*</span><b>${m(x.loss*.10)}～${m(x.loss*.20)}</b></div></div>`).join("")}`:"";
+}
+function renderGrowthOpportunity(a){
+ renderMoneyImpact(a);
  const host=$("#growthOpportunity");if(!host)return;
  const wt=num($("#wasteThreshold")?.value||3),ct=num($("#clearThreshold")?.value||10),dq=window.__opsDataQualityScore??100,ds=[];
  const avg=v=>v.length?v.reduce((s,n)=>s+n,0)/v.length:0;
