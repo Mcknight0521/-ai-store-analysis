@@ -93,7 +93,7 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
 .report-card{padding:18px;border-radius:18px;background:#fff;border:1px solid var(--line)}.report-section{padding:14px 0;border-bottom:1px solid #EEF1F4}.report-section:last-child{border-bottom:0}.report-section h4{margin:0 0 7px;font-size:11px}.report-section p{margin:0;color:#667085;font-size:9px;line-height:1.6}
 .bottom-nav{position:fixed;z-index:40;left:50%;bottom:calc(10px + var(--safe-b));transform:translateX(-50%);width:min(680px,calc(100% - 20px));height:64px;padding:6px;background:rgba(11,18,32,.94);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08);border-radius:22px;box-shadow:0 18px 44px rgba(4,10,18,.28);display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
 .nav-btn{min-width:0;border:0;background:transparent;color:#93A0B3;border-radius:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:8px;font-weight:800}
-.nav-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.nav-btn.active{background:#fff;color:var(--navy)}
+.nav-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}.nav-btn span{pointer-events:none}.nav-btn{touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer}.nav-btn.active{background:#fff;color:var(--navy)}
 .drawer{position:fixed;inset:0;z-index:80;display:none}.drawer.open{display:block}.drawer-backdrop{position:absolute;inset:0;background:rgba(5,10,18,.46);backdrop-filter:blur(4px)}.drawer-sheet{position:absolute;right:0;top:0;bottom:0;width:min(520px,100%);background:#fff;box-shadow:-20px 0 60px rgba(7,15,28,.18);display:flex;flex-direction:column}.drawer-head{padding:18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}.drawer-head h2{margin:0;font-size:18px}.drawer-body{padding:18px;overflow:auto}.dropzone{padding:24px 16px;text-align:center;border:1.5px dashed #C9D3E1;border-radius:18px;background:#F8FAFC}.dropzone.drag{border-color:var(--blue);background:#F1F5FF}.dropzone svg{width:28px;height:28px;fill:none;stroke:var(--blue);stroke-width:1.7}.dropzone h3{margin:9px 0 4px;font-size:13px}.dropzone p{margin:0;color:var(--muted);font-size:8px;line-height:1.5}.dropzone input{display:none}.file-list{display:grid;gap:8px;margin-top:12px}.file-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;border:1px solid var(--line);border-radius:12px}.file-row b{font-size:9px}.file-row small{display:block;margin-top:2px;color:var(--muted);font-size:7px}.mapping{margin-top:14px}.mapping h3{font-size:11px;margin:0 0 8px}.map-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.map-item{padding:9px;border:1px solid var(--line);border-radius:11px;background:#fff}.map-item span{display:block;font-size:7px;color:var(--muted)}.map-item b{display:block;margin-top:3px;font-size:9px}.drawer-actions{margin-top:auto;padding:14px 18px calc(14px + var(--safe-b));border-top:1px solid var(--line);background:#fff;display:grid;grid-template-columns:1fr 1.2fr;gap:8px}
 .toast{position:fixed;z-index:100;left:50%;top:76px;transform:translate(-50%,-12px);opacity:0;pointer-events:none;transition:.22s;padding:10px 13px;border-radius:12px;background:#111827;color:#fff;font-size:9px;font-weight:800;box-shadow:0 10px 24px rgba(0,0,0,.2)}.toast.show{opacity:1;transform:translate(-50%,0)}
 @media(max-width:760px){
@@ -634,7 +634,19 @@ function renderReport(){
  $('#reportCard').innerHTML=parts.map(([h,p])=>`<div class="report-section"><h4>${h}</h4><p>${esc(p)}</p></div>`).join('');
 }
 $('#copyReport').onclick=async()=>{const txt=$('#reportCard').innerText;try{await navigator.clipboard.writeText(txt);toast('已複製報告')}catch{toast('無法存取剪貼簿')}}
-$('#bottomNav').onclick=e=>{const b=e.target.closest('.nav-btn');if(!b)return;$$('.nav-btn').forEach(x=>x.classList.toggle('active',x===b));$$('.page').forEach(p=>p.classList.toggle('active',p.dataset.page===b.dataset.page));window.scrollTo({top:0,behavior:'smooth'})}
+function switchMainPage(page,button){
+  $$('.nav-btn').forEach(x=>x.classList.toggle('active',x===button));
+  $$('.page').forEach(p=>p.classList.toggle('active',p.dataset.page===page));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+$$('#bottomNav .nav-btn').forEach(b=>{
+  b.type='button';
+  b.addEventListener('click',()=>switchMainPage(b.dataset.page,b));
+  b.addEventListener('touchend',e=>{
+    e.preventDefault();
+    switchMainPage(b.dataset.page,b);
+  },{passive:false});
+});
 $('#openInfo').onclick=()=>toast(confirmed?`目前已確認 ${rows.length.toLocaleString()} 筆資料`:'尚未確認任何資料');
 renderPlans();
 </script>
@@ -830,9 +842,7 @@ renderPlans();
     };
   }
 
-  document.getElementById('bottomNav')?.addEventListener('click',e=>{
-    if(e.target.closest('[data-page="analysis"]')) setTimeout(renderSalesTop10,0);
-  });
+  document.querySelector('[data-page="analysis"]')?.addEventListener('click',()=>setTimeout(renderSalesTop10,0));
 
   window.renderSalesTop10=renderSalesTop10;
 })();
