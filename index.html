@@ -109,6 +109,81 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
   .form-grid{grid-template-columns:1fr}.drawer-sheet{width:100%}.drawer-body{padding:14px}.drawer-head{padding:14px}.map-grid{grid-template-columns:1fr 1fr}
 }
 </style>
+
+<style id="improvement-center-v2">
+.improve-overview{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px}
+.improve-stat{padding:14px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 24px rgba(18,29,45,.045)}
+.improve-stat span{display:block;color:var(--muted);font-size:8px;font-weight:800}
+.improve-stat strong{display:block;margin-top:7px;font-size:21px;letter-spacing:-.04em}
+.improve-stat small{display:block;margin-top:4px;color:#98A2B3;font-size:7px}
+.improve-stat.highlight{background:linear-gradient(145deg,#0F233D,#183A61);border-color:#163554;color:#fff}
+.improve-stat.highlight span,.improve-stat.highlight small{color:#B8C9DD}
+.improve-layout{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(280px,.82fr);gap:12px}
+.improve-board{display:grid;gap:9px}
+.improve-card{padding:13px;border:1px solid var(--line);border-radius:15px;background:#fff}
+.improve-card-top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
+.improve-card h4{margin:0;font-size:11px;line-height:1.35}
+.improve-card .baseline{margin-top:4px;color:var(--muted);font-size:8px;line-height:1.45}
+.improve-status{padding:5px 7px;border-radius:999px;background:#EEF2F6;color:#667085;font-size:7px;font-weight:900}
+.improve-status.success{background:#EAF7F1;color:var(--green)}
+.improve-status.verify{background:#FFF4E5;color:var(--amber)}
+.improve-card-action{margin-top:10px;padding:9px 10px;border-radius:11px;background:#F8FAFC}
+.improve-card-action b{display:block;font-size:8px;color:#475467}.improve-card-action p{margin:3px 0 0;color:#667085;font-size:8px;line-height:1.5}
+.improve-card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.improve-card-kpi{padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.improve-card-kpi span{display:block;color:var(--muted);font-size:7px}.improve-card-kpi b{display:block;margin-top:4px;font-size:10px}
+.improve-card-footer{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:9px}
+.improve-card-footer small{color:#98A2B3;font-size:7px}
+.improve-card-actions{display:flex;gap:6px}
+.improve-card-actions button{border:1px solid var(--line);background:#fff;color:#475467;border-radius:9px;padding:6px 8px;font-size:7px;font-weight:800}
+.improve-guide{background:linear-gradient(160deg,#0B1220,#132642)!important;border-color:#132642!important;color:#fff}
+.improve-guide .panel-head p{color:#AFC0D4}.improve-guide .panel-kicker{color:#A6BBDD}
+.improve-steps{display:grid;gap:10px}
+.improve-step{display:grid;grid-template-columns:28px minmax(0,1fr);gap:9px;align-items:start}
+.improve-step i{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.1);font-style:normal;font-size:8px;font-weight:900;color:#D7E2EF}
+.improve-step b{display:block;font-size:9px}.improve-step span{display:block;margin-top:3px;color:#AFC0D4;font-size:7px;line-height:1.45}
+.improve-form-section{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;padding:14px 0;border-bottom:1px solid var(--line)}
+.improve-form-section:first-child{padding-top:0}.improve-form-section:last-child{border-bottom:0}
+.improve-form-no{width:34px;height:34px;border-radius:11px;background:var(--navy);color:#fff;display:grid;place-items:center;font-size:8px;font-weight:900}
+.improve-form-content h3{margin:0;font-size:12px}.improve-form-content>p{margin:4px 0 10px;color:var(--muted);font-size:8px;line-height:1.45}
+.improve-form-content .field{margin-top:8px}
+@media(max-width:760px){
+  .improve-overview{grid-template-columns:1fr 1fr;gap:6px}.improve-stat{padding:10px;border-radius:13px}.improve-stat strong{font-size:17px}
+  .improve-layout{display:block}.improve-guide{margin-top:8px}
+  .improve-card-grid{grid-template-columns:1fr 1fr 1fr}.improve-card-kpi{padding:7px}
+  #improveFilter{overflow:auto;max-width:100%}#improveFilter button{white-space:nowrap}
+  .page-head #newImprovePlan span{display:none}.page-head #newImprovePlan{width:40px;padding:0}
+}
+</style>
+
+
+<style id="sales-top10-v3">
+.top10-sales-panel{margin-top:12px}
+.top10-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.top10-summary>div{padding:10px 11px;border:1px solid var(--line);border-radius:12px;background:#F8FAFC}
+.top10-summary span{display:block;color:var(--muted);font-size:7px;font-weight:800}
+.top10-summary strong{display:block;margin-top:5px;font-size:13px;letter-spacing:-.03em}
+.sales-top10-list{display:grid;gap:7px}
+.sales-top10-row{display:grid;grid-template-columns:28px minmax(0,1.2fr) minmax(110px,2fr) auto;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.sales-top10-rank{width:28px;height:28px;border-radius:9px;background:#EEF3FF;color:var(--blue);display:grid;place-items:center;font-size:8px;font-weight:900}
+.sales-top10-name{min-width:0}
+.sales-top10-name b{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sales-top10-name small{display:block;margin-top:2px;color:var(--muted);font-size:7px}
+.sales-top10-bar{height:8px;border-radius:999px;background:#EEF2F6;overflow:hidden}
+.sales-top10-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#2C64F1,#7A9BFF)}
+.sales-top10-money{text-align:right}
+.sales-top10-money b{display:block;font-size:10px}
+.sales-top10-money small{display:block;margin-top:2px;color:var(--muted);font-size:7px}
+@media(max-width:760px){
+  .top10-sales-panel{margin-top:8px}
+  .top10-summary{gap:6px}.top10-summary>div{padding:8px}.top10-summary strong{font-size:11px}
+  .sales-top10-row{grid-template-columns:25px minmax(0,1fr) auto;gap:7px;padding:8px}
+  .sales-top10-rank{width:25px;height:25px}
+  .sales-top10-bar{grid-column:2/4;height:6px}
+  .sales-top10-name b{font-size:8px}.sales-top10-money b{font-size:9px}
+}
+</style>
+
 </head>
 <body>
 <div class="app">
@@ -119,7 +194,7 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
         <div><strong>OpsPilot</strong><small>營運決策系統</small></div>
       </div>
       <div class="top-actions">
-        <button class="ghost-btn" id="openImport"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 21h14"/></svg><span>匯入資料</span></button>
+        <button class="ghost-btn" id="openImport" aria-label="匯入資料"><svg viewBox="0 0 24 24"><path d="M12 17V5"/><path d="m8 9 4-4 4 4"/><path d="M5 20h14"/></svg><span>匯入資料</span></button>
         <button class="icon-btn" id="openInfo" aria-label="資料狀態"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7h.01"/></svg></button>
       </div>
     </div>
@@ -178,6 +253,27 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
         <section class="panel"><div class="panel-head"><div><div class="panel-kicker">LOSS STRUCTURE</div><h3 id="analysisTitle">品項損耗排行</h3><p>損耗 = 報廢 + 出清。</p></div></div><div id="analysisBars"><div class="empty">等待資料</div></div></section>
         <section class="panel"><div class="panel-head"><div><div class="panel-kicker">DETAIL</div><h3>資料明細</h3><p>方便追溯每個判斷的來源。</p></div></div><div class="table-wrap"><table><thead id="detailHead"></thead><tbody id="detailBody"><tr><td>等待資料</td></tr></tbody></table></div></section>
       </div>
+      <section class="panel top10-sales-panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-kicker">SALES TOP 10</div>
+            <h3>平日 / 假日 單品 Top 10 營業額</h3>
+            <p>依實際日期拆分後，分別計算單品營業額排行。假日目前定義為星期六、星期日。</p>
+          </div>
+          <div class="segmented" id="salesTop10Tabs">
+            <button class="active" data-daytype="weekday">平日</button>
+            <button data-daytype="weekend">假日</button>
+          </div>
+        </div>
+        <div class="top10-summary">
+          <div><span>樣本天數</span><strong id="top10SampleDays">—</strong></div>
+          <div><span>該類型總營業額</span><strong id="top10TotalSales">—</strong></div>
+          <div><span>Top 10 營業額占比</span><strong id="top10Share">—</strong></div>
+        </div>
+        <div id="salesTop10List" class="sales-top10-list">
+          <div class="empty">等待資料</div>
+        </div>
+      </section>
     </section>
 
     <section class="page" data-page="anomaly">
@@ -186,22 +282,63 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
     </section>
 
     <section class="page" data-page="improve">
-      <div class="page-head"><div><div class="eyebrow">IMPROVEMENT</div><h1>改善</h1><p>把發現的問題變成可追蹤、可驗證的改善計畫。</p></div></div>
-      <div class="grid-2">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">IMPROVEMENT LOOP</div>
+          <h1>改善任務</h1>
+          <p>從異常建立改善、執行行動、驗證前後差異，成功後才計入已驗證節省。</p>
+        </div>
+        <button class="primary-btn" id="newImprovePlan">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>建立改善</span>
+        </button>
+      </div>
+
+      <section class="improve-overview">
+        <div class="improve-stat"><span>待處理</span><strong id="impOpen">0</strong><small>進行中任務</small></div>
+        <div class="improve-stat"><span>待驗證</span><strong id="impVerify">0</strong><small>已執行，尚未驗證</small></div>
+        <div class="improve-stat"><span>已成功</span><strong id="impSuccess">0</strong><small>完成驗證</small></div>
+        <div class="improve-stat highlight"><span>已驗證節省</span><strong id="impSaved">$0</strong><small>只計成功任務</small></div>
+      </section>
+
+      <div class="improve-layout">
         <section class="panel">
-          <div class="panel-head"><div><div class="panel-kicker">NEW PLAN</div><h3>建立改善計畫</h3><p>節省金額只有在驗證後才會計入經營首頁。</p></div></div>
-          <div class="form-grid">
-            <div class="field"><label>計畫名稱</label><input id="planName" placeholder="例如：熟食晚間減量"></div>
-            <div class="field"><label>狀態</label><select id="planStatus"><option>進行中</option><option>成功</option><option>未達標</option></select></div>
-            <div class="field"><label>已驗證節省金額</label><input id="planSaving" inputmode="decimal" placeholder="未驗證請留空"></div>
-            <div class="field"><label>驗證依據</label><input id="planEvidence" placeholder="例如：相同週期前後比較"></div>
-            <div class="field" style="grid-column:1/-1"><label>行動內容</label><textarea id="planAction" placeholder="寫下實際執行方式"></textarea></div>
+          <div class="panel-head">
+            <div>
+              <div class="panel-kicker">TASK BOARD</div>
+              <h3>改善任務板</h3>
+              <p>每一張卡都必須有問題、行動、基準與驗證方式。</p>
+            </div>
+            <div class="segmented" id="improveFilter">
+              <button class="active" data-filter="all">全部</button>
+              <button data-filter="進行中">進行中</button>
+              <button data-filter="待驗證">待驗證</button>
+              <button data-filter="成功">成功</button>
+            </div>
           </div>
-          <div style="margin-top:10px"><button class="primary-btn" id="addPlan">新增改善計畫</button></div>
+          <div id="improveBoard" class="improve-board">
+            <div class="empty">尚未建立改善任務</div>
+          </div>
         </section>
-        <section class="panel"><div class="panel-head"><div><div class="panel-kicker">TRACKING</div><h3>改善追蹤</h3><p>已建立的計畫會保存在這台裝置。</p></div></div><div id="planList" class="plan-list"><div class="empty">尚未建立改善計畫</div></div></section>
+
+        <aside class="panel improve-guide">
+          <div class="panel-head">
+            <div>
+              <div class="panel-kicker">WORKFLOW</div>
+              <h3>改善流程</h3>
+              <p>不是填表，是把問題走到可驗證的結果。</p>
+            </div>
+          </div>
+          <div class="improve-steps">
+            <div class="improve-step"><i>1</i><div><b>確認問題</b><span>從異常或分析帶入實際數字。</span></div></div>
+            <div class="improve-step"><i>2</i><div><b>設定行動</b><span>寫清楚要改什麼、什麼時候做。</span></div></div>
+            <div class="improve-step"><i>3</i><div><b>定義驗證</b><span>先決定比較期間與驗證指標。</span></div></div>
+            <div class="improve-step"><i>4</i><div><b>比較前後</b><span>改善後再帶入實際資料計算差異。</span></div></div>
+            <div class="improve-step"><i>5</i><div><b>確認成果</b><span>成功才計入已驗證節省。</span></div></div>
+          </div>
+        </aside>
       </div>
     </section>
+
 
     <section class="page" data-page="report">
       <div class="page-head"><div><div class="eyebrow">MANAGEMENT REPORT</div><h1>報告</h1><p>把本期結果、異常與改善紀錄整理成可直接閱讀的管理摘要。</p></div><button class="ghost-btn" id="copyReport"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg><span>複製</span></button></div>
@@ -238,6 +375,89 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
     <div class="drawer-actions">
       <button class="ghost-btn" id="clearImport">清除</button>
       <button class="primary-btn" id="confirmImport" disabled>確認並開始分析</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="drawer" id="improveDrawer">
+  <div class="drawer-backdrop" data-improve-close></div>
+  <div class="drawer-sheet">
+    <div class="drawer-head">
+      <div><div class="eyebrow">NEW IMPROVEMENT</div><h2 id="improveDrawerTitle">建立改善任務</h2></div>
+      <button class="icon-btn" data-improve-close>
+        <svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="drawer-body">
+      <div class="improve-form-section">
+        <div class="improve-form-no">01</div>
+        <div class="improve-form-content">
+          <h3>問題</h3>
+          <p>先記錄目前真的發生了什麼，不填推測原因。</p>
+          <div class="field"><label>問題 / 品項</label><input id="impProblem" placeholder="例如：烤雞損耗金額最高"></div>
+          <div class="field"><label>目前實際數字</label><input id="impBaselineValue" placeholder="例如：本期損耗 $8,200"></div>
+          <div class="field"><label>基準期間</label><input id="impBaselinePeriod" placeholder="例如：2026/08/01–2026/08/15"></div>
+        </div>
+      </div>
+
+      <div class="improve-form-section">
+        <div class="improve-form-no">02</div>
+        <div class="improve-form-content">
+          <h3>行動</h3>
+          <p>把行動寫成現場可以直接執行的方式。</p>
+          <div class="field"><label>改善行動</label><textarea id="impAction" placeholder="例如：19:00 後每次生產批量由 8 隻調整為 5 隻"></textarea></div>
+          <div class="form-grid">
+            <div class="field"><label>執行開始日</label><input id="impStartDate" type="date"></div>
+            <div class="field"><label>負責人</label><input id="impOwner" placeholder="可留空"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="improve-form-section">
+        <div class="improve-form-no">03</div>
+        <div class="improve-form-content">
+          <h3>驗證方式</h3>
+          <p>先定義成功怎麼判定，避免事後才挑數字。</p>
+          <div class="field"><label>驗證指標</label>
+            <select id="impMetric">
+              <option value="loss">損耗金額</option>
+              <option value="loss_rate">損耗率</option>
+              <option value="waste">報廢金額</option>
+              <option value="clearance">出清金額</option>
+              <option value="sales">營業額</option>
+              <option value="custom">自訂指標</option>
+            </select>
+          </div>
+          <div class="field"><label>驗證期間</label><input id="impVerifyPeriod" placeholder="例如：2026/08/16–2026/08/30"></div>
+          <div class="field"><label>成功條件</label><input id="impSuccessRule" placeholder="例如：損耗金額低於基準期"></div>
+        </div>
+      </div>
+
+      <div class="improve-form-section">
+        <div class="improve-form-no">04</div>
+        <div class="improve-form-content">
+          <h3>驗證結果</h3>
+          <p>改善完成後再填；未驗證時請留空。</p>
+          <div class="form-grid">
+            <div class="field"><label>改善後數字</label><input id="impAfterValue" placeholder="例如：$5,900"></div>
+            <div class="field"><label>已驗證節省</label><input id="impVerifiedSaving" inputmode="decimal" placeholder="未驗證請留空"></div>
+          </div>
+          <div class="field"><label>狀態</label>
+            <select id="impStatus">
+              <option>進行中</option>
+              <option>待驗證</option>
+              <option>成功</option>
+              <option>未達標</option>
+            </select>
+          </div>
+          <div class="field"><label>驗證依據</label><textarea id="impEvidence" placeholder="例如：相同星期結構、相同天數的改善前後比較"></textarea></div>
+        </div>
+      </div>
+    </div>
+    <div class="drawer-actions">
+      <button class="ghost-btn" data-improve-close>取消</button>
+      <button class="primary-btn" id="saveImprovePlan">儲存改善任務</button>
     </div>
   </div>
 </div>
@@ -418,5 +638,211 @@ $('#bottomNav').onclick=e=>{const b=e.target.closest('.nav-btn');if(!b)return;$$
 $('#openInfo').onclick=()=>toast(confirmed?`目前已確認 ${rows.length.toLocaleString()} 筆資料`:'尚未確認任何資料');
 renderPlans();
 </script>
+
+<script id="improvement-center-v2-js">
+(function(){
+  let editImproveId=null, improveFilter='all';
+  const key='opsImprovementPlansV3';
+  const getImp=()=>{try{return JSON.parse(localStorage.getItem(key)||'[]')}catch{return[]}};
+  const setImp=x=>localStorage.setItem(key,JSON.stringify(x));
+  const drawer=document.getElementById('improveDrawer');
+
+  function openImp(plan){
+    editImproveId=plan?.id||null;
+    document.getElementById('improveDrawerTitle').textContent=plan?'編輯改善任務':'建立改善任務';
+    const v=(id,val='')=>document.getElementById(id).value=val??'';
+    v('impProblem',plan?.problem); v('impBaselineValue',plan?.baselineValue); v('impBaselinePeriod',plan?.baselinePeriod);
+    v('impAction',plan?.action); v('impStartDate',plan?.startDate); v('impOwner',plan?.owner);
+    v('impMetric',plan?.metric||'loss'); v('impVerifyPeriod',plan?.verifyPeriod); v('impSuccessRule',plan?.successRule);
+    v('impAfterValue',plan?.afterValue); v('impVerifiedSaving',plan?.saving==null?'':plan.saving); v('impStatus',plan?.status||'進行中'); v('impEvidence',plan?.evidence);
+    drawer.classList.add('open');
+  }
+  function closeImp(){drawer.classList.remove('open');editImproveId=null}
+  document.getElementById('newImprovePlan')?.addEventListener('click',()=>openImp());
+  document.querySelectorAll('[data-improve-close]').forEach(x=>x.addEventListener('click',closeImp));
+
+  function renderImp(){
+    const list=getImp();
+    const open=list.filter(x=>x.status==='進行中').length;
+    const verify=list.filter(x=>x.status==='待驗證').length;
+    const success=list.filter(x=>x.status==='成功').length;
+    const saved=list.filter(x=>x.status==='成功'&&Number.isFinite(x.saving)).reduce((s,x)=>s+x.saving,0);
+    document.getElementById('impOpen').textContent=open;
+    document.getElementById('impVerify').textContent=verify;
+    document.getElementById('impSuccess').textContent=success;
+    document.getElementById('impSaved').textContent=money(saved);
+
+    const shown=list.filter(x=>improveFilter==='all'||x.status===improveFilter);
+    document.getElementById('improveBoard').innerHTML=shown.map(x=>{
+      const cls=x.status==='成功'?'success':x.status==='待驗證'?'verify':'';
+      const metricMap={loss:'損耗金額',loss_rate:'損耗率',waste:'報廢金額',clearance:'出清金額',sales:'營業額',custom:'自訂指標'};
+      return `<article class="improve-card">
+        <div class="improve-card-top">
+          <div><h4>${esc(x.problem||'未命名改善')}</h4><div class="baseline">${esc(x.baselineValue||'未填基準數字')} · ${esc(x.baselinePeriod||'未填基準期間')}</div></div>
+          <span class="improve-status ${cls}">${esc(x.status)}</span>
+        </div>
+        <div class="improve-card-action"><b>改善行動</b><p>${esc(x.action||'尚未填寫行動內容')}</p></div>
+        <div class="improve-card-grid">
+          <div class="improve-card-kpi"><span>驗證指標</span><b>${esc(metricMap[x.metric]||x.metric||'未設定')}</b></div>
+          <div class="improve-card-kpi"><span>驗證期間</span><b>${esc(x.verifyPeriod||'未設定')}</b></div>
+          <div class="improve-card-kpi"><span>已驗證節省</span><b>${x.saving==null?'未驗證':money(x.saving)}</b></div>
+        </div>
+        <div class="improve-card-footer">
+          <small>${x.owner?`負責人：${esc(x.owner)}`:'未指定負責人'}${x.startDate?` · ${esc(x.startDate)}`:''}</small>
+          <div class="improve-card-actions">
+            <button data-edit-imp="${x.id}">編輯</button>
+            <button data-del-imp="${x.id}">刪除</button>
+          </div>
+        </div>
+      </article>`;
+    }).join('')||'<div class="empty">這個狀態目前沒有改善任務</div>';
+
+    // Keep executive verified savings in sync with this new improvement system.
+    const oldKey='opsImprovementPlansV2';
+    localStorage.setItem(oldKey, JSON.stringify(list.map(x=>({
+      id:x.id,name:x.problem,status:x.status,saving:x.saving,evidence:x.evidence,action:x.action,created:x.created
+    }))));
+    if(typeof renderPlans==='function') try{renderPlans()}catch(e){}
+    if(window.confirmed && typeof renderAll==='function') try{renderAll()}catch(e){}
+  }
+
+  document.getElementById('improveFilter')?.addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b)return;
+    improveFilter=b.dataset.filter; document.querySelectorAll('#improveFilter button').forEach(x=>x.classList.toggle('active',x===b)); renderImp();
+  });
+
+  document.getElementById('improveBoard')?.addEventListener('click',e=>{
+    const eb=e.target.closest('[data-edit-imp]'), db=e.target.closest('[data-del-imp]');
+    if(eb){const p=getImp().find(x=>x.id===Number(eb.dataset.editImp)); if(p)openImp(p)}
+    if(db){const id=Number(db.dataset.delImp);setImp(getImp().filter(x=>x.id!==id));renderImp();toast('已刪除改善任務')}
+  });
+
+  document.getElementById('saveImprovePlan')?.addEventListener('click',()=>{
+    const g=id=>document.getElementById(id).value.trim();
+    const problem=g('impProblem'), action=g('impAction'), status=document.getElementById('impStatus').value;
+    if(!problem){toast('請先填寫問題');return}
+    if(!action){toast('請先填寫改善行動');return}
+    const raw=g('impVerifiedSaving'); let saving=null;
+    if(raw!==''){saving=Number(raw.replace(/[$,\s]/g,'')); if(!Number.isFinite(saving)){toast('已驗證節省格式不正確');return}}
+    if(status==='成功' && (saving==null || !g('impEvidence'))){toast('成功任務需填已驗證節省與驗證依據');return}
+    const list=getImp(), existing=list.find(x=>x.id===editImproveId);
+    const plan={
+      id:existing?.id||Date.now(), problem, baselineValue:g('impBaselineValue'), baselinePeriod:g('impBaselinePeriod'),
+      action, startDate:g('impStartDate'), owner:g('impOwner'), metric:document.getElementById('impMetric').value,
+      verifyPeriod:g('impVerifyPeriod'), successRule:g('impSuccessRule'), afterValue:g('impAfterValue'),
+      saving, status, evidence:g('impEvidence'), created:existing?.created||new Date().toISOString(),
+      updated:new Date().toISOString()
+    };
+    if(existing) list[list.findIndex(x=>x.id===existing.id)]=plan; else list.unshift(plan);
+    setImp(list); closeImp(); renderImp(); toast(existing?'已更新改善任務':'已建立改善任務');
+  });
+
+  // Migration from previous simple plans if present.
+  if(!localStorage.getItem(key)){
+    try{
+      const old=JSON.parse(localStorage.getItem('opsImprovementPlansV2')||'[]');
+      if(old.length) setImp(old.map(x=>({
+        id:x.id||Date.now()+Math.random(),problem:x.name||'改善任務',baselineValue:'',baselinePeriod:'',
+        action:x.action||'',startDate:'',owner:'',metric:'loss',verifyPeriod:'',successRule:'',
+        afterValue:'',saving:Number.isFinite(x.saving)?x.saving:null,status:x.status||'進行中',
+        evidence:x.evidence||'',created:x.created||new Date().toISOString()
+      })));
+    }catch(e){}
+  }
+
+  renderImp();
+})();
+</script>
+
+
+<script id="sales-top10-v3-js">
+(function(){
+  let dayType='weekday';
+
+  function renderSalesTop10(){
+    const box=document.getElementById('salesTop10List');
+    if(!box) return;
+    if(!window.confirmed || !Array.isArray(window.rows) || !window.rows.length){
+      box.innerHTML='<div class="empty">等待資料</div>';
+      document.getElementById('top10SampleDays').textContent='—';
+      document.getElementById('top10TotalSales').textContent='—';
+      document.getElementById('top10Share').textContent='—';
+      return;
+    }
+
+    const valid=window.rows.filter(r=>r.date instanceof Date && !isNaN(r.date));
+    if(!valid.length){
+      box.innerHTML='<div class="empty">沒有日期欄位，無法拆分平日 / 假日 Top 10。</div>';
+      document.getElementById('top10SampleDays').textContent='無資料';
+      document.getElementById('top10TotalSales').textContent='無資料';
+      document.getElementById('top10Share').textContent='無資料';
+      return;
+    }
+
+    const filtered=valid.filter(r=>{
+      const weekend=[0,6].includes(r.date.getDay());
+      return dayType==='weekend' ? weekend : !weekend;
+    });
+
+    const days=new Set(filtered.map(r=>r.date.toISOString().slice(0,10))).size;
+    const totalSales=filtered.reduce((s,r)=>s+(Number(r.sales)||0),0);
+
+    const map=new Map();
+    filtered.forEach(r=>{
+      const name=(r.item||r.sku||'未命名品項').trim();
+      if(!map.has(name)) map.set(name,{name,sales:0,qty:0});
+      const x=map.get(name);
+      x.sales += Number(r.sales)||0;
+      x.qty += Number(r.qty)||0;
+    });
+
+    const ranked=[...map.values()].sort((a,b)=>b.sales-a.sales).slice(0,10);
+    const top10Sales=ranked.reduce((s,x)=>s+x.sales,0);
+    const max=Math.max(...ranked.map(x=>x.sales),1);
+
+    document.getElementById('top10SampleDays').textContent=days ? `${days} 天` : '0 天';
+    document.getElementById('top10TotalSales').textContent=money(totalSales);
+    document.getElementById('top10Share').textContent=totalSales ? `${(top10Sales/totalSales*100).toFixed(1)}%` : '—';
+
+    box.innerHTML=ranked.length ? ranked.map((x,i)=>`
+      <div class="sales-top10-row">
+        <div class="sales-top10-rank">${i+1}</div>
+        <div class="sales-top10-name"><b>${esc(x.name)}</b><small>${x.qty?`銷售數量 ${num(x.qty)}`:'銷售數量無資料'}</small></div>
+        <div class="sales-top10-bar"><div class="sales-top10-fill" style="width:${Math.max(2,x.sales/max*100)}%"></div></div>
+        <div class="sales-top10-money"><b>${money(x.sales)}</b><small>${totalSales?`${(x.sales/totalSales*100).toFixed(1)}%`:'—'}</small></div>
+      </div>`).join('') : '<div class="empty">這個日期類型目前沒有可排行的營業額資料。</div>';
+  }
+
+  document.getElementById('salesTop10Tabs')?.addEventListener('click',e=>{
+    const b=e.target.closest('button');
+    if(!b)return;
+    dayType=b.dataset.daytype;
+    document.querySelectorAll('#salesTop10Tabs button').forEach(x=>x.classList.toggle('active',x===b));
+    renderSalesTop10();
+  });
+
+  const oldRenderAll=window.renderAll;
+  if(typeof oldRenderAll==='function'){
+    window.renderAll=function(){
+      const result=oldRenderAll.apply(this,arguments);
+      setTimeout(renderSalesTop10,0);
+      return result;
+    };
+  }
+
+  document.getElementById('bottomNav')?.addEventListener('click',e=>{
+    if(e.target.closest('[data-page="analysis"]')) setTimeout(renderSalesTop10,0);
+  });
+
+  window.renderSalesTop10=renderSalesTop10;
+})();
+</script>
+
+
+<script id="state-expose-v3">
+Object.defineProperty(window,'confirmed',{get:()=>confirmed});
+Object.defineProperty(window,'rows',{get:()=>rows});
+</script>
+
 </body>
 </html>
