@@ -202,6 +202,15 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
 html.has-hash .page.active:not(:target){display:none!important}
 </style>
 
+
+<style id="avg-qty-top10-v8">
+.sales-top10-name .avg-qty{
+  color:var(--blue);
+  font-weight:800;
+  margin-top:3px;
+}
+</style>
+
 </head>
 <body>
 <div class="app">
@@ -276,7 +285,7 @@ html.has-hash .page.active:not(:target){display:none!important}
           <div>
             <div class="panel-kicker">SALES TOP 10</div>
             <h3>平日 / 假日 單品 Top 10 營業額</h3>
-            <p>依實際日期拆分後，分別計算單品營業額排行。假日目前定義為星期六、星期日。</p>
+            <p>依實際日期拆分後，分別計算單品營業額排行。假日目前定義為星期六、星期日；平均銷售數量＝該品項總銷售數量 ÷ 有該品項紀錄的日期數。</p>
           </div>
           <div class="segmented" id="salesTop10Tabs">
             <button class="active" data-daytype="weekday">平日</button>
@@ -799,10 +808,11 @@ renderPlans();
     const map=new Map();
     filtered.forEach(r=>{
       const name=(r.item||r.sku||'未命名品項').trim();
-      if(!map.has(name)) map.set(name,{name,sales:0,qty:0});
+      if(!map.has(name)) map.set(name,{name,sales:0,qty:0,activeDays:new Set()});
       const x=map.get(name);
       x.sales += Number(r.sales)||0;
       x.qty += Number(r.qty)||0;
+      x.activeDays.add(r.date.toISOString().slice(0,10));
     });
 
     const ranked=[...map.values()].sort((a,b)=>b.sales-a.sales).slice(0,10);
@@ -816,7 +826,11 @@ renderPlans();
     box.innerHTML=ranked.length ? ranked.map((x,i)=>`
       <div class="sales-top10-row">
         <div class="sales-top10-rank">${i+1}</div>
-        <div class="sales-top10-name"><b>${esc(x.name)}</b><small>${x.qty?`銷售數量 ${num(x.qty)}`:'銷售數量無資料'}</small></div>
+        <div class="sales-top10-name">
+          <b>${esc(x.name)}</b>
+          <small>${x.qty?`銷售數量 ${num(x.qty)}`:'銷售數量無資料'}</small>
+          <small class="avg-qty">${x.qty && x.activeDays.size ? `平均銷售數量 ${num(x.qty/x.activeDays.size)} / 日` : '平均銷售數量無資料'}</small>
+        </div>
         <div class="sales-top10-bar"><div class="sales-top10-fill" style="width:${Math.max(2,x.sales/max*100)}%"></div></div>
         <div class="sales-top10-money"><b>${money(x.sales)}</b><small>${totalSales?`${(x.sales/totalSales*100).toFixed(1)}%`:'—'}</small></div>
       </div>`).join('') : '<div class="empty">這個日期類型目前沒有可排行的營業額資料。</div>';
