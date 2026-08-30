@@ -117,12 +117,12 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
 
 .period-modal{position:fixed;inset:0;z-index:10000;background:rgba(11,18,32,.5);display:flex;align-items:flex-end;justify-content:center;padding:18px}
 .period-modal[hidden]{display:none!important}
-.period-sheet{width:min(520px,100%);background:#fff;border-radius:24px;padding:22px;box-shadow:0 24px 70px rgba(11,18,32,.24)}
+.period-sheet{pointer-events:auto;touch-action:manipulation;width:min(520px,100%);background:#fff;border-radius:24px;padding:22px;box-shadow:0 24px 70px rgba(11,18,32,.24)}
 .period-sheet h3{margin:5px 0 8px;font-size:22px;color:#111827}
 .period-sheet p{margin:0 0 14px;line-height:1.65;color:#667085}
 .period-days{background:#F8FAFC;border:1px solid #E6EBF1;border-radius:14px;padding:13px 14px;margin-bottom:16px;color:#344054;line-height:1.7;font-size:14px}
 .period-actions{display:grid;gap:10px}
-.period-actions button{min-height:52px;border-radius:14px;font-size:16px;font-weight:800;border:1px solid #E6EBF1}
+.period-actions button{pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent;min-height:52px;border-radius:14px;font-size:16px;font-weight:800;border:1px solid #E6EBF1}
 .period-actions .primary{background:#2C64F1;color:#fff;border-color:#2C64F1}
 .period-actions .secondary{background:#fff;color:#111827}
 
@@ -765,7 +765,8 @@ function assessImportedRecords(records,map){
   const n=Math.max(sample.length,1),problems=[];
   if(map.sales&&salesNumeric/n<.7)problems.push('營業額欄位有較多非數字資料');
   if(map.qty&&qtyNumeric/n<.6)problems.push('銷售數量欄位有較多非數字資料');
-  if(map.date&&dateValid/n<.6)problems.push('日期欄位有較多無法辨識的日期');
+  const hasReportPeriod=sample.some(r=>r.periodStart&&r.periodEnd);
+  if(map.date&&!hasReportPeriod&&dateValid/n<.6)problems.push('日期欄位有較多無法辨識的日期');
   if(itemValid/n<.7)problems.push('部分資料列沒有商品識別');
   return {sample:sample.length,salesNumericRate:salesNumeric/n,qtyNumericRate:qtyNumeric/n,dateValidRate:dateValid/n,itemValidRate:itemValid/n,problems};
 }
@@ -1750,9 +1751,13 @@ function avgOptional(vals){
 function detectCapabilities(list=rows){
   const has=v=>list.some(r=>r[v]!=null && !(typeof r[v]==='string' && !r[v].trim()));
   const product=list.some(r=>(r.item&&String(r.item).trim())||(r.sku&&String(r.sku).trim()));
+  const rowDate=list.some(r=>r.date instanceof Date&&!isNaN(r.date));
+  const period=list.some(r=>r.periodStart&&r.periodEnd);
   const caps={
     product,
-    date:list.some(r=>r.date instanceof Date&&!isNaN(r.date)),
+    date:rowDate||period,
+    rowDate,
+    period,
     qty:has('qty'),
     sales:has('sales'),
     waste:has('waste'),
@@ -1761,7 +1766,8 @@ function detectCapabilities(list=rows){
   caps.loss=caps.waste||caps.clearance;
   caps.topQty=caps.product&&caps.qty;
   caps.topSales=caps.product&&caps.sales;
-  caps.week=caps.date&&(caps.sales||caps.qty||caps.loss);
+  caps.week=caps.rowDate&&(caps.sales||caps.qty||caps.loss);
+  caps.periodAnalysis=caps.period&&(caps.sales||caps.qty||caps.loss);
   return caps;
 }
 function capabilitySummary(c){
@@ -1770,7 +1776,9 @@ function capabilitySummary(c){
   push(c.product,'商品');
   push(c.qty,'銷售量');
   push(c.sales,'營業額');
-  push(c.date,'日期');
+  if(c.rowDate)ok.push('逐日日期');
+  else if(c.period)ok.push('報表期間');
+  else missing.push('日期');
   push(c.waste,'報廢');
   push(c.clearance,'出清');
   return {ok,missing};
@@ -1778,14 +1786,22 @@ function capabilitySummary(c){
 
 function buildImportPreview(){
   const normalized=normalize(staged,mapping);
-  const cols=[['date','日期'],['sku','商品編號'],['item','商品名稱'],['qty','銷售量'],['sales','營業額'],['waste','報廢'],['clearance','出清']];
+  const cols=[['date','日期 / 期間'],['sku','商品編號'],['item','商品名稱'],['qty','銷售量'],['sales','營業額'],['waste','報廢'],['clearance','出清']];
   $('#importPreviewHead').innerHTML='<tr>'+cols.map(c=>`<th>${c[1]}</th>`).join('')+'</tr>';
-  $('#importPreviewBody').innerHTML=normalized.slice(0,8).map(r=>`<tr>
-    <td>${r.date instanceof Date&&!isNaN(r.date)?r.date.toLocaleDateString('zh-TW'):'無資料'}</td>
-    <td>${esc(r.sku||'無資料')}</td><td>${esc(r.item||'無資料')}</td>
-    <td>${maybeNum(r.qty)}</td><td>${maybeMoney(r.sales)}</td>
-    <td>${maybeMoney(r.waste)}</td><td>${maybeMoney(r.clearance)}</td>
-  </tr>`).join('');
+  $('#importPreviewBody').innerHTML=normalized.slice(0,8).map(r=>{
+    const periodLabel=(r.periodStart&&r.periodEnd)
+      ?`${String(r.periodStart).replaceAll('-','/')} ～ ${String(r.periodEnd).replaceAll('-','/')}`
+      :'無資料';
+    const dateLabel=(r.date instanceof Date&&!isNaN(r.date))
+      ?r.date.toLocaleDateString('zh-TW')
+      :periodLabel;
+    return `<tr>
+      <td>${dateLabel}</td>
+      <td>${esc(r.sku||'無資料')}</td><td>${esc(r.item||'無資料')}</td>
+      <td>${maybeNum(r.qty)}</td><td>${maybeMoney(r.sales)}</td>
+      <td>${maybeMoney(r.waste)}</td><td>${maybeMoney(r.clearance)}</td>
+    </tr>`;
+  }).join('');
   $('#previewCount').textContent=`${normalized.length.toLocaleString()} 筆`;
 
   const c=detectCapabilities(normalized),s=capabilitySummary(c),notes=[];
@@ -1793,7 +1809,8 @@ function buildImportPreview(){
   if(s.missing.length)notes.push(`未提供：${s.missing.join('、')}；相關區塊會顯示「無資料」，不影響其他分析。`);
   if(c.topQty)notes.push('可用：商品銷量排行');
   if(c.topSales)notes.push('可用：商品營業額排行');
-  if(c.week)notes.push('可用：日期／平假日相關分析');
+  if(c.week)notes.push('可用：逐日日期／平假日相關分析');
+  if(c.periodAnalysis)notes.push('可用：期間彙總／日均分析');
   if(c.loss)notes.push('可用：損耗相關分析');
   $('#importWarning').hidden=false;
   $('#importWarning').innerHTML=notes.join('<br>');
@@ -1911,7 +1928,7 @@ function updateImportReadiness(headers=[]){
 
   const temp=n?normalize(staged,mapping):[];
   const c=detectCapabilities(temp),s=capabilitySummary(c);
-  const usable=c.product||c.qty||c.sales||c.date||c.waste||c.clearance;
+  const usable=c.product||c.qty||c.sales||c.date||c.waste||c.clearance; // c.date includes trusted report-period metadata
 
   $('#mappingConfidence').textContent=`辨識 ${score}%`;
   $('#mappingConfidence').classList.toggle('ok',usable);
@@ -2002,22 +2019,38 @@ $('#confirmImport').onclick=()=>{
   }
   finishConfirmedImport(nextRows,{mode:hasRealRowDates?'row-dates':'unknown-period',period:p});
 };
-$('#useAggregateOnly').onclick=()=>{
-  $('#periodDecisionModal').hidden=true;
-  const rr=pendingConfirmedRows||[];
-  const p=aggregatePeriodFromRows(rr);
-  finishConfirmedImport(rr,{mode:'mixed-aggregate',period:p,classification:p?classifyAggregatePeriod(p.start,p.end):null});
-  pendingConfirmedRows=null;
-};
-$('#replaceWithSeparatedReports').onclick=()=>{
-  $('#periodDecisionModal').hidden=true;
-  // Do not combine the mixed aggregate with the replacement reports; that would double count.
-  staged=[]; pendingConfirmedRows=null; mapping={}; rows=[];
-  renderFileList([]);
-  setImportStep(1);
-  $('#importStatus').textContent='請上傳分開日期的報表。原本跨平日／假日的彙總檔已移除，避免重複計算。';
-  $('#nextImportStep').disabled=true;$('#confirmImport').disabled=true;
-};
+document.addEventListener('click',(e)=>{
+  const btn=e.target.closest?.('#useAggregateOnly,#replaceWithSeparatedReports');
+  if(!btn)return;
+  e.preventDefault();
+  e.stopPropagation();
+
+  if(btn.id==='useAggregateOnly'){
+    const modal=$('#periodDecisionModal');
+    if(modal)modal.hidden=true;
+    const rr=pendingConfirmedRows||[];
+    const p=aggregatePeriodFromRows(rr);
+    finishConfirmedImport(rr,{
+      mode:'mixed-aggregate',
+      period:p,
+      classification:p?classifyAggregatePeriod(p.start,p.end):null
+    });
+    pendingConfirmedRows=null;
+    return;
+  }
+
+  if(btn.id==='replaceWithSeparatedReports'){
+    const modal=$('#periodDecisionModal');
+    if(modal)modal.hidden=true;
+    // Replace, don't merge: otherwise the mixed aggregate would double-count.
+    staged=[];pendingConfirmedRows=null;mapping={};rows=[];
+    renderFileList([]);
+    setImportStep(1);
+    $('#importStatus').textContent='請上傳分開日期的報表。原本跨平日／假日的彙總檔已移除，避免重複計算。';
+    $('#nextImportStep').disabled=true;
+    $('#confirmImport').disabled=true;
+  }
+});
 function groupBy(list,keyFn){const m=new Map();for(const r of list){const k=keyFn(r);if(!m.has(k))m.set(k,[]);m.get(k).push(r)}return m}
 function aggregate(list){
  const field=key=>{
