@@ -741,7 +741,7 @@ function assessImportedRecords(records,map){
   for(const r of sample){
     if(map.sales&&Number.isFinite(toNum(r[map.sales])))salesNumeric++;
     if(map.qty&&Number.isFinite(toNum(r[map.qty])))qtyNumeric++;
-    if(map.date&&parseDate(r[map.date]))dateValid++;
+    if(map.date&&toDate(r[map.date]))dateValid++;
     if((map.item&&String(r[map.item]??'').trim())||(map.sku&&String(r[map.sku]??'').trim()))itemValid++;
   }
   const n=Math.max(sample.length,1),problems=[];
@@ -1726,13 +1726,27 @@ async function handleFiles(files){
     validations:candidate.validations||[]
   });
   mapping=candidate.map;
-  renderMapping(candidate.headers);
+  try{
+    renderMapping(candidate.headers);
+  }catch(err){
+    console.error('Import readiness UI failed:',err);
+    // Parsing already succeeded. Do not block the user because of a secondary UI/quality check.
+    const canonicalKeys=['date','sku','item','qty','sales','waste','clearance'];
+    const fallbackMap={};
+    for(const k of canonicalKeys){
+      if(staged.some(r=>Object.prototype.hasOwnProperty.call(r,k)))fallbackMap[k]=k;
+    }
+    if(Object.keys(fallbackMap).length)mapping={...mapping,...fallbackMap};
+    $('#importStatus').textContent='檔案已成功讀取；辨識檢查介面發生錯誤，已切換安全模式。';
+    $('#nextImportStep').disabled=staged.length===0;
+    $('#confirmImport').disabled=staged.length===0;
+  }
   setImportStep(2);
   if(candidate.remembered)$('#importStatus').textContent='找到你之前確認過的相同格式，已套用欄位對應。請再快速確認一次。';
   toast(successCount<files.length?`成功 ${successCount}/${files.length} 個檔案`:`已讀取 ${successCount} 個檔案`);
 }
 function renderMapping(headers){
-  const labels={date:'日期',sku:'商品編號',item:'商品名稱',qty:'銷售數量',sales:'營業額',waste:'報廢金額',clearance:'出清金額'};
+  const labels={date:'日期',sku:'商品編號',item:'商品名稱',qty:'銷售數量',sales:'營業額',waste:'報廢金額',clearance:'出清金額',inventory:'庫存',category:'分類'};
   $('#mappingBox').style.display='block';
   $('#mappingGrid').innerHTML=Object.keys(aliases).map(k=>{
     const options=['',...headers].map(h=>`<option value="${esc(h)}"${mapping[k]===h?' selected':''}>${esc(h||'— 不使用 —')}</option>`).join('');
