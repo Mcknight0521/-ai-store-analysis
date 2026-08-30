@@ -636,7 +636,7 @@ function findMapping(headers){
  }
  return out;
 }
-function toNum(v){if(v==null||v==='')return 0;const n=Number(String(v).replace(/[$,%\s,]/g,''));return Number.isFinite(n)?n:0}
+function toNum(v){if(v==null||v==='')return null;const n=Number(String(v).replace(/[$,%\s,]/g,''));return Number.isFinite(n)?n:null}
 function toDate(v){
  if(v instanceof Date&&!isNaN(v))return v;
  if(typeof v==='number'&&window.XLSX){const p=XLSX.SSF.parse_date_code(v);if(p)return new Date(p.y,p.m-1,p.d)}
@@ -801,7 +801,7 @@ function semanticInferMapping(headers,records){
     for(const h of headers){
       if(used.has(h))continue;
       const vals=records.slice(0,200).map(r=>r[h]);
-      const lexical=aliasScore(h,(ALIASES[key]||[]))*100;
+      const lexical=aliasScore(h,(aliases[key]||[]))*100;
       const structural=fieldShapeScore(key,h,vals);
       const score=Math.round(lexical*.6+structural*.4);
       if(score>bestScore){bestScore=score;best=h;}
@@ -974,6 +974,9 @@ async function parseSalesPdf(file){
   if(looksLikeDailyItem){
     const parsed=parseDailyItemByLayout(rawPages,file.name);
     if(parsed.length) return parsed;
+
+    const fallback=parseDailyItemByGeometryFallback(rawPages,file.name);
+    if(fallback.length) return fallback;
   }
 
   throw new Error('PDF 文字已讀取，但目前無法可靠重建表格。這份檔案不會被拿去猜測分析。');
@@ -992,6 +995,187 @@ function inferRetailPdfHeaders(items){
   const found={};
   for(const [k,re] of defs){const hit=items.find(i=>re.test(clean(i.text)));if(hit)found[k]=hit;}
   return {found,coverage:Object.keys(found).length/defs.length};
+}
+
+
+function parseDailyItemByGeometryFallback(rawPages,fileName){
+  const clean=s=>String(s??'').replace(/\u00a0/g,' ').replace(/[−–—]/g,'-').replace(/\s+/g,' ').trim();
+  const numeric=s=>/^-?[\d,.]+(?:\.\d+)?$/.test(clean(s));
+  const nval=s=>{
+    if(s==null||s==='')return null;
+    const n=Number(clean(s).replace(/,/g,'').replace(/[^\d.-]/g,''));
+    return Number.isFinite(n)?n:null;
+  };
+  const coord=(it,axis)=>axis==='x'?Number(it.x||0):Number(it.y||0);
+  const other=(it,axis)=>axis==='x'?Number(it.y||0):Number(it.x||0);
+
+  function candidateRowsForPage(items){
+    const skus=items.filter(i=>/^\d{6}$/.test(clean(i.text)));
+    if(!skus.length)return [];
+    let best=[];
+
+    // We do not trust page.rotate or header geometry here.
+    // Try both possible row axes, both reading directions, and multiple tolerances.
+    for(const axis of ['x','y']){
+      for(const dir of [1,-1]){
+        for(const tol of [4.5,7,10,14,20]){
+          const parsed=[];
+          for(const skuToken of skus){
+            const rc=coord(skuToken,axis);
+            const row=items
+              .filter(i=>Math.abs(coord(i,axis)-rc)<=tol)
+              .sort((a,b)=>(other(a,axis)-other(b,axis))*dir);
+
+            const skuIndex=row.findIndex(i=>i===skuToken || clean(i.text)===clean(skuToken.text));
+            if(skuIndex<0)continue;
+
+            // Find a nearby N/P marker in this visual row.
+            let npIndex=-1;
+            for(let i=Math.max(0,skuIndex-2);i<Math.min(row.length,skuIndex+12);i++){
+              if(/^[NP]$/i.test(clean(row[i].text))){npIndex=i;break}
+            }
+            if(npIndex<0)continue;
+
+            // A legitimate detail row normally has a 3-digit detail code before N/P.
+            let detailIndex=-1;
+            for(let i=npIndex-1;i>=Math.max(0,skuIndex-6);i--){
+              if(/^\d{3}$/.test(clean(row[i].text))){detailIndex=i;break}
+            }
+            if(detailIndex<0)continue;
+
+            // Gather the first 11 numeric business fields after N/P.
+            const nums=[];
+            for(let i=npIndex+1;i<row.length && nums.length<11;i++){
+              if(numeric(row[i].text)) nums.push({value:nval(row[i].text),token:row[i]});
+            }
+            if(nums.length<11)continue;
+
+            const [qty,salesEx,tax,sales,margin,commercial,inventory,nearQty,nearAmt,markdownQty,markdownAmt]=nums.map(x=>x.value);
+            if([qty,salesEx,tax,sales].some(v=>v==null))continue;
+
+            // Strong accounting validation: untaxed + tax should reconstruct tax-inclusive sales.
+            if(Math.abs((salesEx+tax)-sales)>Math.max(2,Math.abs(sales)*0.025))continue;
+
+            // Product name should sit between SKU and detail code. Join fragments if PDF.js split text.
+            let nameTokens=row.slice(Math.min(skuIndex,detailIndex)+1,Math.max(skuIndex,detailIndex))
+              .map(i=>clean(i.text))
+              .filter(Boolean)
+              .filter(t=>!numeric(t))
+              .filter(t=>!/^[NP]$/i.test(t))
+              .filter(t=>!/總計|小分類編號|合計|subtotal|total/i.test(t));
+
+            // If the reading direction placed detail before SKU, use the nearest nonnumeric token around SKU.
+            if(!nameTokens.length){
+              const nearby=row
+                .map((i,idx)=>({i,idx,d:Math.abs(other(i,axis)-other(skuToken,axis))}))
+                .filter(x=>x.idx!==skuIndex && !numeric(x.i.text) && !/^[NP]$/i.test(clean(x.i.text)))
+                .filter(x=>!/總計|小分類編號|合計|subtotal|total/i.test(clean(x.i.text)))
+                .sort((a,b)=>a.d-b.d);
+              if(nearby[0])nameTokens=[clean(nearby[0].i.text)];
+            }
+
+            const item=clean(nameTokens.join(' '));
+            if(!item || /^\d+$/.test(item))continue;
+
+            parsed.push({
+              date:null,
+              periodStart:null,
+              periodEnd:null,
+              sku:clean(skuToken.text),
+              item,
+              detail:clean(row[detailIndex].text),
+              npType:clean(row[npIndex].text).toUpperCase(),
+              qty,
+              sales,
+              salesExTax:salesEx,
+              tax,
+              grossMargin:margin,
+              commercialReturn:commercial,
+              inventory,
+              nearExpiryQty:nearQty,
+              nearExpiryAmt:nearAmt,
+              markdownQty,
+              markdownAmt,
+              clearance:(nearAmt??0)+(markdownAmt??0),
+              sourceType:'pdf-geometry-fallback',
+              sourceFile:fileName
+            });
+          }
+
+          // Prefer the transform that produces the largest number of validated business rows.
+          const uniq=new Map();
+          for(const r of parsed){
+            uniq.set([r.sku,r.npType,r.qty,r.sales,r.markdownAmt].join('|'),r);
+          }
+          const rows=[...uniq.values()];
+          if(rows.length>best.length)best=rows;
+        }
+      }
+    }
+    return best;
+  }
+
+  const detailRows=rawPages.flatMap(p=>candidateRowsForPage(p.items||[]));
+  if(!detailRows.length)return [];
+
+  // De-dupe across pages/attempts.
+  const unique=[];
+  const seen=new Set();
+  for(const r of detailRows){
+    const key=[r.sku,r.npType,r.qty,r.sales,r.nearExpiryAmt,r.markdownAmt].join('|');
+    if(seen.has(key))continue;
+    seen.add(key);unique.push(r);
+  }
+
+  // Merge N/P rows by SKU; N and P are price types, not separate products.
+  const bySku=new Map();
+  for(const r of unique){
+    const key=r.sku||r.item;
+    if(!bySku.has(key)){
+      bySku.set(key,{
+        ...r,
+        qty:0,sales:0,salesExTax:0,tax:0,
+        nearExpiryQty:0,nearExpiryAmt:0,markdownQty:0,markdownAmt:0,clearance:0,
+        npTypes:new Set()
+      });
+    }
+    const x=bySku.get(key);
+    x.qty+=(r.qty??0);
+    x.sales+=(r.sales??0);
+    x.salesExTax+=(r.salesExTax??0);
+    x.tax+=(r.tax??0);
+    x.nearExpiryQty+=(r.nearExpiryQty??0);
+    x.nearExpiryAmt+=(r.nearExpiryAmt??0);
+    x.markdownQty+=(r.markdownQty??0);
+    x.markdownAmt+=(r.markdownAmt??0);
+    x.clearance+=(r.clearance??0);
+    x.npTypes.add(r.npType);
+    if(r.inventory!=null)x.inventory=r.inventory;
+    if(r.grossMargin!=null)x.grossMargin=r.grossMargin;
+    if(r.commercialReturn!=null)x.commercialReturn=r.commercialReturn;
+    if((!x.item || x.item.length<r.item.length) && r.item)x.item=r.item;
+  }
+
+  const merged=[...bySku.values()].map(x=>{
+    const z={...x,npType:[...x.npTypes].join('/')};
+    delete z.npTypes;
+    delete z.waste; // report does not provide waste
+    return z;
+  });
+
+  Object.defineProperty(merged,'pdfMeta',{
+    value:{
+      reportType:'每日銷售報表 - 依單品',
+      parser:'geometry-fallback-v1',
+      parsedDetailRows:unique.length,
+      parsedProducts:merged.length,
+      periodStart:null,
+      periodEnd:null
+    },
+    enumerable:false,
+    configurable:true
+  });
+  return merged;
 }
 
 function parseDailyItemByLayout(rawPages,fileName){
