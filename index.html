@@ -7,6 +7,12 @@
 <title>OpsPilot｜營運決策系統</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.mjs" type="module"></script>
+<script id="pdfjs-worker-config-v10">
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+</script>
 <style>
 :root{
   --bg:#F3F6FA;--surface:#FFF;--surface2:#F8FAFC;--ink:#111827;--text:#344054;--muted:#7A8699;
@@ -585,7 +591,17 @@ async function parseSalesPdf(file){
   if(!window.pdfjsLib) throw new Error('PDF 解析元件尚未載入，請重新整理後再試。');
 
   const data=await file.arrayBuffer();
-  const pdf=await pdfjsLib.getDocument({data}).promise;
+  let pdf;
+  try{
+    pdf=await pdfjsLib.getDocument({data}).promise;
+  }catch(err){
+    const msg=String(err&&err.message||err||'');
+    if(/worker|GlobalWorkerOptions|fake worker/i.test(msg)){
+      pdf=await pdfjsLib.getDocument({data,disableWorker:true}).promise;
+    }else{
+      throw err;
+    }
+  }
 
   const pages=[];
   let fullText='';
@@ -821,7 +837,7 @@ async function handleFiles(files){
   try{const raw=await parseFile(f);staged.push(...raw);row.querySelector('small').textContent=`${raw.length.toLocaleString()} 筆`;row.querySelector('span').textContent='✓'}
   catch(err){row.querySelector('small').textContent=err.message;row.querySelector('span').textContent='!'}
  }
- if(!staged.length){$('#confirmImport').disabled=true;return}
+ if(!staged.length){$('#confirmImport').disabled=!(Array.isArray(rows)&&rows.length>0);return}
  const headers=[...new Set(staged.flatMap(r=>Object.keys(r)))];mapping=findMapping(headers);renderMapping(headers);$('#confirmImport').disabled=!mapping.sales;
 }
 function renderMapping(headers){
@@ -1186,5 +1202,17 @@ Object.defineProperty(window,'rows',{get:()=>rows});
 })();
 </script>
 
+
+<script id="pdf-upload-fallback-v10">
+window.addEventListener('unhandledrejection', function(e){
+  const msg=String(e.reason&&e.reason.message||e.reason||'');
+  if(/GlobalWorkerOptions\.workerSrc|pdf\.worker|fake worker/i.test(msg)){
+    const status=document.getElementById('importStatus');
+    if(status){
+      status.innerHTML='<div class="empty">PDF 元件載入失敗，請重新整理後再試。若仍失敗，系統會改用無 Worker 模式解析。</div>';
+    }
+  }
+});
+</script>
 </body>
 </html>
