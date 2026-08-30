@@ -455,7 +455,7 @@ html.has-hash .page.active:not(:target){display:none!important}
       <div>
         <div class="eyebrow">SMART IMPORT · V2</div>
         <h2>智慧匯入中心</h2>
-        <p class="import-subtitle">有什麼辨識什麼；缺少的欄位顯示「無資料」，不會阻擋其他分析。</p>
+        <p class="import-subtitle">先理解欄位角色，再做分析；有什麼辨識什麼，缺少的欄位顯示「無資料」。</p>
       </div>
       <button class="icon-btn" data-close><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
     </div>
@@ -751,13 +751,102 @@ function assessImportedRecords(records,map){
   if(itemValid/n<.7)problems.push('部分資料列沒有商品識別');
   return {sample:sample.length,salesNumericRate:salesNumeric/n,qtyNumericRate:qtyNumeric/n,dateValidRate:dateValid/n,itemValidRate:itemValid/n,problems};
 }
+
+function fieldShapeScore(key,header,values){
+  const vals=values.filter(v=>String(v??'').trim()!=='');
+  if(!vals.length)return 0;
+  const text=s=>/[A-Za-z\u4e00-\u9fff]/.test(String(s));
+  const num=s=>Number.isFinite(Number(String(s).replace(/,/g,'').replace(/[^\d.-]/g,'')));
+  const date=s=>/^\d{1,4}[\/.-]\d{1,2}[\/.-]\d{1,4}$/.test(String(s).trim())||!isNaN(Date.parse(String(s)));
+  const ratio=fn=>vals.filter(fn).length/vals.length;
+  const unique=new Set(vals.map(v=>String(v).trim())).size/vals.length;
+  const h=canon(header||'');
+  let s=0;
+  if(key==='sku'){
+    s+=ratio(v=>/^\d{6}$/.test(String(v).trim()))*70+unique*10;
+    if(/編號|代碼|sku|品號|貨號/.test(h))s+=25;
+  }else if(key==='item'){
+    s+=ratio(text)*55+unique*10;
+    if(/品名|商品|單品名稱|產品|description|item/.test(h))s+=30;
+  }else if(key==='qty'){
+    s+=ratio(num)*45;
+    if(/數量|銷量|quantity|qty|units/.test(h))s+=50;
+  }else if(key==='sales'){
+    s+=ratio(num)*45;
+    if(/營業額|銷售額|營收|實收|revenue|sales|amount/.test(h))s+=50;
+    if(/未稅|稅額|毛利|收益/.test(h))s-=35;
+  }else if(key==='date'){
+    s+=ratio(date)*70;
+    if(/日期|交易日|營業日|date|day/.test(h))s+=30;
+  }else if(key==='waste'){
+    s+=ratio(num)*35;
+    if(/報廢|廢棄|報損|waste|shrink/.test(h))s+=60;
+  }else if(key==='clearance'){
+    s+=ratio(num)*35;
+    if(/出清|降價|markdown|clearance/.test(h))s+=60;
+  }else if(key==='inventory'){
+    s+=ratio(num)*35;
+    if(/庫存|inventory|stock/.test(h))s+=60;
+  }else if(key==='category'){
+    s+=ratio(text)*25+unique*10;
+    if(/分類|類別|部門|category|department/.test(h))s+=60;
+  }
+  return Math.max(0,Math.min(100,Math.round(s)));
+}
+function semanticInferMapping(headers,records){
+  const keys=['date','sku','item','qty','sales','waste','clearance','inventory','category'];
+  const map={},confidence={},used=new Set();
+  for(const key of keys){
+    let best=null,bestScore=0;
+    for(const h of headers){
+      if(used.has(h))continue;
+      const vals=records.slice(0,200).map(r=>r[h]);
+      const lexical=aliasScore(h,(ALIASES[key]||[]))*100;
+      const structural=fieldShapeScore(key,h,vals);
+      const score=Math.round(lexical*.6+structural*.4);
+      if(score>bestScore){bestScore=score;best=h;}
+    }
+    const threshold=['sku','item','qty','sales'].includes(key)?46:56;
+    if(best&&bestScore>=threshold){
+      map[key]=best;confidence[key]=bestScore;used.add(best);
+    }
+  }
+  return {map,confidence};
+}
+function validateInferredMapping(records,map){
+  const checks=[];
+  const sample=records.slice(0,200);
+  if(map.sku){
+    const v=sample.map(r=>String(r[map.sku]??'').trim()).filter(Boolean);
+    const ok=v.filter(x=>/^\d{6}$/.test(x)).length;
+    checks.push({name:'商品編號結構',ok:!v.length||ok/v.length>=.5});
+  }
+  if(map.sales){
+    const v=sample.map(r=>toNumber(r[map.sales])).filter(Number.isFinite);
+    checks.push({name:'營業額數值結構',ok:v.length>=Math.max(1,sample.length*.4)});
+  }
+  if(map.qty){
+    const v=sample.map(r=>toNumber(r[map.qty])).filter(Number.isFinite);
+    checks.push({name:'銷售量數值結構',ok:v.length>=Math.max(1,sample.length*.4)});
+  }
+  return checks;
+}
+
 function analyzeImportCandidate(records,sourceType=''){
   const headers=[...new Set(records.flatMap(r=>Object.keys(r)))];
-  let map=smartFindMapping(headers);
+  const lexical=smartFindMapping(headers);
+  const semantic=semanticInferMapping(headers,records);
   const signature=importSignature(headers,sourceType);
   const remembered=loadRememberedMapping(signature,headers);
+  let map={...lexical,...semantic.map};
   if(remembered)map={...map,...remembered};
-  return {headers,map,signature,quality:assessImportedRecords(records,map),remembered:!!remembered};
+  return {
+    headers,map,signature,
+    quality:assessImportedRecords(records,map),
+    remembered:!!remembered,
+    semanticConfidence:semantic.confidence,
+    validations:validateInferredMapping(records,map)
+  };
 }
 
 function workbookSheetToRecords(ws){
@@ -890,6 +979,21 @@ async function parseSalesPdf(file){
   throw new Error('PDF 文字已讀取，但目前無法可靠重建表格。這份檔案不會被拿去猜測分析。');
 }
 
+
+function inferRetailPdfHeaders(items){
+  const clean=s=>String(s??'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
+  const defs=[
+    ['sku',/單品編號/],['item',/單品名稱/],['detail',/細目編號/],['np',/^N\/P$/i],
+    ['qty',/銷售量/],['salesEx',/銷售額.*未稅/],['tax',/^稅額$/],
+    ['sales',/銷售額.*含稅/],['margin',/毛利/],['commercial',/商業收益/],
+    ['inventory',/剩餘庫存|庫存/],['nearQty',/即期出清數量/],['nearAmt',/即期出清金額/],
+    ['markdownQty',/降價出清數量/],['markdownAmt',/降價出清金額/]
+  ];
+  const found={};
+  for(const [k,re] of defs){const hit=items.find(i=>re.test(clean(i.text)));if(hit)found[k]=hit;}
+  return {found,coverage:Object.keys(found).length/defs.length};
+}
+
 function parseDailyItemByLayout(rawPages,fileName){
   const clean=s=>String(s??'').replace(/\u00a0/g,' ').replace(/[−–—]/g,'-').replace(/\s+/g,' ').trim();
   const numeric=s=>/^-?[\d,.]+(?:\.\d+)?$/.test(clean(s));
@@ -991,11 +1095,12 @@ function parseDailyItemByLayout(rawPages,fileName){
 
   for(const page of rawPages){
     const items=page.items;
+    const inferredHeaders=inferRetailPdfHeaders(items);
     const headers={};
     for(const [key,patterns] of defs) headers[key]=findHeader(items,patterns);
 
     const essential=[headers.sku,headers.item,headers.qty,headers.sales,headers.np].filter(Boolean);
-    if(essential.length<4) continue;
+    if(essential.length<4 || inferredHeaders.coverage<0.25) continue;
     pagesWithHeaders++;
 
     const hx=essential.map(i=>i.x),hy=essential.map(i=>i.y);
@@ -1052,12 +1157,13 @@ function parseDailyItemByLayout(rawPages,fileName){
           .filter(i=>!/^\d{6}$/.test(clean(i.text)))
           .filter(i=>!/^[NP]$/i.test(clean(i.text)))
           .filter(i=>!numeric(i.text))
+          .filter(i=>!/總計|小分類編號|合計|subtotal|total/i.test(clean(i.text)))
           .sort((a,b)=>Math.abs(colCoord(a)-col.item)-Math.abs(colCoord(b)-col.item));
         if(itemCandidates.length&&Math.abs(colCoord(itemCandidates[0])-col.item)<70){
           item=clean(itemCandidates[0].text);
         }
       }
-      if(!item)continue;
+      if(!item||/總計|小分類編號|合計|subtotal|total/i.test(item))continue;
 
       const getNum=key=>{
         if(!Number.isFinite(col[key]))return null;
@@ -1149,7 +1255,7 @@ function parseDailyItemByLayout(rawPages,fileName){
   Object.defineProperty(merged,'pdfMeta',{
     value:{
       reportType:'每日銷售報表 - 依單品',
-      parser:'layout-header-v1',
+      parser:'semantic-layout-v2',
       parsedDetailRows:unique.length,
       parsedProducts:merged.length,
       periodStart:startDate||null,
@@ -1340,6 +1446,8 @@ function updateImportReadiness(headers=[]){
   const n=staged.length,mapped=Object.keys(mapping).filter(k=>!k.startsWith('_')).length;
   const score=mappingScore(headers,mapping),q=assessImportedRecords(staged,mapping);
   window.__opsImportContext=window.__opsImportContext||{};window.__opsImportContext.quality=q;
+  const sem=window.__opsImportContext.semanticConfidence||{};
+  const validations=window.__opsImportContext.validations||[];
 
   const temp=n?normalize(staged,mapping):[];
   const c=detectCapabilities(temp),s=capabilitySummary(c);
@@ -1366,7 +1474,10 @@ function updateImportReadiness(headers=[]){
   }else{
     const available=s.ok.length?s.ok.join('、'):'—';
     const absent=s.missing.length?s.missing.join('、'):'無';
-    $('#importStatus').textContent=`已辨識：${available}。未提供：${absent}。沒有的欄位會顯示「無資料」，不會阻擋其他分析。`;
+    const labels={date:'日期',sku:'商品編號',item:'商品名稱',qty:'銷售量',sales:'營業額',waste:'報廢',clearance:'出清',inventory:'庫存',category:'分類'};
+    const inferred=Object.entries(sem).filter(([k])=>mapping[k]).map(([k,v])=>`${labels[k]||k} ${v}%`).join('、');
+    const warnings=validations.filter(x=>!x.ok).map(x=>x.name);
+    $('#importStatus').textContent=`已辨識：${available}。未提供：${absent}。${inferred?`推定信心：${inferred}。`:''}${warnings.length?`需留意：${warnings.join('、')}。`:''}沒有的欄位會顯示「無資料」，不會阻擋其他分析。`;
   }
 }
 $('#confirmImport').onclick=()=>{
