@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0B1220">
 <title>OpsPilot｜營運決策系統</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.min.mjs" type="module"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script id="pdfjs-worker-config-v10">
 if (window.pdfjsLib) {
   pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -588,7 +588,7 @@ async function parseFile(file){
 }
 
 async function parseSalesPdf(file){
-  if(!window.pdfjsLib) throw new Error('PDF 解析元件尚未載入，請重新整理後再試。');
+  if(!window.pdfjsLib) throw new Error('PDF 解析元件載入失敗。請確認網路連線後重新整理頁面。');
 
   const data=await file.arrayBuffer();
   let pdf;
@@ -661,84 +661,68 @@ function parseDailyItemSalesPdf(pages,fileName){
   const all=pages.flat();
   const joined=all.join('\n');
 
-  // Extract report period. These Carrefour-style reports print the start date near the title
-  // and the end date in the header. We collect all D/M/Y dates, then exclude print date when possible.
-  const dateMatches=[...joined.matchAll(/\b(\d{1,2}\/\d{1,2}\/\d{4})\b/g)].map(m=>m[1]);
-  const parsedDates=dateMatches.map(parseDMY).filter(Boolean);
-
-  // Prefer the date immediately following the report title as start.
-  let startDate=null;
-  for(let i=0;i<all.length;i++){
-    if(/每日銷售報表\s*-\s*依單品/.test(all[i])){
-      for(let j=i+1;j<Math.min(i+8,all.length);j++){
-        const d=parseDMY(all[j]);
-        if(d){startDate=d;break;}
-      }
-      if(startDate)break;
+  // Extract the actual report period from the "日期起 ... 迄 ..." header.
+  // Do NOT use the print date as the period end.
+  let startDate=null, endDate=null;
+  for(const line of all){
+    const m=line.match(/日期起\s+(\d{1,2}\/\d{1,2}\/\d{4})\s+迄\s+(\d{1,2}\/\d{1,2}\/\d{4})/);
+    if(m){
+      startDate=parseDMY(m[1]);
+      endDate=parseDMY(m[2]);
+      break;
     }
   }
-
-  // End date: among dates in the header, choose the latest date not earlier than startDate.
-  let endDate=startDate;
-  if(startDate && parsedDates.length){
-    const candidates=parsedDates.filter(d=>d>=startDate);
-    if(candidates.length) endDate=new Date(Math.max(...candidates.map(d=>d.getTime())));
+  if(!startDate){
+    const dates=[...joined.matchAll(/\b(\d{1,2}\/\d{1,2}\/\d{4})\b/g)].map(m=>parseDMY(m[1])).filter(Boolean);
+    if(dates.length) startDate=dates[0];
   }
+  if(!endDate) endDate=startDate;
 
   // Detect store.
   const storeLine=all.find(x=>/^店\s*[:：]/.test(x));
   const store=storeLine ? clean(storeLine.replace(/^店\s*[:：]\s*/,'')) : '';
 
   const rows=[];
-  const skuName=new Map();
 
-  // This report repeats each product as:
-  // SKU + Chinese name, optional English line(s), then a numeric row containing department/detail/N-P and metrics.
-  // Numeric row pattern is anchored by the N/P marker to reduce false positives from subtotal rows.
+  // Actual layout of this PDF:
+  // 部門 | 單品編號 | 單品名稱 | 細目編號 | N/P | 銷售量 | 未稅額 | 稅額 | 含稅額 | 毛利 | 商業收益 | 庫存 | 即期出清量 | 即期出清額 | 降價出清量 | 降價出清額
+  // All of those fields are on the same visual row, so parse that row directly.
   for(const lines of pages){
     for(let i=0;i<lines.length;i++){
       const line=clean(lines[i]);
 
-      // Capture SKU/name lines.
-      const prod=line.match(/^(\d{6})\s+(.+)$/);
-      if(prod && !/^(小分類|部門|單品編號)/.test(prod[2])){
-        const sku=prod[1], item=clean(prod[2]);
-        if(item && !/^\d+$/.test(item)) skuName.set(sku,item);
-      }
-
-      // Match numeric transaction line.
-      // Example: 20 001 P 101.00 5,652 283 5,935 23.16 23.16 -496 0.00 0.00 0.00 0.00
-      const tx=line.match(/^(\d{1,3})\s+(\d{3})\s+([NP])\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)$/i);
+      const tx=line.match(
+        /^(\d{1,3})\s+(\d{6})\s+(.+?)\s+(\d{3})\s+([NP])\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)$/i
+      );
       if(!tx) continue;
 
-      // Find nearest preceding SKU/name within a short range.
-      let sku='', item='';
-      for(let j=i-1;j>=Math.max(0,i-7);j--){
-        const pm=clean(lines[j]).match(/^(\d{6})\s+(.+)$/);
-        if(pm){
-          sku=pm[1];
-          item=skuName.get(sku)||clean(pm[2]);
-          break;
-        }
+      const sku=tx[2];
+      let item=clean(tx[3]);
+
+      // Some long Chinese names continue on the next visual line before the English translation.
+      // Append only a short continuation that is clearly not another transaction/header/English name.
+      const next=clean(lines[i+1]||'');
+      if(next &&
+         !/^\d{1,3}\s+\d{6}\s+/.test(next) &&
+         !/^(小分類|部門|單品編號|每日銷售報表)/.test(next) &&
+         !/^[A-Za-z][A-Za-z0-9 _()+\-/,.'"]+$/.test(next) &&
+         next.length<=28){
+        item=clean(item+next);
       }
-      if(!sku) continue;
 
-      const np=tx[3].toUpperCase();
-      const qty=toNum(tx[4])??0;
-      const salesEx=toNum(tx[5])??0;
-      const tax=toNum(tx[6])??0;
-      const salesInc=toNum(tx[7])??0;
-      const margin=toNum(tx[8]);
-      const commercial=toNum(tx[9]);
-      const inventory=toNum(tx[10]);
-      const nearExpiryQty=toNum(tx[11])??0;
-      const nearExpiryAmt=toNum(tx[12])??0;
-      const markdownQty=toNum(tx[13])??0;
-      const markdownAmt=toNum(tx[14])??0;
+      const np=tx[5].toUpperCase();
+      const qty=toNum(tx[6])??0;
+      const salesEx=toNum(tx[7])??0;
+      const tax=toNum(tx[8])??0;
+      const salesInc=toNum(tx[9])??0;
+      const margin=toNum(tx[10]);
+      const commercial=toNum(tx[11]);
+      const inventory=toNum(tx[12]);
+      const nearExpiryQty=toNum(tx[13])??0;
+      const nearExpiryAmt=toNum(tx[14])??0;
+      const markdownQty=toNum(tx[15])??0;
+      const markdownAmt=toNum(tx[16])??0;
 
-      // Important: in this report, N/P is a price/sales type, not simply "normal vs waste".
-      // We retain both rows. Sales uses the actual "sales amount incl. tax".
-      // Loss/clearance for existing UI is mapped only from explicit clearance amount columns.
       rows.push({
         date:startDate && endDate && startDate.getTime()===endDate.getTime() ? startDate : null,
         periodStart:startDate,
@@ -765,7 +749,6 @@ function parseDailyItemSalesPdf(pages,fileName){
       });
     }
   }
-
   if(!rows.length){
     throw new Error('已辨識到報表格式，但沒有成功解析單品明細。請確認 PDF 不是掃描圖片版。');
   }
@@ -834,7 +817,7 @@ async function handleFiles(files){
  staged=[];$('#fileList').innerHTML='';
  for(const f of files){
   const row=document.createElement('div');row.className='file-row';row.innerHTML=`<div><b>${esc(f.name)}</b><small>解析中…</small></div><span>…</span>`;$('#fileList').appendChild(row);
-  try{const raw=await parseFile(f);staged.push(...raw);row.querySelector('small').textContent=`${raw.length.toLocaleString()} 筆`;row.querySelector('span').textContent='✓'}
+  try{const raw=await parseFile(f);staged.push(...raw);row.querySelector('small').textContent=`已解析 ${raw.length.toLocaleString()} 個品項`;row.querySelector('span').textContent='✓'}
   catch(err){row.querySelector('small').textContent=err.message;row.querySelector('span').textContent='!'}
  }
  if(!staged.length){$('#confirmImport').disabled=!(Array.isArray(rows)&&rows.length>0);return}
