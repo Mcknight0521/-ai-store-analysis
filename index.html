@@ -114,6 +114,20 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
   .bottom-nav{height:60px;bottom:calc(7px + var(--safe-b));width:calc(100% - 14px);border-radius:19px;padding:5px}.nav-btn{font-size:7px}.nav-btn svg{width:17px;height:17px}
   .form-grid{grid-template-columns:1fr}.drawer-sheet{width:100%}.drawer-body{padding:14px}.drawer-head{padding:14px}.map-grid{grid-template-columns:1fr 1fr}
 }
+
+.period-modal{position:fixed;inset:0;z-index:10000;background:rgba(11,18,32,.5);display:flex;align-items:flex-end;justify-content:center;padding:18px}
+.period-modal[hidden]{display:none!important}
+.period-sheet{width:min(520px,100%);background:#fff;border-radius:24px;padding:22px;box-shadow:0 24px 70px rgba(11,18,32,.24)}
+.period-sheet h3{margin:5px 0 8px;font-size:22px;color:#111827}
+.period-sheet p{margin:0 0 14px;line-height:1.65;color:#667085}
+.period-days{background:#F8FAFC;border:1px solid #E6EBF1;border-radius:14px;padding:13px 14px;margin-bottom:16px;color:#344054;line-height:1.7;font-size:14px}
+.period-actions{display:grid;gap:10px}
+.period-actions button{min-height:52px;border-radius:14px;font-size:16px;font-weight:800;border:1px solid #E6EBF1}
+.period-actions .primary{background:#2C64F1;color:#fff;border-color:#2C64F1}
+.period-actions .secondary{background:#fff;color:#111827}
+
+.period-banner{margin:0 0 12px;padding:12px 14px;border:1px solid #DDE6F3;background:#F8FAFC;border-radius:14px;color:#344054;font-size:13px;font-weight:750;line-height:1.55}
+.period-banner strong{color:#111827}
 </style>
 
 <style id="improvement-center-v2">
@@ -323,14 +337,17 @@ html.has-hash .page.active:not(:target){display:none!important}
       <div class="page-head"><div><div class="eyebrow">OPERATIONS OVERVIEW</div><h1>營運總覽</h1><p>把今天最需要注意的營運結果放在第一眼。</p></div><div class="status-pill" id="overviewStatus">等待資料</div></div>
       <div class="overview-grid">
         <section class="panel">
-          <div class="panel-head"><div><div class="panel-kicker">PERIOD RESULT</div><h3>本期營運結果</h3><p>只呈現能從匯入資料直接取得或計算的指標。</p></div></div>
+          <div class="panel-head"><div><div class="panel-kicker">PERIOD RESULT</div><h3>本期營運結果</h3><p>期間彙總維持原始總額；日均值只用總額除以報表涵蓋天數。</p></div></div>
+          <div id="reportPeriodBanner" class="period-banner" hidden></div>
           <div class="metric-grid">
-            <div class="metric"><span>總營業額</span><strong id="ovSales">—</strong></div>
-            <div class="metric"><span>銷售數量</span><strong id="ovQty">—</strong></div>
-            <div class="metric"><span>報廢金額</span><strong id="ovWaste">—</strong></div>
-            <div class="metric"><span>出清金額</span><strong id="ovClearance">—</strong></div>
-            <div class="metric"><span>報廢率</span><strong id="ovWasteRate">—</strong></div>
-            <div class="metric"><span>出清率</span><strong id="ovClearanceRate">—</strong></div>
+            <div class="metric"><span id="ovSalesLabel">總營業額</span><strong id="ovSales">—</strong></div>
+            <div class="metric"><span id="ovAvgSalesLabel">日均營業額</span><strong id="ovAvgSales">—</strong></div>
+            <div class="metric"><span id="ovQtyLabel">銷售數量</span><strong id="ovQty">—</strong></div>
+            <div class="metric"><span id="ovAvgQtyLabel">日均銷售量</span><strong id="ovAvgQty">—</strong></div>
+            <div class="metric"><span id="ovWasteLabel">報廢金額</span><strong id="ovWaste">—</strong></div>
+            <div class="metric"><span id="ovAvgWasteLabel">日均報廢</span><strong id="ovAvgWaste">—</strong></div>
+            <div class="metric"><span id="ovClearanceLabel">出清金額</span><strong id="ovClearance">—</strong></div>
+            <div class="metric"><span id="ovAvgClearanceLabel">日均出清</span><strong id="ovAvgClearance">—</strong></div>
           </div>
         </section>
         <aside class="panel dark"><div class="panel-head"><div><div class="panel-kicker">FOCUS</div><h3>目前最重要的事</h3><p>只列出資料真正支持的處理重點。</p></div></div><div id="focusList" class="focus-list"><div class="empty" style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.13);color:#AFC0D4">等待資料</div></div></aside>
@@ -877,10 +894,18 @@ function detectFileKind(file){
 
 function normalize(raw,map){
  return raw.map((r,i)=>({
-  _i:i+1,date:map.date?toDate(r[map.date]):null,sku:map.sku?String(r[map.sku]??'').trim():'',
-  item:map.item?String(r[map.item]??'').trim():'',qty:map.qty?toNum(r[map.qty]):null,
-  sales:map.sales?toNum(r[map.sales]):null,waste:map.waste?toNum(r[map.waste]):null,clearance:map.clearance?toNum(r[map.clearance]):null
- })).filter(r=>r.date||r.item||r.sku||r.sales!=null||r.waste!=null||r.clearance!=null||r.qty!=null)
+  _i:i+1,
+  date:map.date?toDate(r[map.date]):null,
+  periodStart:r.periodStart||null,
+  periodEnd:r.periodEnd||null,
+  printDate:r.printDate||null,
+  sku:map.sku?String(r[map.sku]??'').trim():'',
+  item:map.item?String(r[map.item]??'').trim():'',
+  qty:map.qty?toNum(r[map.qty]):null,
+  sales:map.sales?toNum(r[map.sales]):null,
+  waste:map.waste?toNum(r[map.waste]):null,
+  clearance:map.clearance?toNum(r[map.clearance]):null
+ })).filter(r=>r.date||r.periodStart||r.periodEnd||r.item||r.sku||r.sales!=null||r.waste!=null||r.clearance!=null||r.qty!=null)
 }
 function parseDelimited(text,name){
  const sep=name.toLowerCase().endsWith('.tsv')?'\t':(text.includes('\t')?'\t':',');
@@ -938,6 +963,74 @@ async function parseFile(file){
 }
 
 
+
+function parseDmyDateStrict(s){
+  const m=String(s??'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!m)return null;
+  const d=new Date(Number(m[3]),Number(m[2])-1,Number(m[1]));
+  return (d.getFullYear()===Number(m[3])&&d.getMonth()===Number(m[2])-1&&d.getDate()===Number(m[1]))?d:null;
+}
+function isoLocalDate(d){
+  if(!(d instanceof Date)||isNaN(d))return null;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function extractReportPeriod(rawPages){
+  const counts=new Map();
+  for(const p of (rawPages||[])){
+    const seen=new Set((p.items||[]).map(i=>String(i.text||'').trim())
+      .filter(t=>/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(t)));
+    for(const s of seen)counts.set(s,(counts.get(s)||0)+1);
+  }
+  const ranked=[...counts].map(([s,count])=>({s,count,d:parseDmyDateStrict(s)}))
+    .filter(x=>x.d).sort((a,b)=>b.count-a.count||a.d-b.d);
+  if(!ranked.length)return {start:null,end:null,printDate:null,confidence:'none'};
+  const threshold=Math.max(1,Math.floor((rawPages?.length||1)*0.35));
+  const repeated=ranked.filter(x=>x.count>=threshold);
+  const pool=(repeated.length>=2?repeated:ranked.slice(0,3)).sort((a,b)=>a.d-b.d);
+  if(pool.length===1){
+    return {start:isoLocalDate(pool[0].d),end:isoLocalDate(pool[0].d),printDate:null,confidence:'medium'};
+  }
+  return {
+    start:isoLocalDate(pool[0].d),
+    end:isoLocalDate(pool[1].d),
+    printDate:pool.length>=3?isoLocalDate(pool[pool.length-1].d):null,
+    confidence:repeated.length>=2?'high':'medium'
+  };
+}
+function applyReportPeriod(rows,period){
+  if(!Array.isArray(rows))return rows;
+  for(const r of rows){
+    // periodStart/end describe the report range. They are NOT per-item transaction dates.
+    r.periodStart=period?.start||null;
+    r.periodEnd=period?.end||null;
+    r.printDate=period?.printDate||null;
+    if(!r.date)r.date=null;
+  }
+  return rows;
+}
+function periodDates(startIso,endIso){
+  if(!startIso||!endIso)return [];
+  const [sy,sm,sd]=startIso.split('-').map(Number),[ey,em,ed]=endIso.split('-').map(Number);
+  let d=new Date(sy,sm-1,sd),e=new Date(ey,em-1,ed),out=[];
+  if(isNaN(d)||isNaN(e)||d>e)return [];
+  for(let i=0;d<=e&&i<370;i++){
+    out.push(new Date(d));
+    d=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1);
+  }
+  return out;
+}
+function classifyAggregatePeriod(startIso,endIso){
+  const days=periodDates(startIso,endIso).map(d=>({
+    date:isoLocalDate(d),
+    holiday:[0,6].includes(d.getDay())
+  }));
+  if(!days.length)return {kind:'unknown',days,weekday:[],holiday:[]};
+  const holiday=days.filter(x=>x.holiday),weekday=days.filter(x=>!x.holiday);
+  if(!holiday.length)return {kind:'weekday',days,weekday,holiday};
+  if(!weekday.length)return {kind:'holiday',days,weekday,holiday};
+  return {kind:'mixed',days,weekday,holiday};
+}
+
 async function parseSalesPdf(file){
   if(!window.pdfjsLib) throw new Error('PDF 解析元件載入失敗。請確認網路連線後重新整理頁面。');
 
@@ -973,6 +1066,7 @@ async function parseSalesPdf(file){
     searchableText += '\n' + items.map(x=>x.text).join(' ');
   }
 
+  const reportPeriod=extractReportPeriod(rawPages);
   const looksLikeDailyItem=
     /每日銷售報表/.test(searchableText) &&
     /單品編號/.test(searchableText) &&
@@ -1018,7 +1112,7 @@ async function parseSalesPdf(file){
         value:{rawSkuCount,coverage:best.coverage,parser:best.parser},
         enumerable:false,configurable:true
       });
-      return best.rows;
+      return applyReportPeriod(best.rows,reportPeriod);
     }
   }
 
@@ -1846,20 +1940,83 @@ function updateImportReadiness(headers=[]){
     $('#importStatus').textContent=`已辨識：${available}。未提供：${absent}。${inferred?`推定信心：${inferred}。`:''}${warnings.length?`需留意：${warnings.join('、')}。`:''}沒有的欄位會顯示「無資料」，不會阻擋其他分析。`;
   }
 }
-$('#confirmImport').onclick=()=>{
-  rows=normalize(staged,mapping);
-  if(!rows.length){toast('目前沒有可分析資料');return}
-  const c=detectCapabilities(rows);
-  if(!(c.product||c.qty||c.sales||c.date||c.waste||c.clearance)){
-    toast('請至少確認一個可用欄位');
-    return;
-  }
+
+let pendingConfirmedRows=null;
+function finishConfirmedImport(nextRows,periodMode){
+  rows=nextRows;
+  window.__opsPeriodMode=periodMode||{mode:'row-dates'};
   const sig=window.__opsImportContext?.signature;
   if(sig)saveRememberedMapping(sig,mapping);
   confirmed=true;
   hideDrawer();
   renderAll();
   toast(`已確認 ${rows.length.toLocaleString()} 筆資料`);
+}
+
+function activePeriodInfo(rr=rows){
+ const starts=rr.map(r=>r.periodStart).filter(Boolean).sort();
+ const ends=rr.map(r=>r.periodEnd).filter(Boolean).sort();
+ if(!starts.length||!ends.length)return null;
+ const start=starts[0],end=ends[ends.length-1],days=periodDates(start,end).length;
+ return {start,end,days,label:`${start.replaceAll('-','/')} ～ ${end.replaceAll('-','/')}`};
+}
+function avgOverReportDays(value,rr=rows){
+ const p=activePeriodInfo(rr);
+ return value!=null&&p?.days?value/p.days:null;
+}
+
+function aggregatePeriodFromRows(rr){
+  const starts=rr.map(r=>r.periodStart).filter(Boolean).sort();
+  const ends=rr.map(r=>r.periodEnd).filter(Boolean).sort();
+  return starts.length&&ends.length?{start:starts[0],end:ends[ends.length-1]}:null;
+}
+$('#confirmImport').onclick=()=>{
+  const nextRows=normalize(staged,mapping);
+  if(!nextRows.length){toast('目前沒有可分析資料');return}
+  const c=detectCapabilities(nextRows);
+  if(!(c.product||c.qty||c.sales||c.date||c.waste||c.clearance)){
+    toast('請至少確認一個可用欄位');return;
+  }
+
+  const hasRealRowDates=nextRows.some(r=>r.date instanceof Date&&!isNaN(r.date));
+  const p=aggregatePeriodFromRows(nextRows);
+  if(!hasRealRowDates&&p){
+    const cls=classifyAggregatePeriod(p.start,p.end);
+    if(cls.kind==='mixed'){
+      pendingConfirmedRows=nextRows;
+      const weekday=cls.weekday.map(x=>x.date).join('、')||'無';
+      const holiday=cls.holiday.map(x=>x.date).join('、')||'無';
+      $('#periodDecisionText').textContent=
+        `報表期間是 ${p.start} ～ ${p.end}。因為商品只有期間彙總，系統不會把營業額硬拆到每一天。`;
+      $('#periodDecisionDays').innerHTML=
+        `平日：${weekday}<br>假日（六／日）：${holiday}<br><b>若不另外上傳分開報表，平日／假日分析會自動停用。</b>`;
+      $('#periodDecisionModal').hidden=false;
+      return;
+    }
+    if(cls.kind==='weekday'){
+      finishConfirmedImport(nextRows,{mode:'weekday-aggregate',period:p,classification:cls});return;
+    }
+    if(cls.kind==='holiday'){
+      finishConfirmedImport(nextRows,{mode:'holiday-aggregate',period:p,classification:cls});return;
+    }
+  }
+  finishConfirmedImport(nextRows,{mode:hasRealRowDates?'row-dates':'unknown-period',period:p});
+};
+$('#useAggregateOnly').onclick=()=>{
+  $('#periodDecisionModal').hidden=true;
+  const rr=pendingConfirmedRows||[];
+  const p=aggregatePeriodFromRows(rr);
+  finishConfirmedImport(rr,{mode:'mixed-aggregate',period:p,classification:p?classifyAggregatePeriod(p.start,p.end):null});
+  pendingConfirmedRows=null;
+};
+$('#replaceWithSeparatedReports').onclick=()=>{
+  $('#periodDecisionModal').hidden=true;
+  // Do not combine the mixed aggregate with the replacement reports; that would double count.
+  staged=[]; pendingConfirmedRows=null; mapping={}; rows=[];
+  renderFileList([]);
+  setImportStep(1);
+  $('#importStatus').textContent='請上傳分開日期的報表。原本跨平日／假日的彙總檔已移除，避免重複計算。';
+  $('#nextImportStep').disabled=true;$('#confirmImport').disabled=true;
 };
 function groupBy(list,keyFn){const m=new Map();for(const r of list){const k=keyFn(r);if(!m.has(k))m.set(k,[]);m.get(k).push(r)}return m}
 function aggregate(list){
@@ -1906,12 +2063,30 @@ function renderAll(){
    $('#summary').textContent='此結論只基於已提供的報廢／出清欄位。';
  }
 
+ const period=activePeriodInfo(rows);
+ const pb=$('#reportPeriodBanner');
+ if(period){
+   pb.hidden=false;
+   pb.innerHTML=`資料期間　<strong>${period.label}</strong>　・　${period.days} 天彙總<br><span style="font-weight:500;color:#7A8699">不把期間彙總反推成任何一天的實績。</span>`;
+   $('#ovSalesLabel').textContent='期間總營業額';
+   $('#ovQtyLabel').textContent='期間總銷售量';
+   $('#ovWasteLabel').textContent='期間報廢金額';
+   $('#ovClearanceLabel').textContent='期間出清金額';
+ }else{
+   pb.hidden=true;
+   $('#ovSalesLabel').textContent='總營業額';
+   $('#ovQtyLabel').textContent='銷售數量';
+   $('#ovWasteLabel').textContent='報廢金額';
+   $('#ovClearanceLabel').textContent='出清金額';
+ }
  $('#ovSales').textContent=maybeMoney(a.sales);
+ $('#ovAvgSales').textContent=period?maybeMoney(avgOverReportDays(a.sales)):'無資料';
  $('#ovQty').textContent=maybeNum(a.qty);
+ $('#ovAvgQty').textContent=period?maybeNum(avgOverReportDays(a.qty)):'無資料';
  $('#ovWaste').textContent=maybeMoney(a.waste);
+ $('#ovAvgWaste').textContent=period?maybeMoney(avgOverReportDays(a.waste)):'無資料';
  $('#ovClearance').textContent=maybeMoney(a.clearance);
- $('#ovWasteRate').textContent=(a.sales!=null&&a.sales!==0&&a.waste!=null)?pct(a.waste/a.sales):'無資料';
- $('#ovClearanceRate').textContent=(a.sales!=null&&a.sales!==0&&a.clearance!=null)?pct(a.clearance/a.sales):'無資料';
+ $('#ovAvgClearance').textContent=period?maybeMoney(avgOverReportDays(a.clearance)):'無資料';
 
  renderTop3(skuStats,loss);
  renderWeek();
@@ -1929,6 +2104,24 @@ function renderTop3(stats,total){
  $('#top3').innerHTML=stats.filter(x=>x.loss!=null&&x.loss>0).slice(0,3).map((x,i)=>`<div class="rank-item"><div class="rank-no">${i+1}</div><div class="rank-main"><b>${esc(x.name)}</b><small>報廢 ${maybeMoney(x.waste)} · 出清 ${maybeMoney(x.clearance)}</small></div><div class="rank-money"><b>${money(x.loss)}</b><small>${total?((x.loss/total)*100).toFixed(1)+'%':'—'}</small></div></div>`).join('')||'<div class="empty">已提供損耗欄位，但目前沒有正數損耗</div>';
 }
 function renderWeek(){
+ const pm=window.__opsPeriodMode||{};
+ if(pm.mode==='mixed-aggregate'){
+   $('#weekCompare').innerHTML='<div class="empty">這份報表同時包含平日與假日，但只有期間彙總，沒有逐日明細。為避免錯誤拆分，平日／假日分析已停用。</div>';return;
+ }
+ if(pm.mode==='weekday-aggregate'||pm.mode==='holiday-aggregate'){
+   const a=aggregate(rows), days=pm.classification?.days?.length||0;
+   const label=pm.mode==='weekday-aggregate'?'平日':'假日';
+   const avgSales=(a.sales!=null&&days)?a.sales/days:null;
+   const avgLoss=days?((sumOptional(a.waste,a.clearance))??null):null;
+   const perDayLoss=avgLoss!=null?avgLoss/days:null;
+   $('#weekCompare').innerHTML=`<div class="mini-grid">
+    <div class="mini-card"><span>${label}期間營業額</span><strong>${maybeMoney(a.sales)}</strong><small>${days} 天，整段期間皆為${label}</small></div>
+    <div class="mini-card"><span>${label}日均營業額</span><strong>${maybeMoney(avgSales)}</strong><small>期間總額 ÷ ${days} 天</small></div>
+    <div class="mini-card"><span>${label}期間損耗</span><strong>${maybeMoney(sumOptional(a.waste,a.clearance))}</strong></div>
+    <div class="mini-card"><span>${label}日均損耗</span><strong>${maybeMoney(perDayLoss)}</strong></div>
+   </div><div class="insight">此報表沒有逐日商品明細；因整段日期都屬於${label}，所以可安全歸類為${label}彙總，但不會捏造每日商品數字。</div>`;
+   return;
+ }
  const valid=rows.filter(r=>r.date instanceof Date&&!isNaN(r.date));
  if(!valid.length){$('#weekCompare').innerHTML='<div class="empty">日期資料：無資料，無法比較平日與假日</div>';return}
  const dayGroups=groupBy(valid,r=>r.date.toISOString().slice(0,10));
@@ -2377,5 +2570,18 @@ window.addEventListener('unhandledrejection', function(e){
 })();
 </script>
 
+
+<div id="periodDecisionModal" class="period-modal" hidden>
+ <div class="period-sheet" role="dialog" aria-modal="true">
+  <div style="font-size:12px;font-weight:900;letter-spacing:.18em;color:#2C64F1">日期範圍判斷</div>
+  <h3>這份報表同時包含平日與假日</h3>
+  <p id="periodDecisionText"></p>
+  <div id="periodDecisionDays" class="period-days"></div>
+  <div class="period-actions">
+   <button id="replaceWithSeparatedReports" class="primary" type="button">要，改傳分開日期的報表</button>
+   <button id="useAggregateOnly" class="secondary" type="button">不用，只分析整體營運</button>
+  </div>
+ </div>
+</div>
 </body>
 </html>
