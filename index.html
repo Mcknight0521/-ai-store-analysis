@@ -3182,13 +3182,13 @@ window.addEventListener('unhandledrejection', function(e){
     if(m===5&&dow===0&&d>=8&&d<=14)return {name:'母親節'};if(m===8&&d===8)return {name:'父親節'};if((m===12&&d>=29)||(m===1&&d===1))return {name:'跨年／元旦'};if(m===12&&d>=20&&d<=25)return {name:'聖誕檔期'};return null;
   }
   function buildDailySales(){
-    const rows=Array.isArray(window.rows)?window.rows:[],map=new Map();
-    rows.forEach(r=>{if(!(r.date instanceof Date)||isNaN(r.date)||r.sales==null)return;const k=iso(r.date);if(!map.has(k))map.set(k,{date:new Date(r.date),sales:0});map.get(k).sales+=Number(r.sales)||0});
+    const currentRows=Array.isArray(rows)?rows:[],map=new Map();
+    currentRows.forEach(r=>{if(!(r.date instanceof Date)||isNaN(r.date)||r.sales==null)return;const k=iso(r.date);if(!map.has(k))map.set(k,{date:new Date(r.date),sales:0});map.get(k).sales+=Number(r.sales)||0});
     const days=[...map.values()].sort((a,b)=>a.date-b.date);days.forEach(x=>{const peers=days.filter(y=>y!==x&&y.date.getDay()===x.date.getDay()).map(y=>y.sales).filter(Number.isFinite);if(peers.length>=2){peers.sort((a,b)=>a-b);const mid=Math.floor(peers.length/2),base=peers.length%2?peers[mid]:(peers[mid-1]+peers[mid])/2;x.baseline=base;x.delta=base?x.sales/base-1:0}else{x.baseline=null;x.delta=0}});return days;
   }
   function analysisDates(){
     const daily=buildDailySales();if(daily.length)return daily.map(x=>({date:new Date(x.date),sales:x.sales,baseline:x.baseline,delta:x.delta,hasSales:true}));
-    const p=typeof activePeriodInfo==='function'?activePeriodInfo(window.rows||[]):null;if(!p)return [];
+    const p=typeof activePeriodInfo==='function'?activePeriodInfo(Array.isArray(rows)?rows:[]):null;if(!p)return [];
     return periodDates(p.start,p.end).map(date=>({date,sales:null,baseline:null,delta:0,hasSales:false}));
   }
   function analysisRange(){const days=analysisDates();if(!days.length)return null;const arr=days.map(x=>new Date(x.date)).sort((a,b)=>a-b);return {start:arr[0],end:arr[arr.length-1]}}
