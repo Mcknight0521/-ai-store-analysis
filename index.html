@@ -978,7 +978,86 @@ function workbookSheetToRecords(ws){
   return matrixToRecords(matrix);
 }
 
+
+// Carrefour ERP「每日銷售報表 - 依單品」是列印版 Excel：商品明細、N/P、
+// 小分類總計與最終總計混在同一張表。專用 parser 只接受 6 碼 SKU 明細，
+// 合併同 SKU 的 N/P；小分類總計與總計只做驗證，不進分析，避免營業額重複加總。
+function parseDailySalesByItemSheet(ws,name='',sheetName=''){
+  const matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,dateNF:'yyyy-mm-dd'});
+  if(!matrix?.length)return null;
+  const text=v=>String(v??'').trim();
+  const headerRow=matrix.findIndex(row=>{
+    const vals=(row||[]).map(text);
+    return vals.includes('單品編號')&&vals.some(v=>/銷售額[（(]含稅[）)]/.test(v))&&vals.includes('降價出清金額');
+  });
+  if(headerRow<0)return null;
+  const headers=(matrix[headerRow]||[]).map(text);
+  const findCol=re=>headers.findIndex(h=>re.test(h));
+  const cSku=findCol(/^單品編號$/),cItem=findCol(/^單品名稱$/),cNP=findCol(/^N\/P$/),cQty=findCol(/^銷售量$/),cSales=findCol(/銷售額[（(]含稅[）)]/),cInv=findCol(/^剩餘庫存$/),cNear=findCol(/^即期出清金額$/),cMark=findCol(/^降價出清金額$/);
+  if([cSku,cItem,cQty,cSales,cMark].some(i=>i<0))return null;
+
+  let periodStart=null,periodEnd=null,printDate=null;
+  for(let r=0;r<headerRow;r++){
+    const row=matrix[r]||[];
+    for(let c=0;c<row.length;c++){
+      const label=text(row[c]);
+      if(label==='日期起'){
+        periodStart=isoLocalDate(parseDmyDateStrict(text(row[c+2]??row[c+1])))||periodStart;
+        const till=row.findIndex((v,i)=>i>c&&text(v)==='迄');
+        if(till>=0)periodEnd=isoLocalDate(parseDmyDateStrict(text(row[till+1])))||periodEnd;
+      }
+      if(label==='列印日期:')printDate=isoLocalDate(parseDmyDateStrict(text(row[c+2]??row[c+1])))||printDate;
+    }
+  }
+
+  const grouped=new Map();let detailRows=0,totalRow=null,subtotals=0;
+  const n=v=>{const x=toNum(v);return x==null?0:x};
+  for(let r=headerRow+1;r<matrix.length;r++){
+    const row=matrix[r]||[];
+    const sku=text(row[cSku]);
+    const labels=row.map(text);
+    if(labels.includes('小分類總計')){subtotals++;continue}
+    if(labels.includes('總計')){
+      totalRow={sales:toNum(row[cSales]),qty:toNum(row[cQty]),clearance:n(row[cNear])+n(row[cMark])};
+      continue;
+    }
+    if(!/^\d{6}$/.test(sku))continue;
+    detailRows++;
+    const rawName=text(row[cItem]);
+    const item=(rawName.split(/\r?\n/)[0]||rawName).trim();
+    const prev=grouped.get(sku)||{sku,item,qty:0,sales:0,clearance:0,inventory:null,periodStart,periodEnd,printDate,np:[]};
+    prev.item=prev.item||item;
+    prev.qty+=n(row[cQty]);
+    prev.sales+=n(row[cSales]);
+    prev.clearance+=n(row[cNear])+n(row[cMark]);
+    const inv=toNum(row[cInv]);if(inv!=null)prev.inventory=inv;
+    const np=text(row[cNP]);if(np&&!prev.np.includes(np))prev.np.push(np);
+    grouped.set(sku,prev);
+  }
+  const records=[...grouped.values()];
+  if(!records.length)return null;
+  const calc={
+    sales:records.reduce((a,r)=>a+n(r.sales),0),
+    qty:records.reduce((a,r)=>a+n(r.qty),0),
+    clearance:records.reduce((a,r)=>a+n(r.clearance),0)
+  };
+  const close=(a,b,tol=.01)=>b==null||Math.abs(Number(a)-Number(b))<=tol;
+  const verification={sales:close(calc.sales,totalRow?.sales,.5),qty:close(calc.qty,totalRow?.qty,.02),clearance:close(calc.clearance,totalRow?.clearance,.5),calculated:calc,reported:totalRow};
+  if(totalRow&&(!verification.sales||!verification.qty||!verification.clearance)){
+    const bad=[];if(!verification.sales)bad.push('營業額');if(!verification.qty)bad.push('銷售量');if(!verification.clearance)bad.push('出清金額');
+    throw new Error(`Excel 明細與報表總計不一致（${bad.join('、')}），已停止匯入，避免重複加總或誤算。`);
+  }
+  Object.defineProperty(records,'importMeta',{value:{sourceType:'spreadsheet',sourceFile:name,sheet:sheetName,headerRow:headerRow+1,reportType:'每日銷售報表 - 依單品',parser:'daily-sales-by-item-xlsx-v2',detailRows,products:records.length,ignoredSubtotals:subtotals,verification,periodStart,periodEnd},enumerable:false,configurable:true});
+  return records;
+}
+
 function parseWorkbook(wb,name=''){
+  // 已知 ERP 報表優先走確定性 parser；其他試算表才使用通用智慧辨識。
+  for(const sheetName of wb.SheetNames||[]){
+    const ws=wb.Sheets[sheetName];if(!ws)continue;
+    const known=parseDailySalesByItemSheet(ws,name,sheetName);
+    if(known?.length)return known;
+  }
   let best={records:[],score:-Infinity,sheet:'',headerRow:0,headers:[]};
   for(const sheetName of wb.SheetNames||[]){
     const ws=wb.Sheets[sheetName];if(!ws)continue;
@@ -2184,6 +2263,11 @@ async function handleFiles(files){
       let detail=`讀取成功・${raw.length.toLocaleString()} 筆`;
       if(meta.sheet)detail+=`・${meta.sheet}`;
       if(meta.headerRow)detail+=`・表頭第 ${meta.headerRow} 列`;
+      if(meta.sourceType==='spreadsheet'&&meta.parser==='daily-sales-by-item-xlsx-v2'){
+        detail+=`・ERP單品銷售・${Number(meta.products||raw.length).toLocaleString()} 商品`;
+        if(meta.ignoredSubtotals)detail+=`・已排除 ${Number(meta.ignoredSubtotals).toLocaleString()} 個小分類總計`;
+        if(meta.verification?.sales&&meta.verification?.qty&&meta.verification?.clearance)detail+='・總計核對通過';
+      }
       if(meta.sourceType==='pdf'){
         if(raw.pdfMeta?.reportType==='庫存調整單'){
           detail+='・庫存調整明細';
@@ -3134,14 +3218,28 @@ window.addEventListener('unhandledrejection', function(e){
     for(const re of patterns){let m;while((m=re.exec(text))){let title,url,y,mo,da;if(re===patterns[0]){title=m[1];y=m[2];mo=m[3];da=m[4];url=m[5]}else{url=m[1];title=m[2];y=m[3];mo=m[4];da=m[5];if(url.startsWith('/'))url='https://www.dgpa.gov.tw'+url}const date=rocDateToISO(y,mo,da),k=date+'|'+url;if(!seen.has(k)){seen.add(k);out.push({date,url,title})}}}
     return out;
   }
+  function resolveDgpaUrl(base,href){try{return new URL(String(href||'').replace(/&amp;/g,'&'),base).href}catch{return ''}}
+  function extractDgpaAttachmentUrls(text,base){
+    const urls=[];const push=u=>{u=resolveDgpaUrl(base,u);if(u&&!urls.includes(u))urls.push(u)};let m;
+    const html=/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    while((m=html.exec(String(text||'')))){const label=stripHtml(m[2]),href=m[1];if(/nds(?:E)?\.html|停止上班|停止辦公|附件下載/i.test(label+' '+href))push(href)}
+    const md=/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+    while((m=md.exec(String(text||''))))if(/nds(?:E)?\.html|停止上班|停止辦公|附件/i.test(m[1]+' '+m[2]))push(m[2]);
+    return urls.filter(u=>!/ndsE\.html/i.test(u));
+  }
+  async function fetchDgpaClosureDetail(it){
+    const detail=await fetchTextSmart(it.url);let parsed=parseDGPA(detail.text,state.region);if(parsed.found)return parsed;
+    for(const url of extractDgpaAttachmentUrls(detail.text,it.url)){try{const r=await fetchTextSmart(url);parsed=parseDGPA(r.text,state.region);if(parsed.found)return parsed}catch{}}
+    return parsed;
+  }
   async function loadHistoricalClosures(range){
-    if(!range)return [];const start=iso(range.start),end=iso(range.end),key=`opsDGPA:${state.region}:${start}:${end}`,cached=cacheGet(key,14*864e5);if(cached)return cached;
+    if(!range)return [];const start=iso(range.start),end=iso(range.end),key=`opsDGPAV3:${state.region}:${start}:${end}`,cached=cacheGet(key,14*864e5);if(cached)return cached;
     const targets=[];let foundOlder=false;
     for(let page=1;page<=50&&!foundOlder;page++){
       try{const url=`https://www.dgpa.gov.tw/informationlist?page=${page}&uid=374`,r=await fetchTextSmart(url),items=extractDgpaList(r.text);if(!items.length){if(page>3)break;continue}for(const it of items){if(it.date>=iso(addDays(range.start,-1))&&it.date<=iso(addDays(range.end,1)))targets.push(it);if(it.date<iso(addDays(range.start,-3)))foundOlder=true}}catch(e){if(page>6)break}
     }
     const uniq=[...new Map(targets.map(x=>[x.url,x])).values()],out=[];
-    for(let i=0;i<uniq.length;i+=4){const batch=uniq.slice(i,i+4);const rr=await Promise.allSettled(batch.map(x=>fetchTextSmart(x.url)));rr.forEach((r,j)=>{if(r.status!=='fulfilled')return;const it=batch[j],parsed=parseDGPA(r.value.text,state.region);if(parsed.closure){const plain=stripHtml(r.value.text);let date=it.date;const md=plain.match(/(\d{2,3})年\s*(\d{1,2})月\s*(\d{1,2})日/);if(md)date=rocDateToISO(md[1],md[2],md[3]);if(date>=start&&date<=end)out.push({type:'closure',date,name:'停班停課',detail:parsed.detail,source:'行政院人事行政總處'})}})}
+    for(let i=0;i<uniq.length;i+=4){const batch=uniq.slice(i,i+4);const rr=await Promise.allSettled(batch.map(fetchDgpaClosureDetail));rr.forEach((r,j)=>{if(r.status!=='fulfilled'||!r.value?.closure)return;const it=batch[j],date=it.date;if(date>=start&&date<=end)out.push({type:'closure',date,name:'停班停課',detail:r.value.detail,source:'行政院人事行政總處'})})}
     cacheSet(key,out);return out;
   }
   function parseTyphoonDetail(text){
