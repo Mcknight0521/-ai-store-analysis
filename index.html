@@ -244,6 +244,7 @@ html.has-hash .page.active:not(:target){display:none!important}
 
 
 <style id="smart-import-v17-style">
+[hidden]{display:none!important}
 .smart-import-sheet{max-width:760px}
 .import-subtitle{margin:5px 0 0;color:var(--muted);font-size:8px;line-height:1.45}
 .import-stepbar{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 18px 12px;border-bottom:1px solid var(--line)}
@@ -787,9 +788,9 @@ function detectFileKind(file){
 function normalize(raw,map){
  return raw.map((r,i)=>({
   _i:i+1,date:map.date?toDate(r[map.date]):null,sku:map.sku?String(r[map.sku]??'').trim():'',
-  item:map.item?String(r[map.item]??'').trim():'',qty:map.qty?toNum(r[map.qty]):0,
-  sales:map.sales?toNum(r[map.sales]):0,waste:map.waste?toNum(r[map.waste]):0,clearance:map.clearance?toNum(r[map.clearance]):0
- })).filter(r=>r.date||r.item||r.sku||r.sales||r.waste||r.clearance||r.qty)
+  item:map.item?String(r[map.item]??'').trim():'',qty:map.qty?toNum(r[map.qty]):null,
+  sales:map.sales?toNum(r[map.sales]):null,waste:map.waste?toNum(r[map.waste]):null,clearance:map.clearance?toNum(r[map.clearance]):null
+ })).filter(r=>r.date||r.item||r.sku||r.sales!=null||r.waste!=null||r.clearance!=null||r.qty!=null)
 }
 function parseDelimited(text,name){
  const sep=name.toLowerCase().endsWith('.tsv')?'\t':(text.includes('\t')?'\t':',');
@@ -839,6 +840,7 @@ async function parseFile(file){
   throw new Error(`不支援的檔案格式：${ext||'未知'}`);
 }
 
+
 async function parseSalesPdf(file){
   if(!window.pdfjsLib) throw new Error('PDF 解析元件載入失敗。請確認網路連線後重新整理頁面。');
 
@@ -846,370 +848,320 @@ async function parseSalesPdf(file){
   let pdf;
   try{
     pdf=await pdfjsLib.getDocument({data}).promise;
-    window.__opsPdfDoc=pdf;
   }catch(err){
     const msg=String(err&&err.message||err||'');
     if(/worker|GlobalWorkerOptions|fake worker/i.test(msg)){
       pdf=await pdfjsLib.getDocument({data,disableWorker:true}).promise;
-      window.__opsPdfDoc=pdf;
-    }else{
-      throw err;
-    }
+    }else throw err;
   }
 
-  const pages=[];
-  let fullText='';
+  const rawPages=[];
+  let searchableText='';
 
   for(let p=1;p<=pdf.numPages;p++){
     const page=await pdf.getPage(p);
-    const content=await page.getTextContent();
+    const content=await page.getTextContent({disableCombineTextItems:false});
+    const items=(content.items||[])
+      .map((x,index)=>({
+        text:String(x.str||'').replace(/\u00a0/g,' ').trim(),
+        x:Number(x.transform?.[4]||0),
+        y:Number(x.transform?.[5]||0),
+        w:Number(x.width||0),
+        h:Number(x.height||0),
+        index
+      }))
+      .filter(x=>x.text);
 
-    const items=content.items
-      .filter(x=>String(x.str||'').trim())
-      .map(x=>({
-        text:String(x.str||'').trim(),
-        x:x.transform?.[4]||0,
-        y:x.transform?.[5]||0
-      }));
-
-    // PDF reports may be physically portrait but displayed with a 90° page rotation.
-    // In that case a VISUAL table row shares the same PDF X coordinate, not Y.
-    const rotation=((page.rotate||0)%360+360)%360;
-    const lineMap=[];
-
-    if(rotation===90 || rotation===270){
-      for(const item of items){
-        let line=lineMap.find(l=>Math.abs(l.axis-item.x)<=5.5);
-        if(!line){
-          line={axis:item.x,items:[]};
-          lineMap.push(line);
-        }
-        line.items.push(item);
-      }
-      lineMap.sort((a,b)=>rotation===90 ? a.axis-b.axis : b.axis-a.axis);
-      for(const l of lineMap){
-        l.items.sort((a,b)=>rotation===90 ? b.y-a.y : a.y-b.y);
-      }
-    }else{
-      for(const item of items){
-        let line=lineMap.find(l=>Math.abs(l.axis-item.y)<=5.5);
-        if(!line){
-          line={axis:item.y,items:[]};
-          lineMap.push(line);
-        }
-        line.items.push(item);
-      }
-      lineMap.sort((a,b)=>rotation===0 ? b.axis-a.axis : a.axis-b.axis);
-      for(const l of lineMap){
-        l.items.sort((a,b)=>rotation===0 ? a.x-b.x : b.x-a.x);
-      }
-    }
-
-    const lines=lineMap.map(l=>l.items.map(i=>i.text).join(' ').replace(/\s+/g,' ').trim());
-
-    pages.push(lines);
-    fullText += '\n' + lines.join('\n');
+    rawPages.push({page:p,rotation:((page.rotate||0)%360+360)%360,items});
+    searchableText += '\n' + items.map(x=>x.text).join(' ');
   }
 
-  const isDailyItemSales=/每日銷售報表\s*-\s*依單品/.test(fullText);
-  if(!isDailyItemSales){
-    throw new Error('目前 PDF 自動辨識優先支援「每日銷售報表 - 依單品」。其他 PDF 請改用 Excel / CSV，避免錯讀。');
+  const looksLikeDailyItem=
+    /每日銷售報表/.test(searchableText) &&
+    /單品編號/.test(searchableText) &&
+    /銷售量/.test(searchableText) &&
+    /銷售額/.test(searchableText);
+
+  if(looksLikeDailyItem){
+    const parsed=parseDailyItemByLayout(rawPages,file.name);
+    if(parsed.length) return parsed;
   }
 
-  return await parseDailyItemSalesPdf(pages,file.name);
+  throw new Error('PDF 文字已讀取，但目前無法可靠重建表格。這份檔案不會被拿去猜測分析。');
 }
 
-async function parseDailyItemSalesPdf(pages,fileName){
+function parseDailyItemByLayout(rawPages,fileName){
   const clean=s=>String(s??'').replace(/\u00a0/g,' ').replace(/[−–—]/g,'-').replace(/\s+/g,' ').trim();
-  const toNum=v=>{
-    const n=Number(String(v??'').replace(/,/g,'').replace(/[^\d.-]/g,''));
+  const numeric=s=>/^-?[\d,.]+(?:\.\d+)?$/.test(clean(s));
+  const nval=s=>{
+    if(s==null||s==='')return null;
+    const n=Number(clean(s).replace(/,/g,'').replace(/[^\d.-]/g,''));
     return Number.isFinite(n)?n:null;
   };
-  const parseDMY=s=>{
-    const m=String(s||'').match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/);
-    if(!m)return null;
-    const d=new Date(Number(m[3]),Number(m[2])-1,Number(m[1]));
-    return isNaN(d)?null:d;
+  const median=a=>{
+    const b=a.filter(Number.isFinite).sort((x,y)=>x-y);
+    if(!b.length)return 0;
+    const m=Math.floor(b.length/2);
+    return b.length%2?b[m]:(b[m-1]+b[m])/2;
   };
-  const iso=d=>d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:'';
+  const spread=a=>{
+    if(!a.length)return 0;
+    const m=a.reduce((s,v)=>s+v,0)/a.length;
+    return Math.sqrt(a.reduce((s,v)=>s+(v-m)*(v-m),0)/a.length);
+  };
 
-  const all=pages.flat();
-  const joined=all.join('\n');
+  // Header names are semantic anchors. The parser does NOT depend on page.rotate.
+  // We infer whether rows run along X or Y from the actual header coordinates.
+  const defs=[
+    ['dept',        [/^部門$/]],
+    ['sku',         [/單品編號/]],
+    ['item',        [/單品名稱/]],
+    ['detail',      [/細目編號/]],
+    ['np',          [/^N\/P$/i,/N\/P/]],
+    ['qty',         [/銷售量/]],
+    ['salesEx',     [/銷售額.*未稅/]],
+    ['tax',         [/^稅額$/]],
+    ['sales',       [/銷售額.*含稅/]],
+    ['margin',      [/毛利/]],
+    ['commercial',  [/商業收益/]],
+    ['inventory',   [/剩餘庫存|庫存/]],
+    ['nearQty',     [/即期出清數量/]],
+    ['nearAmt',     [/即期出清金額/]],
+    ['markdownQty', [/降價出清數量/]],
+    ['markdownAmt', [/降價出清金額/]]
+  ];
 
-  // Extract the actual report period from the "日期起 ... 迄 ..." header.
-  // Do NOT use the print date as the period end.
-  let startDate=null, endDate=null;
-  for(const line of all){
-    const m=line.match(/日期起\s+(\d{1,2}\/\d{1,2}\/\d{4})\s+迄\s+(\d{1,2}\/\d{1,2}\/\d{4})/);
-    if(m){
-      startDate=parseDMY(m[1]);
-      endDate=parseDMY(m[2]);
-      break;
+  function findHeader(items,patterns){
+    return items.find(it=>patterns.some(re=>re.test(clean(it.text))))||null;
+  }
+
+  function nearestToColumn(rowItems,axis,target){
+    if(!Number.isFinite(target))return null;
+    let best=null,bestD=Infinity;
+    for(const it of rowItems){
+      const c=axis==='x'?it.x:it.y;
+      const d=Math.abs(c-target);
+      if(d<bestD){bestD=d;best=it}
     }
+    return best;
   }
-  if(!startDate){
-    const dates=[...joined.matchAll(/\b(\d{1,2}\/\d{1,2}\/\d{4})\b/g)].map(m=>parseDMY(m[1])).filter(Boolean);
-    if(dates.length) startDate=dates[0];
-  }
-  if(!endDate) endDate=startDate;
 
-  // Detect store.
-  const storeLine=all.find(x=>/^店\s*[:：]/.test(x));
-  const store=storeLine ? clean(storeLine.replace(/^店\s*[:：]\s*/,'')) : '';
+  function extractDateMeta(){
+    const all=rawPages.flatMap(p=>p.items);
+    const dates=all.filter(i=>/\b\d{1,2}\/\d{1,2}\/\d{4}\b/.test(i.text));
+    const parse=s=>{
+      const m=s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if(!m)return null;
+      const d=new Date(+m[3],+m[2]-1,+m[1]);
+      return isNaN(d)?null:d;
+    };
 
-  const rows=[];
+    // Only accept period dates when we can tie them to the explicit start/end labels.
+    const starts=all.filter(i=>/日期起/.test(i.text));
+    const ends=all.filter(i=>/^迄$/.test(i.text));
+    let startDate=null,endDate=null;
 
-  // Actual layout of this PDF:
-  // 部門 | 單品編號 | 單品名稱 | 細目編號 | N/P | 銷售量 | 未稅額 | 稅額 | 含稅額 | 毛利 | 商業收益 | 庫存 | 即期出清量 | 即期出清額 | 降價出清量 | 降價出清額
-  // All of those fields are on the same visual row, so parse that row directly.
-  for(const lines of pages){
-    for(let i=0;i<lines.length;i++){
-      const line=clean(lines[i]);
-
-      const tx=line.match(
-        /^(\d{1,3})\s+(\d{6})\s+(.+?)\s+(\d{3})\s+([NP])\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)$/i
-      );
-      if(!tx) continue;
-
-      const sku=tx[2];
-      let item=clean(tx[3]);
-
-      // Some long Chinese names continue on the next visual line before the English translation.
-      // Append only a short continuation that is clearly not another transaction/header/English name.
-      const next=clean(lines[i+1]||'');
-      if(next &&
-         !/^\d{1,3}\s+\d{6}\s+/.test(next) &&
-         !/^(小分類|部門|單品編號|每日銷售報表)/.test(next) &&
-         !/^[A-Za-z][A-Za-z0-9 _()+\-/,.'"]+$/.test(next) &&
-         next.length<=28){
-        item=clean(item+next);
+    const nearestDate=(anchor)=>{
+      if(!anchor||!dates.length)return null;
+      let best=null,dist=Infinity;
+      for(const d of dates){
+        const dx=d.x-anchor.x,dy=d.y-anchor.y;
+        const dd=Math.hypot(dx,dy);
+        if(dd<dist){dist=dd;best=d}
       }
+      return best&&dist<220?parse(best.text):null;
+    };
 
-      const np=tx[5].toUpperCase();
-      const qty=toNum(tx[6])??0;
-      const salesEx=toNum(tx[7])??0;
-      const tax=toNum(tx[8])??0;
-      const salesInc=toNum(tx[9])??0;
-      const margin=toNum(tx[10]);
-      const commercial=toNum(tx[11]);
-      const inventory=toNum(tx[12]);
-      const nearExpiryQty=toNum(tx[13])??0;
-      const nearExpiryAmt=toNum(tx[14])??0;
-      const markdownQty=toNum(tx[15])??0;
-      const markdownAmt=toNum(tx[16])??0;
+    if(starts.length) startDate=nearestDate(starts[0]);
+
+    // "迄" appears multiple times. Prefer one geometrically near the start-period area.
+    if(starts.length&&ends.length){
+      const s=starts[0];
+      const nearEnd=[...ends].sort((a,b)=>Math.hypot(a.x-s.x,a.y-s.y)-Math.hypot(b.x-s.x,b.y-s.y))[0];
+      endDate=nearestDate(nearEnd);
+    }
+
+    return {startDate,endDate};
+  }
+
+  const {startDate,endDate}=extractDateMeta();
+  const singleDate=!!(startDate&&endDate&&startDate.getTime()===endDate.getTime());
+  const rows=[];
+  let pagesWithHeaders=0;
+
+  for(const page of rawPages){
+    const items=page.items;
+    const headers={};
+    for(const [key,patterns] of defs) headers[key]=findHeader(items,patterns);
+
+    const essential=[headers.sku,headers.item,headers.qty,headers.sales,headers.np].filter(Boolean);
+    if(essential.length<4) continue;
+    pagesWithHeaders++;
+
+    const hx=essential.map(i=>i.x),hy=essential.map(i=>i.y);
+    // If header labels share X, columns are distributed on Y and visual rows share X.
+    const rowAxis=spread(hx)<spread(hy)?'x':'y';
+    const colAxis=rowAxis==='x'?'y':'x';
+
+    const rowCoord=it=>rowAxis==='x'?it.x:it.y;
+    const colCoord=it=>colAxis==='x'?it.x:it.y;
+
+    const headerRowMedian=median(essential.map(rowCoord));
+    const fontScale=median(items.map(i=>Math.max(Math.abs(i.h||0),5)));
+    const rowTol=Math.max(4.5,Math.min(9,fontScale*.9));
+
+    // Coordinates of each semantic column.
+    const col={};
+    for(const [key] of defs){
+      if(headers[key]) col[key]=colCoord(headers[key]);
+    }
+
+    const skuCandidates=items.filter(i=>/^\d{6}$/.test(clean(i.text)));
+
+    for(const skuToken of skuCandidates){
+      const rc=rowCoord(skuToken);
+
+      // Skip header-like or impossible region.
+      if(Math.abs(rc-headerRowMedian)<rowTol*1.5) continue;
+
+      // Row is reconstructed directly from spatial proximity.
+      const rowItems=items.filter(i=>Math.abs(rowCoord(i)-rc)<=rowTol);
+
+      const skuCell=nearestToColumn(rowItems,colAxis,col.sku);
+      const npCell=nearestToColumn(rowItems,colAxis,col.np);
+      const qtyCell=nearestToColumn(rowItems,colAxis,col.qty);
+      const salesCell=nearestToColumn(rowItems,colAxis,col.sales);
+      const exCell=nearestToColumn(rowItems,colAxis,col.salesEx);
+      const taxCell=nearestToColumn(rowItems,colAxis,col.tax);
+
+      if(!skuCell||clean(skuCell.text)!==clean(skuToken.text))continue;
+      if(!npCell||!/^[NP]$/i.test(clean(npCell.text)))continue;
+      if(!qtyCell||!numeric(qtyCell.text)||!salesCell||!numeric(salesCell.text))continue;
+
+      // Validate the accounting relation when all three values are available.
+      const sales=nval(salesCell.text);
+      const salesEx=exCell&&numeric(exCell.text)?nval(exCell.text):null;
+      const tax=taxCell&&numeric(taxCell.text)?nval(taxCell.text):null;
+      if(sales==null)continue;
+      if(salesEx!=null&&tax!=null&&Math.abs((salesEx+tax)-sales)>Math.max(2,Math.abs(sales)*.02))continue;
+
+      // Item-name cell: choose content closest to item column, excluding numeric / control cells.
+      let item='';
+      if(Number.isFinite(col.item)){
+        const itemCandidates=rowItems
+          .filter(i=>!/^\d{6}$/.test(clean(i.text)))
+          .filter(i=>!/^[NP]$/i.test(clean(i.text)))
+          .filter(i=>!numeric(i.text))
+          .sort((a,b)=>Math.abs(colCoord(a)-col.item)-Math.abs(colCoord(b)-col.item));
+        if(itemCandidates.length&&Math.abs(colCoord(itemCandidates[0])-col.item)<70){
+          item=clean(itemCandidates[0].text);
+        }
+      }
+      if(!item)continue;
+
+      const getNum=key=>{
+        if(!Number.isFinite(col[key]))return null;
+        const c=nearestToColumn(rowItems,colAxis,col[key]);
+        return c&&numeric(c.text)?nval(c.text):null;
+      };
+
+      const detailCell=Number.isFinite(col.detail)?nearestToColumn(rowItems,colAxis,col.detail):null;
+      const detail=detailCell&&/^\d{3}$/.test(clean(detailCell.text))?clean(detailCell.text):'';
+
+      const qty=getNum('qty');
+      const nearQty=getNum('nearQty');
+      const nearAmt=getNum('nearAmt');
+      const markdownQty=getNum('markdownQty');
+      const markdownAmt=getNum('markdownAmt');
 
       rows.push({
-        date:startDate && endDate && startDate.getTime()===endDate.getTime() ? startDate : null,
-        periodStart:startDate,
-        periodEnd:endDate,
-        store,
-        sku,
+        date:singleDate?startDate:null,
+        periodStart:startDate||null,
+        periodEnd:endDate||null,
+        sku:clean(skuToken.text),
         item,
-        qty,
-        sales:salesInc,
+        detail,
+        npType:clean(npCell.text).toUpperCase(),
+        qty:qty??0,
+        sales,
         salesExTax:salesEx,
         tax,
-        grossMargin:margin,
-        commercialReturn:commercial,
-        inventory,
-        nearExpiryQty,
-        nearExpiryAmt,
+        grossMargin:getNum('margin'),
+        commercialReturn:getNum('commercial'),
+        inventory:getNum('inventory'),
+        nearExpiryQty:nearQty,
+        nearExpiryAmt:nearAmt,
         markdownQty,
         markdownAmt,
-        clearance:nearExpiryAmt+markdownAmt,
-        waste:0,
-        npType:np,
-        sourceType:'pdf-daily-item-sales',
+        clearance:(nearAmt??0)+(markdownAmt??0),
+        sourceType:'pdf-layout-table',
         sourceFile:fileName
       });
     }
   }
-  // Rotation-independent fallback:
-  // In this report PDF.js may expose the SKU/name and the numeric metrics as separate text lines.
-  // Remember the latest "6-digit SKU + Chinese item name", then attach the following
-  // "department detail N/P + 11 metrics" row. This does not depend on X/Y coordinates.
-  if(!rows.length){
-    for(const lines of pages){
-      let pendingSku='', pendingItem='';
-      for(let i=0;i<lines.length;i++){
-        const line=clean(lines[i]);
 
-        const skuLine=line.match(/^(\d{6})\s+(.+)$/);
-        if(skuLine){
-          pendingSku=skuLine[1];
-          pendingItem=clean(skuLine[2]);
+  if(!rows.length || !pagesWithHeaders) return [];
 
-          // Join a short Chinese continuation line, but never English/header/numeric lines.
-          const next=clean(lines[i+1]||'');
-          if(next &&
-             !/^\d{6}\s+/.test(next) &&
-             !/^\d{1,3}\s+\d{3}\s+[NP]\s+/i.test(next) &&
-             !/^(小分類|部門|單品編號|每日銷售報表|店\s*[:：])/.test(next) &&
-             !/^[A-Za-z]/.test(next) &&
-             next.length<=32){
-            pendingItem=clean(pendingItem+next);
-          }
-          continue;
-        }
-
-        const tx=line.match(
-          /^(\d{1,3})\s+(\d{3})\s+([NP])\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)$/i
-        );
-        if(!tx || !pendingSku || !pendingItem) continue;
-
-        const np=tx[3].toUpperCase();
-        const qty=toNum(tx[4])??0;
-        const salesEx=toNum(tx[5])??0;
-        const tax=toNum(tx[6])??0;
-        const salesInc=toNum(tx[7])??0;
-        const margin=toNum(tx[8]);
-        const commercial=toNum(tx[9]);
-        const inventory=toNum(tx[10]);
-        const nearExpiryQty=toNum(tx[11])??0;
-        const nearExpiryAmt=toNum(tx[12])??0;
-        const markdownQty=toNum(tx[13])??0;
-        const markdownAmt=toNum(tx[14])??0;
-
-        rows.push({
-          date:startDate && endDate && startDate.getTime()===endDate.getTime() ? startDate : null,
-          periodStart:startDate,periodEnd:endDate,store,
-          sku:pendingSku,item:pendingItem,qty,sales:salesInc,salesExTax:salesEx,tax,
-          grossMargin:margin,commercialReturn:commercial,inventory,
-          nearExpiryQty,nearExpiryAmt,markdownQty,markdownAmt,
-          clearance:nearExpiryAmt+markdownAmt,waste:0,npType:np,
-          sourceType:'pdf-daily-item-sales',sourceFile:fileName
-        });
-      }
-    }
-  }
-
-  if(!rows.length && window.__opsPdfDoc){
-    for(let p=1;p<=window.__opsPdfDoc.numPages;p++){
-      const page=await window.__opsPdfDoc.getPage(p);
-      const content=await page.getTextContent();
-      const items=content.items
-        .filter(x=>String(x.str||'').trim())
-        .map(x=>({text:clean(x.str),x:x.transform?.[4]||0,y:x.transform?.[5]||0}));
-
-      const rotation=((page.rotate||0)%360+360)%360;
-      const skuItems=items.filter(x=>/^\d{6}$/.test(x.text));
-
-      for(const skuItem of skuItems){
-        const sameRow=(rotation===90 || rotation===270
-          ? items.filter(x=>Math.abs(x.x-skuItem.x)<=7)
-          : items.filter(x=>Math.abs(x.y-skuItem.y)<=7))
-          .sort((a,b)=>{
-            if(rotation===90)return b.y-a.y;
-            if(rotation===270)return a.y-b.y;
-            if(rotation===180)return b.x-a.x;
-            return a.x-b.x;
-          });
-
-        const tokens=sameRow.map(x=>x.text).filter(Boolean);
-        const skuIndex=tokens.findIndex(t=>t===skuItem.text);
-        if(skuIndex<0)continue;
-
-        let npIndex=-1;
-        for(let k=skuIndex+1;k<tokens.length;k++){
-          if(/^[NP]$/i.test(tokens[k]) && k>0 && /^\d{3}$/.test(tokens[k-1])){
-            npIndex=k;
-            break;
-          }
-        }
-        if(npIndex<0)continue;
-
-        const detailIndex=npIndex-1;
-        const item=clean(tokens.slice(skuIndex+1,detailIndex).join(' '));
-        const nums=tokens.slice(npIndex+1)
-          .map(t=>clean(t))
-          .filter(t=>/^-?[\d,.]+$/.test(t));
-
-        if(!item || nums.length<11)continue;
-
-        const qty=toNum(nums[0])??0;
-        const salesEx=toNum(nums[1])??0;
-        const tax=toNum(nums[2])??0;
-        const salesInc=toNum(nums[3])??0;
-        const margin=toNum(nums[4]);
-        const commercial=toNum(nums[5]);
-        const inventory=toNum(nums[6]);
-        const nearExpiryQty=toNum(nums[7])??0;
-        const nearExpiryAmt=toNum(nums[8])??0;
-        const markdownQty=toNum(nums[9])??0;
-        const markdownAmt=toNum(nums[10])??0;
-
-        rows.push({
-          date:startDate && endDate && startDate.getTime()===endDate.getTime() ? startDate : null,
-          periodStart:startDate,periodEnd:endDate,store,
-          sku:skuItem.text,item,qty,sales:salesInc,salesExTax:salesEx,tax,
-          grossMargin:margin,commercialReturn:commercial,inventory,
-          nearExpiryQty,nearExpiryAmt,markdownQty,markdownAmt,
-          clearance:nearExpiryAmt+markdownAmt,waste:0,
-          npType:tokens[npIndex].toUpperCase(),
-          sourceType:'pdf-daily-item-sales',sourceFile:fileName
-        });
-      }
-    }
-  }
-
-  if(!rows.length){
-    throw new Error('PDF 文字已讀取，但三種表格解析方式都未取得明細。');
-  }
-
-  // The same product commonly appears in separate N/P rows. Merge them to one product record
-  // so Top10 and totals do not double-list the SKU.
-  const mergedMap=new Map();
+  // Remove accidental duplicate parses from overlapping text items.
+  const unique=[];
+  const seen=new Set();
   for(const r of rows){
+    const key=[r.sku,r.npType,r.qty,r.sales,r.nearExpiryAmt,r.markdownAmt].join('|');
+    if(seen.has(key))continue;
+    seen.add(key);unique.push(r);
+  }
+
+  // Merge N/P rows into one product record.
+  const mergedMap=new Map();
+  for(const r of unique){
     const key=r.sku||r.item;
     if(!mergedMap.has(key)){
       mergedMap.set(key,{
-        ...r,
-        qty:0,sales:0,salesExTax:0,tax:0,
+        ...r,qty:0,sales:0,salesExTax:0,tax:0,
         nearExpiryQty:0,nearExpiryAmt:0,markdownQty:0,markdownAmt:0,clearance:0,
         npTypes:new Set()
       });
     }
     const x=mergedMap.get(key);
-    x.qty += Number(r.qty)||0;
-    x.sales += Number(r.sales)||0;
-    x.salesExTax += Number(r.salesExTax)||0;
-    x.tax += Number(r.tax)||0;
-    x.nearExpiryQty += Number(r.nearExpiryQty)||0;
-    x.nearExpiryAmt += Number(r.nearExpiryAmt)||0;
-    x.markdownQty += Number(r.markdownQty)||0;
-    x.markdownAmt += Number(r.markdownAmt)||0;
-    x.clearance += Number(r.clearance)||0;
+    x.qty+=(r.qty??0);
+    x.sales+=(r.sales??0);
+    x.salesExTax+=(r.salesExTax??0);
+    x.tax+=(r.tax??0);
+    x.nearExpiryQty+=(r.nearExpiryQty??0);
+    x.nearExpiryAmt+=(r.nearExpiryAmt??0);
+    x.markdownQty+=(r.markdownQty??0);
+    x.markdownAmt+=(r.markdownAmt??0);
+    x.clearance+=(r.clearance??0);
     x.npTypes.add(r.npType);
-    // Use inventory/margins from the last available row only as reference fields.
-    if(r.inventory!=null) x.inventory=r.inventory;
-    if(r.grossMargin!=null) x.grossMargin=r.grossMargin;
+    if(r.inventory!=null)x.inventory=r.inventory;
+    if(r.grossMargin!=null)x.grossMargin=r.grossMargin;
+    if(r.commercialReturn!=null)x.commercialReturn=r.commercialReturn;
   }
 
-  const merged=[...mergedMap.values()].map(x=>({
-    ...x,
-    npType:[...x.npTypes].join('/'),
-    npTypes:undefined
-  }));
+  const merged=[...mergedMap.values()].map(x=>{
+    const out={...x,npType:[...x.npTypes].join('/')};
+    delete out.npTypes;
+    // No waste field exists in this report. Do not fabricate 0.
+    delete out.waste;
+    return out;
+  });
 
-  // Report-level metadata is returned with the rows for UI warnings.
-  merged.pdfMeta={
-    reportType:'每日銷售報表 - 依單品',
-    periodStart:startDate,
-    periodEnd:endDate,
-    store,
-    isMixedDayType:(()=>{
-      if(!startDate||!endDate)return false;
-      let hasWeekday=false,hasWeekend=false;
-      for(let d=new Date(startDate);d<=endDate;d.setDate(d.getDate()+1)){
-        const w=d.getDay();
-        if(w===0||w===6)hasWeekend=true;else hasWeekday=true;
-      }
-      return hasWeekday&&hasWeekend;
-    })()
-  };
+  Object.defineProperty(merged,'pdfMeta',{
+    value:{
+      reportType:'每日銷售報表 - 依單品',
+      parser:'layout-header-v1',
+      parsedDetailRows:unique.length,
+      parsedProducts:merged.length,
+      periodStart:startDate||null,
+      periodEnd:endDate||null
+    },
+    enumerable:false,
+    configurable:true
+  });
 
   return merged;
 }
+
 function showDrawer(){ $('#importDrawer').classList.add('open') }
 function hideDrawer(){ $('#importDrawer').classList.remove('open') }
 $('#openImport').onclick=()=>{showDrawer();setImportStep(1)};
@@ -1296,7 +1248,11 @@ async function handleFiles(files){
       let detail=`讀取成功・${raw.length.toLocaleString()} 筆`;
       if(meta.sheet)detail+=`・${meta.sheet}`;
       if(meta.headerRow)detail+=`・表頭第 ${meta.headerRow} 列`;
-      if(meta.sourceType==='pdf')detail+='・PDF文字表格';
+      if(meta.sourceType==='pdf'){
+        detail+='・PDF文字表格';
+        if(raw.pdfMeta?.parser)detail+=`・${raw.pdfMeta.parser}`;
+        if(raw.pdfMeta?.parsedProducts)detail+=`・${raw.pdfMeta.parsedProducts} 商品`;
+      }
       row.querySelector('small').textContent=detail;row.querySelector('span').textContent='✓';
     }catch(err){
       row.querySelector('small').textContent=String(err?.message||err);row.querySelector('span').textContent='!';
