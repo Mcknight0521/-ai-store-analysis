@@ -2813,18 +2813,18 @@ window.addEventListener('unhandledrejection', function(e){
     if(lm){
       if((lm.m===12&&lm.d>=25)||(lm.m===1&&lm.d<=5))return {name:'春節'};
       if(lm.m===5&&lm.d>=1&&lm.d<=5)return {name:'端午節慶期'};
-      if(lm.m===7&&lm.d>=1&&lm.d<=15)return {name:'中元節慶期'};
+      if(lm.m===7&&lm.d>=9&&lm.d<=15)return {name:'中元節慶期'};
       if(lm.m===8&&lm.d>=10&&lm.d<=15)return {name:'中秋節慶期'};
     }
     if(m===5&&dow===0&&d>=8&&d<=14)return {name:'母親節'};
-    if(m===8&&d>=1&&d<=8)return {name:'父親節檔期'};
+    if(m===8&&d===8)return {name:'父親節'};
     if((m===12&&d>=29)||(m===1&&d===1))return {name:'跨年／元旦'};
     if(m===12&&d>=20&&d<=25)return {name:'聖誕檔期'};
     return null;
   }
   function festivalDays(){return buildDailySales().map(x=>({...x,festival:festivalForDate(x.date)})).filter(x=>x.festival)}
   function eventPin(label,type='neutral'){
-    return `<span class="event-pin ${type}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>${label}</span>`;
+    return `<span class="event-pin ${type}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="7" r="4"></circle><path d="M12 11v10"></path><path d="M9 21h6"></path></svg>${label}</span>`;
   }
   function renderCards(dgpa,cwa,via=[]){
     const box=$e('externalEventCards');if(!box)return;
