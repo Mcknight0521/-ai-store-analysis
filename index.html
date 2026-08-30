@@ -1008,8 +1008,20 @@ function normalize(raw,map){
   qty:map.qty?toNum(r[map.qty]):null,
   sales:map.sales?toNum(r[map.sales]):null,
   waste:map.waste?toNum(r[map.waste]):null,
-  clearance:map.clearance?toNum(r[map.clearance]):null
- })).filter(r=>r.date||r.periodStart||r.periodEnd||r.item||r.sku||r.sales!=null||r.waste!=null||r.clearance!=null||r.qty!=null)
+  clearance:map.clearance?toNum(r[map.clearance]):null,
+  adjustmentReason:r.adjustmentReason||null,
+  adjustmentQty:r.adjustmentQty!=null?toNum(r.adjustmentQty):null,
+  adjustmentAmount:r.adjustmentAmount!=null?toNum(r.adjustmentAmount):null,
+  unitCost:r.unitCost!=null?toNum(r.unitCost):null,
+  stockBefore:r.stockBefore!=null?toNum(r.stockBefore):null,
+  stockAfter:r.stockAfter!=null?toNum(r.stockAfter):null,
+  detailCode:r.detailCode||null,
+  partnership:r.partnership||null,
+  clearanceFlag:r.clearanceFlag||null,
+  diffPct:r.diffPct!=null?toNum(r.diffPct):null,
+  ref:r.ref||null,
+  postDate:r.postDate||null
+ })).filter(r=>r.date||r.periodStart||r.periodEnd||r.item||r.sku||r.sales!=null||r.waste!=null||r.clearance!=null||r.qty!=null||r.adjustmentQty!=null)
 }
 function parseDelimited(text,name){
  const sep=name.toLowerCase().endsWith('.tsv')?'\t':(text.includes('\t')?'\t':',');
@@ -1135,6 +1147,90 @@ function classifyAggregatePeriod(startIso,endIso){
   return {kind:'mixed',days,weekday,holiday};
 }
 
+function groupPdfItemsIntoLines(items,tolerance=2.6){
+  const sorted=[...(items||[])].sort((a,b)=>b.y-a.y||a.x-b.x);
+  const lines=[];
+  for(const it of sorted){
+    let line=lines.find(l=>Math.abs(l.y-it.y)<=tolerance);
+    if(!line){line={y:it.y,items:[]};lines.push(line)}
+    line.items.push(it);
+  }
+  return lines.sort((a,b)=>b.y-a.y).map(l=>({
+    y:l.y,
+    items:l.items.sort((a,b)=>a.x-b.x),
+    text:l.items.sort((a,b)=>a.x-b.x).map(x=>String(x.text||'').trim()).filter(Boolean).join(' ')
+  }));
+}
+function parseInventoryAdjustmentPdf(rawPages,fileName,reportPeriod){
+  const clean=s=>String(s??'').replace(/\u00a0/g,' ').replace(/[−–—]/g,'-').replace(/\s+/g,' ').trim();
+  const num='-?[\\d,]+(?:\\.\\d+)?';
+  const rowRe=new RegExp('^20\\s+(\\d{6})\\s+(.+?)\\s+(\\d{3})\\s+([YN])\\s+('+num+')\\s+('+num+')\\s+('+num+')\\s+('+num+')\\s+([YN])\\s+('+num+')\\s+(F\\d+)\\s+(\\d{2}\\/\\d{2}\\/\\d{4})\\s+(\\d{2}\\/\\d{2}\\/\\d{4})$');
+  const toN=v=>{const n=Number(String(v).replace(/,/g,''));return Number.isFinite(n)?n:null};
+  const rows=[];let rawTransactionCount=0;const reasons=new Set();
+
+  for(const page of (rawPages||[])){
+    const pageText=(page.items||[]).map(x=>clean(x.text)).join(' ');
+    let reason='';
+    const reasonHit=pageText.match(/(?:調整原因\s*)?([A-Z]-[A-Za-z][A-Za-z-]*)/);
+    if(reasonHit)reason=reasonHit[1];
+    if(reason)reasons.add(reason);
+
+    const lines=groupPdfItemsIntoLines(page.items);
+    for(const line of lines){
+      const text=clean(line.text);
+      if(/^20\s+\d{6}\s+/.test(text))rawTransactionCount++;
+      const m=text.match(rowRe);if(!m)continue;
+      const [,sku,item,detail,partnership,unitCost0,stockBefore0,stockAfter0,adjQty0,clearanceFlag,diffPct0,ref,adjustDate,postDate]=m;
+      const unitCost=toN(unitCost0),stockBefore=toN(stockBefore0),stockAfter=toN(stockAfter0),adjustmentQty=toN(adjQty0),diffPct=toN(diffPct0);
+      if(unitCost==null||adjustmentQty==null)continue;
+      const adjustmentAmount=Math.round(unitCost*adjustmentQty*100)/100;
+      const isLossReason=/Breakage|Expiry/i.test(reason);
+      // Loss analytics use positive values for write-offs and negative values for reversals/corrections.
+      const waste=isLossReason?Math.round((-adjustmentAmount)*100)/100:null;
+      rows.push({
+        date:isoLocalDate(parseDmyDateStrict(adjustDate))||adjustDate,
+        sku,
+        item:clean(item),
+        qty:null,
+        sales:null,
+        waste,
+        clearance:null,
+        periodStart:reportPeriod?.start||null,
+        periodEnd:reportPeriod?.end||null,
+        printDate:reportPeriod?.printDate||null,
+        adjustmentReason:reason||'未辨識',
+        adjustmentQty,
+        adjustmentAmount,
+        unitCost,
+        stockBefore,
+        stockAfter,
+        detailCode:detail,
+        partnership,
+        clearanceFlag,
+        diffPct,
+        ref,
+        postDate:isoLocalDate(parseDmyDateStrict(postDate))||postDate,
+        sourceType:'pdf-inventory-adjustment',
+        sourceFile:fileName
+      });
+    }
+  }
+
+  if(!rows.length)return [];
+  const coverage=rawTransactionCount?rows.length/rawTransactionCount:1;
+  if(rawTransactionCount>=10&&coverage<0.75)return [];
+  const meta={
+    parser:'inventory-adjustment-detail',
+    reportType:'庫存調整單',
+    parsedTransactions:rows.length,
+    rawTransactionCount,
+    coverage,
+    adjustmentReasons:[...reasons]
+  };
+  Object.defineProperty(rows,'pdfMeta',{value:meta,enumerable:false,configurable:true});
+  return rows;
+}
+
 async function parseSalesPdf(file){
   if(!window.pdfjsLib) throw new Error('PDF 解析元件載入失敗。請確認網路連線後重新整理頁面。');
 
@@ -1171,6 +1267,18 @@ async function parseSalesPdf(file){
   }
 
   const reportPeriod=extractReportPeriod(rawPages);
+  const looksLikeInventoryAdjustment=
+    /庫存調整單/.test(searchableText) &&
+    /調整原因/.test(searchableText) &&
+    /調整量/.test(searchableText) &&
+    /Ref\s*#/.test(searchableText) &&
+    /單品編號/.test(searchableText);
+
+  if(looksLikeInventoryAdjustment){
+    const adjustmentRows=parseInventoryAdjustmentPdf(rawPages,file.name,reportPeriod);
+    if(adjustmentRows.length)return adjustmentRows;
+  }
+
   const looksLikeDailyItem=
     /每日銷售報表/.test(searchableText) &&
     /單品編號/.test(searchableText) &&
@@ -1889,7 +1997,10 @@ function capabilitySummary(c){
 
 function buildImportPreview(){
   const normalized=normalize(staged,mapping);
-  const cols=[['date','日期 / 期間'],['sku','商品編號'],['item','商品名稱'],['qty','銷售量'],['sales','營業額'],['waste','報廢'],['clearance','出清']];
+  const isAdjustment=normalized.some(r=>r.adjustmentQty!=null||r.adjustmentReason);
+  const cols=isAdjustment
+    ?[['date','調整日'],['sku','商品編號'],['item','商品名稱'],['adjustmentReason','調整原因'],['adjustmentQty','調整量'],['adjustmentAmount','調整金額'],['ref','Ref #']]
+    :[['date','日期 / 期間'],['sku','商品編號'],['item','商品名稱'],['qty','銷售量'],['sales','營業額'],['waste','報廢'],['clearance','出清']];
   $('#importPreviewHead').innerHTML='<tr>'+cols.map(c=>`<th>${c[1]}</th>`).join('')+'</tr>';
   $('#importPreviewBody').innerHTML=normalized.slice(0,8).map(r=>{
     const periodLabel=(r.periodStart&&r.periodEnd)
@@ -1898,6 +2009,11 @@ function buildImportPreview(){
     const dateLabel=(r.date instanceof Date&&!isNaN(r.date))
       ?r.date.toLocaleDateString('zh-TW')
       :periodLabel;
+    if(isAdjustment)return `<tr>
+      <td>${dateLabel}</td><td>${esc(r.sku||'無資料')}</td><td>${esc(r.item||'無資料')}</td>
+      <td>${esc(r.adjustmentReason||'未辨識')}</td><td>${maybeNum(r.adjustmentQty)}</td>
+      <td>${r.adjustmentAmount==null?'無資料':money(r.adjustmentAmount)}</td><td>${esc(r.ref||'無資料')}</td>
+    </tr>`;
     return `<tr>
       <td>${dateLabel}</td>
       <td>${esc(r.sku||'無資料')}</td><td>${esc(r.item||'無資料')}</td>
@@ -1944,9 +2060,15 @@ async function handleFiles(files){
       if(meta.sheet)detail+=`・${meta.sheet}`;
       if(meta.headerRow)detail+=`・表頭第 ${meta.headerRow} 列`;
       if(meta.sourceType==='pdf'){
-        detail+='・PDF文字表格';
-        if(raw.pdfMeta?.parser)detail+=`・${raw.pdfMeta.parser}`;
-        if(raw.pdfMeta?.parsedProducts)detail+=`・${raw.pdfMeta.parsedProducts} 商品`;
+        if(raw.pdfMeta?.reportType==='庫存調整單'){
+          detail+='・庫存調整明細';
+          if(raw.pdfMeta?.parsedTransactions)detail+=`・${raw.pdfMeta.parsedTransactions.toLocaleString()} 筆異動`;
+          if(raw.pdfMeta?.adjustmentReasons?.length)detail+=`・${raw.pdfMeta.adjustmentReasons.join(' / ')}`;
+        }else{
+          detail+='・PDF文字表格';
+          if(raw.pdfMeta?.parser)detail+=`・${raw.pdfMeta.parser}`;
+          if(raw.pdfMeta?.parsedProducts)detail+=`・${raw.pdfMeta.parsedProducts} 商品`;
+        }
       }
       row.querySelector('small').textContent=detail;row.querySelector('span').textContent='✓';
     }catch(err){
@@ -2052,12 +2174,13 @@ function updateImportReadiness(headers=[]){
   }else if(!usable){
     $('#importStatus').textContent='檔案已讀取，但目前沒有辨識到可分析欄位。你可以手動指定任一可用欄位。';
   }else{
+    const adjustmentCount=temp.filter(r=>r.adjustmentQty!=null||r.adjustmentReason).length;
     const available=s.ok.length?s.ok.join('、'):'—';
     const absent=s.missing.length?s.missing.join('、'):'無';
     const labels={date:'日期',sku:'商品編號',item:'商品名稱',qty:'銷售量',sales:'營業額',waste:'報廢',clearance:'出清',inventory:'庫存',category:'分類'};
     const inferred=Object.entries(sem).filter(([k])=>mapping[k]).map(([k,v])=>`${labels[k]||k} ${v}%`).join('、');
     const warnings=validations.filter(x=>!x.ok).map(x=>x.name);
-    $('#importStatus').textContent=`已辨識：${available}。未提供：${absent}。${inferred?`推定信心：${inferred}。`:''}${warnings.length?`需留意：${warnings.join('、')}。`:''}沒有的欄位會顯示「無資料」，不會阻擋其他分析。`;
+    $('#importStatus').textContent=`${adjustmentCount?`已辨識庫存調整明細 ${adjustmentCount.toLocaleString()} 筆。`:''}已辨識：${available}。未提供：${absent}。${inferred?`推定信心：${inferred}。`:''}${warnings.length?`需留意：${warnings.join('、')}。`:''}沒有的欄位會顯示「無資料」，不會阻擋其他分析。`;
   }
 }
 
