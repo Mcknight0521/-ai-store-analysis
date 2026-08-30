@@ -242,6 +242,38 @@ html.has-hash .page.active:not(:target){display:none!important}
 #confirmImport:disabled{opacity:.42;cursor:not-allowed;filter:saturate(.5)}
 </style>
 
+
+<style id="smart-import-v17-style">
+.smart-import-sheet{max-width:760px}
+.import-subtitle{margin:5px 0 0;color:var(--muted);font-size:8px;line-height:1.45}
+.import-stepbar{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 18px 12px;border-bottom:1px solid var(--line)}
+.import-step{display:flex;align-items:center;justify-content:center;gap:6px;padding:8px;border-radius:10px;background:var(--surface2);color:var(--muted);font-size:8px;font-weight:800}
+.import-step b{width:20px;height:20px;border-radius:7px;display:grid;place-items:center;background:#E9EEF6;color:#6F7B8E}
+.import-step.active{background:#EEF3FF;color:var(--blue)} .import-step.active b{background:var(--blue);color:white}
+.import-step.done{color:var(--green)} .import-step.done b{background:#E7F5EF;color:var(--green)}
+.import-stage{display:none}.import-stage.active{display:block}
+.supported-strip{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;margin:10px 0;padding:10px;border:1px solid var(--line);border-radius:12px;background:#FAFBFD;font-size:7.5px}
+.supported-strip span{color:var(--muted)}.supported-strip b{color:var(--ink)}
+.import-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:9px}
+.import-section-head h3{margin:2px 0 0;font-size:15px}
+.confidence-pill{padding:6px 8px;border-radius:999px;background:#FFF4E5;color:var(--amber);font-size:7px;font-weight:900;white-space:nowrap}
+.confidence-pill.ok{background:#E9F7F1;color:var(--green)}
+.import-message{padding:10px 11px;border:1px solid var(--line);background:#F8FAFC;border-radius:11px;font-size:8px;color:var(--text);line-height:1.5;margin-bottom:10px}
+.preview-note{font-size:8px;color:var(--muted);margin-bottom:8px}
+.import-preview-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:white;max-height:330px}
+.import-preview{width:100%;border-collapse:collapse;min-width:620px;font-size:8px}
+.import-preview th,.import-preview td{padding:8px 9px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.import-preview th{position:sticky;top:0;background:#F8FAFC;color:var(--muted);font-size:7px;z-index:1}
+.import-preview td{color:var(--ink)}
+.import-warning{margin-top:9px;padding:10px 11px;border-radius:11px;background:#FFF7E8;color:#8A5B14;font-size:8px;line-height:1.5}
+.smart-import-actions{gap:7px}.action-spacer{flex:1}
+@media(max-width:760px){
+  .smart-import-sheet{width:100%;max-width:none}
+  .import-stepbar{padding-left:14px;padding-right:14px}
+  .drawer-body{padding-bottom:110px}
+}
+</style>
+
 </head>
 <body>
 <div class="app">
@@ -414,29 +446,77 @@ html.has-hash .page.active:not(:target){display:none!important}
   </nav>
 </div>
 
+
 <div class="drawer" id="importDrawer">
   <div class="drawer-backdrop" data-close></div>
-  <div class="drawer-sheet">
-    <div class="drawer-head"><div><div class="eyebrow">DATA CENTER</div><h2>匯入資料</h2></div><button class="icon-btn" data-close><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div>
-    <div class="drawer-body">
-      <div class="dropzone" id="dropzone">
-        <svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m8 8 4-4 4 4"/><path d="M5 20h14"/></svg>
-        <h3>拖曳檔案到這裡</h3>
-        <p>XLSX / XLS / XLSM / XLSB / ODS / CSV / TSV / TXT / PDF，可一次選多個檔案。</p>
-        <input type="file" id="fileInput" multiple accept=".xlsx,.xls,.xlsm,.xlsb,.ods,.csv,.tsv,.txt,.pdf,application/pdf">
-        <div style="margin-top:12px"><label class="primary-btn" id="pickFiles" for="fileInput" role="button" tabindex="0">選擇檔案</label></div>
+  <div class="drawer-sheet smart-import-sheet">
+    <div class="drawer-head">
+      <div>
+        <div class="eyebrow">SMART IMPORT · V2</div>
+        <h2>智慧匯入中心</h2>
+        <p class="import-subtitle">先辨識、再確認，系統不會在不確定時直接猜欄位。</p>
       </div>
-      <div class="file-list" id="fileList"></div>
-      <div class="mapping" id="mappingBox" style="display:none"><h3>自動辨識欄位</h3><div class="map-grid" id="mappingGrid"></div></div>
-      <div class="mapping" id="qualityBox" style="display:none"><h3>資料狀態</h3><div class="mini-grid" id="qualityGrid"></div></div>
+      <button class="icon-btn" data-close><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
     </div>
-    <div class="drawer-actions">
+
+    <div class="import-stepbar">
+      <div class="import-step active" data-import-step="1"><b>1</b><span>選檔</span></div>
+      <div class="import-step" data-import-step="2"><b>2</b><span>辨識</span></div>
+      <div class="import-step" data-import-step="3"><b>3</b><span>確認</span></div>
+    </div>
+
+    <div class="drawer-body">
+      <section class="import-stage active" id="importStage1">
+        <div class="dropzone" id="dropzone">
+          <svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m8 8 4-4 4 4"/><path d="M5 20h14"/></svg>
+          <h3>把銷售檔案丟進來</h3>
+          <p>Excel、CSV、ODS、TXT、PDF 都可以。系統會先做結構辨識，不會直接開始分析。</p>
+          <input type="file" id="fileInput" multiple accept=".xlsx,.xls,.xlsm,.xlsb,.ods,.csv,.tsv,.txt,.pdf,application/pdf">
+          <div style="margin-top:12px"><label class="primary-btn" id="pickFiles" for="fileInput" role="button" tabindex="0">選擇檔案</label></div>
+        </div>
+        <div class="supported-strip">
+          <span>試算表</span><b>XLSX / XLS / ODS</b>
+          <span>文字</span><b>CSV / TSV / TXT</b>
+          <span>報表</span><b>文字型 PDF</b>
+        </div>
+        <div class="file-list" id="fileList"></div>
+      </section>
+
+      <section class="import-stage" id="importStage2">
+        <div class="import-section-head">
+          <div><div class="panel-kicker">FIELD DETECTION</div><h3>欄位辨識</h3></div>
+          <span class="confidence-pill" id="mappingConfidence">—</span>
+        </div>
+        <div class="import-message" id="importStatus">等待檔案</div>
+        <div class="mapping" id="mappingBox" style="display:none"><div class="map-grid" id="mappingGrid"></div></div>
+        <div class="mapping" id="qualityBox" style="display:none"><div class="mini-grid" id="qualityGrid"></div></div>
+      </section>
+
+      <section class="import-stage" id="importStage3">
+        <div class="import-section-head">
+          <div><div class="panel-kicker">PREVIEW</div><h3>確認資料</h3></div>
+          <span class="confidence-pill ok" id="previewCount">—</span>
+        </div>
+        <div class="preview-note">先看前幾筆是否對得上原始檔，再開始分析。</div>
+        <div class="import-preview-wrap">
+          <table class="import-preview">
+            <thead id="importPreviewHead"></thead>
+            <tbody id="importPreviewBody"></tbody>
+          </table>
+        </div>
+        <div class="import-warning" id="importWarning" hidden></div>
+      </section>
+    </div>
+
+    <div class="drawer-actions smart-import-actions">
       <button class="ghost-btn" id="clearImport">清除</button>
-      <button class="primary-btn" id="confirmImport" disabled>確認並開始分析</button>
+      <div class="action-spacer"></div>
+      <button class="ghost-btn" id="prevImportStep" hidden>上一步</button>
+      <button class="primary-btn" id="nextImportStep" disabled>下一步</button>
+      <button class="primary-btn" id="confirmImport" hidden disabled>確認並開始分析</button>
     </div>
   </div>
 </div>
-
 
 <div class="drawer" id="improveDrawer">
   <div class="drawer-backdrop" data-improve-close></div>
@@ -1046,119 +1126,154 @@ async function parseDailyItemSalesPdf(pages,fileName){
 }
 function showDrawer(){ $('#importDrawer').classList.add('open') }
 function hideDrawer(){ $('#importDrawer').classList.remove('open') }
-$('#openImport').onclick=showDrawer; $$('[data-close]').forEach(x=>x.onclick=hideDrawer);
+$('#openImport').onclick=()=>{showDrawer();setImportStep(1)};
+$$('[data-close]').forEach(x=>x.onclick=hideDrawer);
+
+$('#nextImportStep').onclick=()=>{
+  if(importStep===1){
+    if(!staged.length){toast('請先選擇檔案');return}
+    setImportStep(2);return;
+  }
+  if(importStep===2){
+    if(!mapping.sales||(!mapping.item&&!mapping.sku)){toast('請先確認營業額與商品欄位');return}
+    buildImportPreview();setImportStep(3);
+  }
+};
+$('#prevImportStep').onclick=()=>setImportStep(importStep-1);
+
+$('#clearImport').onclick=()=>{
+  staged=[];mapping={};
+  $('#fileList').innerHTML='';
+  $('#mappingBox').style.display='none';$('#qualityBox').style.display='none';
+  $('#importPreviewHead').innerHTML='';$('#importPreviewBody').innerHTML='';
+  $('#importStatus').textContent='等待檔案';$('#mappingConfidence').textContent='—';
+  $('#nextImportStep').disabled=true;$('#confirmImport').disabled=true;
+  setImportStep(1);
+};
+
 $('#dropzone').ondragover=e=>{e.preventDefault();e.currentTarget.classList.add('drag')};$('#dropzone').ondragleave=e=>e.currentTarget.classList.remove('drag');$('#dropzone').ondrop=e=>{e.preventDefault();e.currentTarget.classList.remove('drag');handleFiles([...e.dataTransfer.files])};
 $('#fileInput').onchange=e=>{const files=[...e.target.files];handleFiles(files).finally(()=>{e.target.value='';});};
+
+let importStep=1;
+function setImportStep(step){
+  importStep=Math.max(1,Math.min(3,step));
+  $$('.import-stage').forEach((el,i)=>el.classList.toggle('active',i===importStep-1));
+  $$('.import-step').forEach((el,i)=>{
+    el.classList.toggle('active',i===importStep-1);
+    el.classList.toggle('done',i<importStep-1);
+  });
+  $('#prevImportStep').hidden=importStep===1;
+  $('#nextImportStep').hidden=importStep===3;
+  $('#confirmImport').hidden=importStep!==3;
+}
+function buildImportPreview(){
+  const normalized=normalize(staged,mapping);
+  const cols=[['date','日期'],['sku','商品編號'],['item','商品名稱'],['qty','銷售量'],['sales','營業額'],['waste','報廢'],['clearance','出清']];
+  $('#importPreviewHead').innerHTML='<tr>'+cols.map(c=>`<th>${c[1]}</th>`).join('')+'</tr>';
+  $('#importPreviewBody').innerHTML=normalized.slice(0,8).map(r=>`<tr>
+    <td>${r.date instanceof Date&&!isNaN(r.date)?r.date.toLocaleDateString('zh-TW'):'—'}</td>
+    <td>${esc(r.sku||'—')}</td><td>${esc(r.item||'—')}</td>
+    <td>${num(r.qty||0)}</td><td>${money(r.sales||0)}</td>
+    <td>${money(r.waste||0)}</td><td>${money(r.clearance||0)}</td>
+  </tr>`).join('');
+  $('#previewCount').textContent=`${normalized.length.toLocaleString()} 筆`;
+  const notes=[];
+  if(!mapping.date)notes.push('沒有日期：平日/假日、星期與時間趨勢將無法計算。');
+  if(!mapping.qty)notes.push('沒有銷售數量：平均銷量將顯示無資料。');
+  if(!mapping.waste&&!mapping.clearance)notes.push('沒有損耗欄位：損耗相關分析將顯示無資料。');
+  $('#importWarning').hidden=!notes.length;
+  $('#importWarning').innerHTML=notes.join('<br>');
+}
+
+
 async function handleFiles(files){
   if(!files.length)return;
-
-  staged=[];
-  mapping={};
+  staged=[];mapping={};
   $('#fileList').innerHTML='';
   $('#mappingBox').style.display='none';
   $('#qualityBox').style.display='none';
+  $('#nextImportStep').disabled=true;
   $('#confirmImport').disabled=true;
+  setImportStep(1);
 
   let successCount=0;
-
   for(const f of files){
     const row=document.createElement('div');
     row.className='file-row';
-    row.innerHTML=`<div><b>${esc(f.name)}</b><small>解析中…</small></div><span>…</span>`;
+    row.innerHTML=`<div><b>${esc(f.name)}</b><small>正在讀取檔案結構…</small></div><span>…</span>`;
     $('#fileList').appendChild(row);
-
     try{
       const raw=await parseFile(f);
-      if(!Array.isArray(raw)||!raw.length) throw new Error('沒有解析到資料');
-
-      staged.push(...raw);
-      successCount++;
-
+      if(!Array.isArray(raw)||!raw.length)throw new Error('沒有取得可用資料列');
+      staged.push(...raw);successCount++;
       const meta=raw.importMeta||raw.pdfMeta||{};
-      let detail=`已解析 ${raw.length.toLocaleString()} 筆`;
-      if(meta.sheet) detail+=`・工作表：${meta.sheet}`;
+      let detail=`讀取成功・${raw.length.toLocaleString()} 筆`;
+      if(meta.sheet)detail+=`・${meta.sheet}`;
+      if(meta.sourceType==='pdf')detail+='・PDF文字表格';
       row.querySelector('small').textContent=detail;
       row.querySelector('span').textContent='✓';
-
-      if(typeof showPdfNotice==='function')showPdfNotice(raw);
     }catch(err){
-      console.error('Import failed:',f.name,err);
       row.querySelector('small').textContent=String(err?.message||err);
       row.querySelector('span').textContent='!';
     }
   }
-
   if(!staged.length){
-    $('#confirmImport').disabled=true;
-    const status=$('#importStatus');
-    if(status) status.textContent='目前沒有成功辨識的資料，請查看上方檔案錯誤訊息。';
+    $('#importStatus').textContent='沒有任何檔案成功讀取。系統不會用猜測資料繼續分析。';
     return;
   }
-
   const headers=[...new Set(staged.flatMap(r=>Object.keys(r)))];
   mapping=findMapping(headers);
   renderMapping(headers);
-
-  if(successCount<files.length){
-    toast(`已成功讀取 ${successCount}/${files.length} 個檔案`);
-  }else{
-    toast(`已讀取 ${successCount} 個檔案`);
-  }
+  setImportStep(2);
+  toast(successCount<files.length?`成功 ${successCount}/${files.length} 個檔案`:`已讀取 ${successCount} 個檔案`);
+}
+function mappingScore(headers,map){
+  const weights={sales:35,item:20,sku:20,date:15,qty:10};
+  let points=0,max=0;
+  Object.entries(weights).forEach(([k,w])=>{max+=w;if(map[k])points+=w});
+  return Math.round(points/max*100);
 }
 function renderMapping(headers){
-  const labels={
-    date:'日期',sku:'商品編號',item:'商品名稱',qty:'銷售數量',
-    sales:'營業額',waste:'報廢金額',clearance:'出清金額'
-  };
-
+  const labels={date:'日期',sku:'商品編號',item:'商品名稱',qty:'銷售數量',sales:'營業額',waste:'報廢金額',clearance:'出清金額'};
   $('#mappingBox').style.display='block';
   $('#mappingGrid').innerHTML=Object.keys(aliases).map(k=>{
     const options=['',...headers].map(h=>`<option value="${esc(h)}"${mapping[k]===h?' selected':''}>${esc(h||'— 不使用 —')}</option>`).join('');
     return `<div class="map-item map-select-item">
-      <span>${labels[k]}</span>
+      <span>${labels[k]} ${mapping[k]?'<em style="color:var(--green);font-style:normal">自動辨識</em>':'<em style="color:var(--amber);font-style:normal">請確認</em>'}</span>
       <select data-map-key="${k}" aria-label="${labels[k]}欄位">${options}</select>
     </div>`;
   }).join('');
-
   $$('#mappingGrid select[data-map-key]').forEach(sel=>{
     sel.addEventListener('change',()=>{
       const key=sel.dataset.mapKey;
-      if(sel.value) mapping[key]=sel.value; else delete mapping[key];
+      if(sel.value)mapping[key]=sel.value;else delete mapping[key];
       updateImportReadiness(headers);
     });
   });
-
   updateImportReadiness(headers);
 }
 
 function updateImportReadiness(headers=[]){
-  const n=staged.length;
-  const mapped=Object.keys(mapping).length;
-  const hasDate=!!mapping.date;
-  const hasItem=!!mapping.item||!!mapping.sku;
-  const hasSales=!!mapping.sales;
-
+  const n=staged.length,mapped=Object.keys(mapping).length;
+  const hasDate=!!mapping.date,hasItem=!!mapping.item||!!mapping.sku,hasSales=!!mapping.sales;
+  const score=mappingScore(headers,mapping);
+  $('#mappingConfidence').textContent=`辨識 ${score}%`;
+  $('#mappingConfidence').classList.toggle('ok',score>=70);
   $('#qualityBox').style.display='block';
   $('#qualityGrid').innerHTML=`
     <div class="mini-card"><span>資料列</span><strong>${n.toLocaleString()}</strong></div>
     <div class="mini-card"><span>辨識欄位</span><strong>${mapped}/7</strong></div>
-    <div class="mini-card"><span>日期欄位</span><strong>${hasDate?'已辨識':'未辨識'}</strong></div>
-    <div class="mini-card"><span>商品識別</span><strong>${hasItem?'已辨識':'未辨識'}</strong></div>`;
-
-  const canAnalyze=n>0 && hasSales && hasItem;
-  $('#confirmImport').disabled=!canAnalyze;
-
-  let msg='';
-  if(!n) msg='尚未解析到資料。';
-  else if(!hasSales) msg='請指定哪一欄是「營業額」。';
-  else if(!hasItem) msg='請指定「商品名稱」或「商品編號」。';
-  else if(!hasDate) msg='可以分析整體銷售，但沒有日期欄位時無法做平日／假日與時間趨勢。';
-  else msg='欄位已可分析，請確認辨識結果後開始。';
-
-  const status=$('#importStatus');
-  if(status) status.textContent=msg;
+    <div class="mini-card"><span>日期</span><strong>${hasDate?'已辨識':'未辨識'}</strong></div>
+    <div class="mini-card"><span>商品</span><strong>${hasItem?'已辨識':'未辨識'}</strong></div>`;
+  const canContinue=n>0&&hasSales&&hasItem;
+  $('#nextImportStep').disabled=!canContinue;
+  $('#confirmImport').disabled=!canContinue;
+  if(!n)$('#importStatus').textContent='沒有解析到資料。';
+  else if(!hasSales)$('#importStatus').textContent='系統不確定哪一欄是營業額，請手動指定。';
+  else if(!hasItem)$('#importStatus').textContent='系統找不到商品名稱或商品編號，請手動指定。';
+  else if(!hasDate)$('#importStatus').textContent='可以做整體商品分析；因沒有日期欄位，平日/假日與時間趨勢會停用。';
+  else $('#importStatus').textContent='核心欄位已辨識。請檢查欄位對應後再看資料預覽。';
 }
-$('#clearImport').onclick=()=>{staged=[];mapping={};$('#fileList').innerHTML='';$('#mappingBox').style.display='none';$('#qualityBox').style.display='none';$('#confirmImport').disabled=true;$('#fileInput').value=''};
 $('#confirmImport').onclick=()=>{
   if(!mapping.sales || (!mapping.item&&!mapping.sku)){
     toast('請先確認營業額與商品欄位');
