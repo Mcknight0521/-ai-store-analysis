@@ -259,6 +259,7 @@ html.has-hash .page.active:not(:target){display:none!important}
   background:#fff;color:var(--ink);padding:9px 10px;font:inherit;font-size:9px;
 }
 #dropzone{cursor:pointer}
+#confirmImport{pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent;position:relative;z-index:5}
 #confirmImport:disabled{opacity:.42;cursor:not-allowed;filter:saturate(.5)}
 </style>
 
@@ -2254,14 +2255,50 @@ function confirmAndStartAnalysis(){
   }
   finishConfirmedImport(nextRows,{mode:hasRealRowDates?'row-dates':'unknown-period',period:p});
 }
-// Delegated binding is more reliable on iOS Safari and survives import-step UI state changes.
+// Reliable confirm action for iOS Safari: direct binding + delegated fallback.
+function runConfirmImportAction(){
+  const confirmBtn=$('#confirmImport');
+  if(!confirmBtn||confirmBtn.disabled)return;
+  try{
+    confirmAndStartAnalysis();
+  }catch(err){
+    console.error('Confirm import failed:',err);
+    toast('開始分析失敗：'+String(err?.message||err));
+  }
+}
+window.runConfirmImportAction=runConfirmImportAction;
+(function bindConfirmImportButton(){
+  const btn=$('#confirmImport');
+  if(!btn)return;
+  btn.style.pointerEvents='auto';
+  btn.style.touchAction='manipulation';
+  btn.onclick=function(e){e.preventDefault();e.stopPropagation();runConfirmImportAction();};
+  let lastTouch=0;
+  btn.addEventListener('touchend',function(e){
+    if(btn.disabled)return;
+    lastTouch=Date.now();
+    e.preventDefault();
+    e.stopPropagation();
+    runConfirmImportAction();
+  },{passive:false});
+  btn.addEventListener('pointerup',function(e){
+    if(e.pointerType==='touch' || Date.now()-lastTouch<700)return;
+    if(btn.disabled)return;
+    e.preventDefault();
+    e.stopPropagation();
+    runConfirmImportAction();
+  });
+})();
+
 document.addEventListener('click',(e)=>{
   const confirmBtn=e.target.closest?.('#confirmImport');
   if(confirmBtn){
+    // Direct onclick handles the real button. Keep this only as a fallback if DOM is rebuilt.
     e.preventDefault();
     e.stopPropagation();
     if(confirmBtn.disabled)return;
-    confirmAndStartAnalysis();
+    if(confirmBtn.onclick)return;
+    runConfirmImportAction();
     return;
   }
   const btn=e.target.closest?.('#useAggregateOnly,#replaceWithSeparatedReports');
