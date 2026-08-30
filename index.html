@@ -2189,12 +2189,18 @@ function renderWeek(){
 }
 function renderFocus(stats,a){
  const total=sumOptional(a.waste,a.clearance),items=[];
- const first=stats.find(x=>x.loss!=null&&x.loss>0);
- if(first)items.push({n:'1',title:`先看 ${first.name}`,desc:`本期損耗 ${money(first.loss)}，為目前最高。`,tag:'損耗排序'});
- if(a.waste!=null&&a.waste>0)items.push({n:'2',title:'檢查報廢結構',desc:`本期報廢 ${money(a.waste)}；到分析頁看集中品項。`,tag:'實際數字'});
- if(a.clearance!=null&&a.clearance>0)items.push({n:'3',title:'檢查出清結構',desc:`本期出清 ${money(a.clearance)}；先找集中區域。`,tag:'實際數字'});
- $('#focusList').innerHTML=items.slice(0,3).map(x=>`<div class="focus"><div class="focus-icon">${x.n}</div><div><b>${esc(x.title)}</b><small>${esc(x.desc)}</small></div><div class="focus-tag">${x.tag}</div></div>`).join('')||
- '<div class="empty" style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.13);color:#AFC0D4">'+(total==null?'損耗資料：無資料；其他分析仍可使用':'目前沒有可排序的正數損耗')+'</div>';
+ const cp=detectCapabilities(rows).sales&&detectCapabilities(rows).clearance?clearancePriorityItems(rows):[];
+ const urgent=cp.find(x=>x.status==='優先改善');
+ const structural=cp.find(x=>x.status==='結構異常');
+ const watch=cp.find(x=>x.status==='主力品觀察');
+ if(urgent)items.push({title:`優先改善 ${urgent.item||urgent.sku}`,desc:`出清 ${money(urgent.clearance)}、出清率 ${pct(urgent.rate)}；金額與比例同時偏高。`,tag:'優先改善'});
+ else if(structural)items.push({title:`檢查 ${structural.item||structural.sku}`,desc:`出清率 ${pct(structural.rate)} 偏高；先檢查生產量與時段。`,tag:'結構異常'});
+ if(watch)items.push({title:`主力品觀察 ${watch.item||watch.sku}`,desc:`出清 ${money(watch.clearance)}，但出清率 ${pct(watch.rate)}；不因金額高就直接減量。`,tag:'主力品觀察'});
+ if(a.waste!=null&&a.waste>0)items.push({title:'檢查報廢結構',desc:`本期報廢 ${money(a.waste)}；到分析頁看集中品項。`,tag:'實際數字'});
+ if(!items.length&&a.clearance!=null&&a.clearance>0)items.push({title:'檢查出清結構',desc:`本期出清 ${money(a.clearance)}；分析頁同時比較出清率與出清金額。`,tag:'雙軸判斷'});
+ const visible=items.slice(0,3);
+ $('#focusList').innerHTML=visible.map((x,i)=>`<div class="focus"><div class="focus-icon">${i+1}</div><div><b>${esc(x.title)}</b><small>${esc(x.desc)}</small></div><div class="focus-tag">${esc(x.tag)}</div></div>`).join('')||
+ '<div class="empty" style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.13);color:#AFC0D4">'+(total==null?'損耗資料：無資料；其他分析仍可使用':'目前沒有需要優先介入的正數損耗')+'</div>';
 }
 $('#analysisTabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;analysisMode=b.dataset.mode;$$('#analysisTabs button').forEach(x=>x.classList.toggle('active',x===b));renderAnalysis()}
 
@@ -2216,7 +2222,23 @@ function clearanceByItem(list=rows){
   if(!m.has(key))m.set(key,{sku:r.sku||'',item:r.item||'',sales:null,clearance:null});
   const x=m.get(key);if(r.sales!=null)x.sales=(x.sales??0)+Number(r.sales);if(r.clearance!=null)x.clearance=(x.clearance??0)+Number(r.clearance);
  }
- return [...m.values()].map(x=>({...x,rate:clearanceRate(x.clearance,x.sales)})).filter(x=>x.rate!=null).sort((a,b)=>b.rate-a.rate);
+ const totalSales=[...m.values()].reduce((t,x)=>t+(x.sales??0),0);
+ return [...m.values()].map(x=>({...x,rate:clearanceRate(x.clearance,x.sales),salesShare:totalSales>0?(x.sales??0)/totalSales:null})).filter(x=>x.rate!=null);
+}
+function clearancePriorityItems(list=rows){
+ const items=clearanceByItem(list).filter(x=>(x.clearance??0)>0);
+ if(!items.length)return [];
+ const rates=items.map(x=>x.rate).sort((a,b)=>a-b), amts=items.map(x=>x.clearance).sort((a,b)=>a-b);
+ const q=(arr,p)=>arr[Math.min(arr.length-1,Math.floor((arr.length-1)*p))]??0;
+ const rateCut=q(rates,.65),amtCut=q(amts,.65);
+ return items.map(x=>{
+  const highRate=x.rate>=rateCut&&x.rate>0, highAmt=x.clearance>=amtCut&&x.clearance>0;
+  let status='正常觀察',reason='出清率與金額皆未進入高影響區。',priority=1;
+  if(highRate&&highAmt){status='優先改善';reason='出清率與出清金額同時偏高，兼具結構與金額影響。';priority=4}
+  else if(highAmt&&!highRate){status='主力品觀察';reason='出清金額偏高，但比例未同步偏高；可能主要來自銷售規模，不建議直接減量。';priority=2}
+  else if(highRate&&!highAmt){status='結構異常';reason='出清率偏高，但目前金額影響較小；先檢查生產量與時段。';priority=3}
+  return {...x,status,reason,priority};
+ }).sort((a,b)=>b.priority-a.priority||b.clearance-a.clearance||b.rate-a.rate);
 }
 function renderClearanceRates(){
  const caps=detectCapabilities(rows),grain=clearanceGrain(rows),daily=document.querySelector('[data-clearance-mode="daily"]');
@@ -2233,8 +2255,9 @@ function renderClearanceRates(){
  const a=aggregate(rows),r=clearanceRate(a.clearance,a.sales),p=activePeriodInfo(rows);
  $('#clearanceModeHint').textContent=grain.dailyAvailable?'目前顯示期間；可切換每日。期間率＝期間總出清 ÷ 期間總營業額，不平均每日百分比。':'目前只有期間彙總；每日模式停用，不強拆每日數字。';
  $('#clearanceRateSummary').innerHTML=`<div class="metric"><span>${p?'期間出清率':'整體出清率'}</span><strong>${r==null?'無資料':pct(r)}</strong><small>${maybeMoney(a.clearance)} ÷ ${maybeMoney(a.sales)}</small></div>`;
- const items=clearanceByItem(rows).slice(0,20);
- $('#clearanceRateDetail').innerHTML=items.length?`<div class="panel-kicker" style="margin:10px 0 4px">單品${p?'期間':''}出清率 TOP 20</div>`+items.map((x,i)=>`<div class="clearance-row"><div><div class="name">${i+1}. ${esc(x.item||x.sku||'未命名商品')}</div><div class="meta">${esc(x.sku||'')}　出清 ${maybeMoney(x.clearance)} ／ 營業額 ${maybeMoney(x.sales)}</div></div><div class="rate">${pct(x.rate)}</div></div>`).join(''):'<div class="empty">沒有可計算單品出清率的資料。</div>';
+ const all=clearanceByItem(rows), byRate=[...all].sort((a,b)=>b.rate-a.rate).slice(0,10), byAmt=[...all].sort((a,b)=>(b.clearance??0)-(a.clearance??0)).slice(0,10), priority=clearancePriorityItems(rows).slice(0,10);
+ const rank=(title,arr,valueFn)=>`<div class="panel-kicker" style="margin:14px 0 6px">${title}</div>`+arr.map((x,i)=>`<div class="clearance-row"><div><div class="name">${i+1}. ${esc(x.item||x.sku||'未命名商品')}</div><div class="meta">營業額 ${maybeMoney(x.sales)} · 出清 ${maybeMoney(x.clearance)} · 出清率 ${pct(x.rate)}</div></div><div class="rate">${valueFn(x)}</div></div>`).join('');
+ $('#clearanceRateDetail').innerHTML=all.length?rank(`單品${p?'期間':''}出清率 TOP 10`,byRate,x=>pct(x.rate))+rank(`單品${p?'期間':''}出清金額 TOP 10`,byAmt,x=>maybeMoney(x.clearance))+`<div class="panel-kicker" style="margin:16px 0 6px">改善優先度｜金額 × 出清率</div>`+priority.map((x,i)=>`<div class="clearance-row"><div><div class="name">${i+1}. ${esc(x.item||x.sku||'未命名商品')} · ${esc(x.status)}</div><div class="meta">${esc(x.reason)} 營收占比 ${x.salesShare==null?'—':pct(x.salesShare)}</div></div><div class="rate">${pct(x.rate)}</div></div>`).join(''):'<div class="empty">沒有可計算單品出清率的資料。</div>';
 }
 document.addEventListener('click',e=>{const b=e.target.closest?.('[data-clearance-mode]');if(!b||b.disabled)return;clearanceMode=b.dataset.clearanceMode;renderClearanceRates()});
 
