@@ -1220,7 +1220,7 @@ async function parseFileViaBackend(file){
     Object.defineProperty(out,'importMeta',{
       value:{
         ...(payload.meta||{}),sourceType,sourceFile:file.name||payload.meta?.sourceFile||'',
-        parserSource:'backend-api-v3',documentType,reportType,
+        parserSource:'backend-api-v4',documentType,reportType,
         confidence:payload.confidence??null,validation:payload.validation||null,apiTotals:payload.totals||null,
         apiVerified:payload.validation?.status==='passed',requiresReview:!!payload.meta?.requiresReview
       },enumerable:false,configurable:true
@@ -2125,6 +2125,9 @@ async function handleFiles(files){
       if(meta.apiVerified)detail+='・API 已驗證';
       else if(meta.validation?.status==='partial')detail+='・部分驗證';
       else if(meta.validation?.status==='unverified'||meta.requiresReview)detail+='・待確認';
+      const dc=meta.validation?.dataCompleteness;
+      if(dc?.status==='incomplete')detail+=`・缺 ${Number(dc.missingCount||dc.missingDays?.length||0)} 天資料`;
+      else if(dc?.status==='complete')detail+='・日期完整';
       if(meta.sheet)detail+=`・${meta.sheet}`;
       if(meta.headerRow)detail+=`・表頭第 ${meta.headerRow} 列`;
       if(meta.sourceType==='spreadsheet'&&meta.parser==='daily-sales-by-item-xlsx-v2'){
@@ -2256,7 +2259,9 @@ function updateImportReadiness(headers=[]){
     const fv=window.__opsImportContext.fileValidations||[];
     const verified=fv.filter(x=>x.status==='passed').length, partial=fv.filter(x=>x.status==='partial').length, unverified=fv.filter(x=>!['passed','partial'].includes(x.status)).length;
     const verifyText=fv.length?(verified===fv.length?`後端驗算：${verified}/${fv.length} 個檔案已驗證通過。`:`後端驗算：已驗證 ${verified}、部分驗證 ${partial}、待確認 ${unverified}。`):'';
-    $('#importStatus').textContent=`${verifyText}${adjustmentCount?`已辨識庫存調整明細 ${adjustmentCount.toLocaleString()} 筆。`:''}已辨識：${available}。未提供：${absent}。${inferred?`推定信心：${inferred}。`:''}${warnings.length?`需留意：${warnings.join('、')}。`:''}沒有的欄位會顯示「無資料」，不會阻擋其他分析。`;
+    const missingDates=[...new Set(fv.flatMap(x=>x.validation?.dataCompleteness?.missingDays||[]))];
+    const completenessText=missingDates.length?`資料完整性警示：缺少 ${missingDates.map(d=>String(d).slice(5).replace('-','/')).join('、')}；缺少日期不視為 0，也不自行推定原因。`:'';
+    $('#importStatus').textContent=`${verifyText}${completenessText}${adjustmentCount?`已辨識庫存調整明細 ${adjustmentCount.toLocaleString()} 筆。`:''}已辨識：${available}。未提供：${absent}。${inferred?`推定信心：${inferred}。`:''}${warnings.length?`需留意：${warnings.join('、')}。`:''}沒有的欄位會顯示「無資料」，不會阻擋其他分析。`;
   }
 }
 
@@ -3145,7 +3150,28 @@ window.addEventListener('unhandledrejection', function(e){
     return parsed;
   }
   async function loadHistoricalClosures(range){
-    if(!range)return [];const start=iso(range.start),end=iso(range.end),key=`opsDGPAV3:${state.region}:${start}:${end}`,cached=cacheGet(key,14*864e5);if(cached)return cached;
+    if(!range)return [];
+    const start=iso(range.start),end=iso(range.end),key=`opsDGPAV4:${state.region}:${start}:${end}`,cached=cacheGet(key,14*864e5);if(cached)return cached;
+
+    // Preferred path: ask OpsPilot backend to query DGPA server-side.
+    // This avoids iPhone Safari CORS / proxy parsing failures on DGPA historical pages.
+    try{
+      const base=(typeof getOpsPilotParserApi==='function'?getOpsPilotParserApi():'').replace(/\/$/,'');
+      if(base){
+        const url=`${base}/history-events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&region=${encodeURIComponent(state.region)}`;
+        const r=await fetch(url,{cache:'no-store'});
+        if(r.ok){
+          const j=await r.json();
+          const out=(Array.isArray(j.events)?j.events:[]).filter(e=>e&&e.type==='closure'&&e.date>=start&&e.date<=end).map(e=>({
+            type:'closure',date:e.date,name:e.name||'停班停課',detail:e.detail||'',scope:e.scope||'',source:e.source||'行政院人事行政總處'
+          }));
+          state.transportUsage.add('OpsPilot 後端／DGPA 官方資料');
+          cacheSet(key,out);return out;
+        }
+      }
+    }catch(e){console.warn('DGPA backend lookup failed, falling back to browser lookup',e)}
+
+    // Fallback for temporary backend issues.
     const targets=[];let foundOlder=false;
     for(let page=1;page<=50&&!foundOlder;page++){
       try{const url=`https://www.dgpa.gov.tw/informationlist?page=${page}&uid=374`,r=await fetchTextSmart(url),items=extractDgpaList(r.text);if(!items.length){if(page>3)break;continue}for(const it of items){if(it.date>=iso(addDays(range.start,-1))&&it.date<=iso(addDays(range.end,1)))targets.push(it);if(it.date<iso(addDays(range.start,-3)))foundOlder=true}}catch(e){if(page>6)break}
