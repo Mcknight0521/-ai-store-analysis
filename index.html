@@ -211,6 +211,19 @@ html.has-hash .page.active:not(:target){display:none!important}
 }
 </style>
 
+
+<style id="pdf-import-v9-style">
+.pdf-import-notice{
+  margin:10px 0;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#F8FAFC;
+}
+.pdf-import-notice strong{display:block;font-size:9px;color:var(--ink)}
+.pdf-import-notice span{display:block;margin-top:4px;font-size:8px;line-height:1.55;color:var(--muted)}
+</style>
+
 </head>
 <body>
 <div class="app">
@@ -392,7 +405,7 @@ html.has-hash .page.active:not(:target){display:none!important}
         <svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m8 8 4-4 4 4"/><path d="M5 20h14"/></svg>
         <h3>拖曳檔案到這裡</h3>
         <p>XLSX / XLS / XLSM / XLSB / ODS / CSV / TSV / TXT / PDF，可一次選多個檔案。</p>
-        <input type="file" id="fileInput" multiple accept=".xlsx,.xls,.xlsm,.xlsb,.ods,.csv,.tsv,.txt,.pdf">
+        <input type="file" id="fileInput" multiple accept=".xlsx,.xls,.xlsm,.xlsb,.ods,.csv,.tsv,.txt,.pdf,application/pdf">
         <div style="margin-top:12px"><label class="primary-btn" id="pickFiles" for="fileInput" role="button" tabindex="0">選擇檔案</label></div>
       </div>
       <div class="file-list" id="fileList"></div>
@@ -545,22 +558,255 @@ function parseDelimited(text,name){
  const h=cells[best];return cells.slice(best+1).map(r=>Object.fromEntries(h.map((x,j)=>[x,r[j]??''])))
 }
 async function parseFile(file){
- const ext=file.name.split('.').pop().toLowerCase();
- if(['csv','tsv','txt'].includes(ext)) return parseDelimited(await file.text(),file.name);
- if(['xlsx','xls','xlsm','xlsb','ods'].includes(ext)){
-  const buf=await file.arrayBuffer(), wb=XLSX.read(buf,{type:'array',cellDates:true});
-  let best=[],score=-1;
-  for(const sn of wb.SheetNames){
-   const arr=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''});
-   for(let i=0;i<Math.min(25,arr.length);i++){
-    const sc=Object.keys(findMapping(arr[i])).length;
-    if(sc>score){score=sc;const h=arr[i];best=arr.slice(i+1).map(r=>Object.fromEntries(h.map((x,j)=>[x,r[j]??''])))}
-   }
+  const name=file.name||'';
+  const ext=name.split('.').pop().toLowerCase();
+
+  if(ext==='pdf'){
+    return await parseSalesPdf(file);
   }
-  return best;
- }
- if(ext==='pdf') throw new Error('PDF 目前僅支援可擷取文字的表格型 PDF；此重新設計版暫不啟用掃描 PDF 辨識。');
- throw new Error('不支援的檔案格式');
+
+  if(['csv','tsv','txt'].includes(ext)){
+    const text=await file.text();
+    const sep=ext==='tsv' ? '\t' : (text.includes('\t') ? '\t' : ',');
+    const wb=XLSX.read(text,{type:'string',FS:sep});
+    return parseWorkbook(wb,name);
+  }
+
+  if(['xlsx','xls','xlsm','xlsb','ods'].includes(ext)){
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',cellDates:true});
+    return parseWorkbook(wb,name);
+  }
+
+  throw new Error(`不支援的檔案格式：${ext||'未知'}`);
+}
+
+async function parseSalesPdf(file){
+  if(!window.pdfjsLib) throw new Error('PDF 解析元件尚未載入，請重新整理後再試。');
+
+  const data=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data}).promise;
+
+  const pages=[];
+  let fullText='';
+
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const content=await page.getTextContent();
+
+    const items=content.items
+      .filter(x=>String(x.str||'').trim())
+      .map(x=>({
+        text:String(x.str||'').trim(),
+        x:x.transform?.[4]||0,
+        y:x.transform?.[5]||0
+      }));
+
+    // Group text items into visual lines by Y coordinate.
+    const lineMap=[];
+    items.sort((a,b)=>Math.abs(b.y-a.y)>2 ? b.y-a.y : a.x-b.x);
+    for(const item of items){
+      let line=lineMap.find(l=>Math.abs(l.y-item.y)<=2.2);
+      if(!line){
+        line={y:item.y,items:[]};
+        lineMap.push(line);
+      }
+      line.items.push(item);
+    }
+    lineMap.sort((a,b)=>b.y-a.y);
+    const lines=lineMap.map(l=>l.items.sort((a,b)=>a.x-b.x).map(i=>i.text).join(' ').replace(/\s+/g,' ').trim());
+
+    pages.push(lines);
+    fullText += '\n' + lines.join('\n');
+  }
+
+  const isDailyItemSales=/每日銷售報表\s*-\s*依單品/.test(fullText);
+  if(!isDailyItemSales){
+    throw new Error('目前 PDF 自動辨識優先支援「每日銷售報表 - 依單品」。其他 PDF 請改用 Excel / CSV，避免錯讀。');
+  }
+
+  return parseDailyItemSalesPdf(pages,file.name);
+}
+
+function parseDailyItemSalesPdf(pages,fileName){
+  const clean=s=>String(s??'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
+  const toNum=v=>{
+    const n=Number(String(v??'').replace(/,/g,'').replace(/[^\d.-]/g,''));
+    return Number.isFinite(n)?n:null;
+  };
+  const parseDMY=s=>{
+    const m=String(s||'').match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/);
+    if(!m)return null;
+    const d=new Date(Number(m[3]),Number(m[2])-1,Number(m[1]));
+    return isNaN(d)?null:d;
+  };
+  const iso=d=>d?`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`:'';
+
+  const all=pages.flat();
+  const joined=all.join('\n');
+
+  // Extract report period. These Carrefour-style reports print the start date near the title
+  // and the end date in the header. We collect all D/M/Y dates, then exclude print date when possible.
+  const dateMatches=[...joined.matchAll(/\b(\d{1,2}\/\d{1,2}\/\d{4})\b/g)].map(m=>m[1]);
+  const parsedDates=dateMatches.map(parseDMY).filter(Boolean);
+
+  // Prefer the date immediately following the report title as start.
+  let startDate=null;
+  for(let i=0;i<all.length;i++){
+    if(/每日銷售報表\s*-\s*依單品/.test(all[i])){
+      for(let j=i+1;j<Math.min(i+8,all.length);j++){
+        const d=parseDMY(all[j]);
+        if(d){startDate=d;break;}
+      }
+      if(startDate)break;
+    }
+  }
+
+  // End date: among dates in the header, choose the latest date not earlier than startDate.
+  let endDate=startDate;
+  if(startDate && parsedDates.length){
+    const candidates=parsedDates.filter(d=>d>=startDate);
+    if(candidates.length) endDate=new Date(Math.max(...candidates.map(d=>d.getTime())));
+  }
+
+  // Detect store.
+  const storeLine=all.find(x=>/^店\s*[:：]/.test(x));
+  const store=storeLine ? clean(storeLine.replace(/^店\s*[:：]\s*/,'')) : '';
+
+  const rows=[];
+  const skuName=new Map();
+
+  // This report repeats each product as:
+  // SKU + Chinese name, optional English line(s), then a numeric row containing department/detail/N-P and metrics.
+  // Numeric row pattern is anchored by the N/P marker to reduce false positives from subtotal rows.
+  for(const lines of pages){
+    for(let i=0;i<lines.length;i++){
+      const line=clean(lines[i]);
+
+      // Capture SKU/name lines.
+      const prod=line.match(/^(\d{6})\s+(.+)$/);
+      if(prod && !/^(小分類|部門|單品編號)/.test(prod[2])){
+        const sku=prod[1], item=clean(prod[2]);
+        if(item && !/^\d+$/.test(item)) skuName.set(sku,item);
+      }
+
+      // Match numeric transaction line.
+      // Example: 20 001 P 101.00 5,652 283 5,935 23.16 23.16 -496 0.00 0.00 0.00 0.00
+      const tx=line.match(/^(\d{1,3})\s+(\d{3})\s+([NP])\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)$/i);
+      if(!tx) continue;
+
+      // Find nearest preceding SKU/name within a short range.
+      let sku='', item='';
+      for(let j=i-1;j>=Math.max(0,i-7);j--){
+        const pm=clean(lines[j]).match(/^(\d{6})\s+(.+)$/);
+        if(pm){
+          sku=pm[1];
+          item=skuName.get(sku)||clean(pm[2]);
+          break;
+        }
+      }
+      if(!sku) continue;
+
+      const np=tx[3].toUpperCase();
+      const qty=toNum(tx[4])??0;
+      const salesEx=toNum(tx[5])??0;
+      const tax=toNum(tx[6])??0;
+      const salesInc=toNum(tx[7])??0;
+      const margin=toNum(tx[8]);
+      const commercial=toNum(tx[9]);
+      const inventory=toNum(tx[10]);
+      const nearExpiryQty=toNum(tx[11])??0;
+      const nearExpiryAmt=toNum(tx[12])??0;
+      const markdownQty=toNum(tx[13])??0;
+      const markdownAmt=toNum(tx[14])??0;
+
+      // Important: in this report, N/P is a price/sales type, not simply "normal vs waste".
+      // We retain both rows. Sales uses the actual "sales amount incl. tax".
+      // Loss/clearance for existing UI is mapped only from explicit clearance amount columns.
+      rows.push({
+        date:startDate && endDate && startDate.getTime()===endDate.getTime() ? startDate : null,
+        periodStart:startDate,
+        periodEnd:endDate,
+        store,
+        sku,
+        item,
+        qty,
+        sales:salesInc,
+        salesExTax:salesEx,
+        tax,
+        grossMargin:margin,
+        commercialReturn:commercial,
+        inventory,
+        nearExpiryQty,
+        nearExpiryAmt,
+        markdownQty,
+        markdownAmt,
+        clearance:nearExpiryAmt+markdownAmt,
+        waste:0,
+        npType:np,
+        sourceType:'pdf-daily-item-sales',
+        sourceFile:fileName
+      });
+    }
+  }
+
+  if(!rows.length){
+    throw new Error('已辨識到報表格式，但沒有成功解析單品明細。請確認 PDF 不是掃描圖片版。');
+  }
+
+  // The same product commonly appears in separate N/P rows. Merge them to one product record
+  // so Top10 and totals do not double-list the SKU.
+  const mergedMap=new Map();
+  for(const r of rows){
+    const key=r.sku||r.item;
+    if(!mergedMap.has(key)){
+      mergedMap.set(key,{
+        ...r,
+        qty:0,sales:0,salesExTax:0,tax:0,
+        nearExpiryQty:0,nearExpiryAmt:0,markdownQty:0,markdownAmt:0,clearance:0,
+        npTypes:new Set()
+      });
+    }
+    const x=mergedMap.get(key);
+    x.qty += Number(r.qty)||0;
+    x.sales += Number(r.sales)||0;
+    x.salesExTax += Number(r.salesExTax)||0;
+    x.tax += Number(r.tax)||0;
+    x.nearExpiryQty += Number(r.nearExpiryQty)||0;
+    x.nearExpiryAmt += Number(r.nearExpiryAmt)||0;
+    x.markdownQty += Number(r.markdownQty)||0;
+    x.markdownAmt += Number(r.markdownAmt)||0;
+    x.clearance += Number(r.clearance)||0;
+    x.npTypes.add(r.npType);
+    // Use inventory/margins from the last available row only as reference fields.
+    if(r.inventory!=null) x.inventory=r.inventory;
+    if(r.grossMargin!=null) x.grossMargin=r.grossMargin;
+  }
+
+  const merged=[...mergedMap.values()].map(x=>({
+    ...x,
+    npType:[...x.npTypes].join('/'),
+    npTypes:undefined
+  }));
+
+  // Report-level metadata is returned with the rows for UI warnings.
+  merged.pdfMeta={
+    reportType:'每日銷售報表 - 依單品',
+    periodStart:startDate,
+    periodEnd:endDate,
+    store,
+    isMixedDayType:(()=>{
+      if(!startDate||!endDate)return false;
+      let hasWeekday=false,hasWeekend=false;
+      for(let d=new Date(startDate);d<=endDate;d.setDate(d.getDate()+1)){
+        const w=d.getDay();
+        if(w===0||w===6)hasWeekend=true;else hasWeekday=true;
+      }
+      return hasWeekday&&hasWeekend;
+    })()
+  };
+
+  return merged;
 }
 function showDrawer(){ $('#importDrawer').classList.add('open') }
 function hideDrawer(){ $('#importDrawer').classList.remove('open') }
@@ -915,6 +1161,28 @@ Object.defineProperty(window,'rows',{get:()=>rows});
       }
     });
   }
+})();
+</script>
+
+
+<script id="pdf-import-v9-hook">
+(function(){
+  const originalParseFile=window.parseFile || (typeof parseFile==='function' ? parseFile : null);
+  function showPdfNotice(result){
+    const box=document.getElementById('pdfImportNotice');
+    const text=document.getElementById('pdfImportNoticeText');
+    if(!box||!text)return;
+    const meta=result && result.pdfMeta;
+    if(!meta){box.hidden=true;return;}
+    box.hidden=false;
+    const fmt=d=>d instanceof Date&&!isNaN(d)?`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`:'未辨識';
+    if(meta.isMixedDayType){
+      text.textContent=`${meta.reportType}｜期間 ${fmt(meta.periodStart)}–${fmt(meta.periodEnd)}。此期間同時包含平日與週末，因此可做整體銷售分析，但不會硬拆成平日/假日 Top10。`;
+    }else{
+      text.textContent=`${meta.reportType}｜期間 ${fmt(meta.periodStart)}–${fmt(meta.periodEnd)}。已讀取單品銷售量、含稅銷售額、庫存與出清欄位。`;
+    }
+  }
+  window.showPdfNotice=showPdfNotice;
 })();
 </script>
 
