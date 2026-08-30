@@ -680,10 +680,12 @@ async function parseSalesPdf(file){
   let pdf;
   try{
     pdf=await pdfjsLib.getDocument({data}).promise;
+    window.__opsPdfDoc=pdf;
   }catch(err){
     const msg=String(err&&err.message||err||'');
     if(/worker|GlobalWorkerOptions|fake worker/i.test(msg)){
       pdf=await pdfjsLib.getDocument({data,disableWorker:true}).promise;
+      window.__opsPdfDoc=pdf;
     }else{
       throw err;
     }
@@ -704,19 +706,40 @@ async function parseSalesPdf(file){
         y:x.transform?.[5]||0
       }));
 
-    // Group text items into visual lines by Y coordinate.
+    // PDF reports may be physically portrait but displayed with a 90° page rotation.
+    // In that case a VISUAL table row shares the same PDF X coordinate, not Y.
+    const rotation=((page.rotate||0)%360+360)%360;
     const lineMap=[];
-    items.sort((a,b)=>Math.abs(b.y-a.y)>2 ? b.y-a.y : a.x-b.x);
-    for(const item of items){
-      let line=lineMap.find(l=>Math.abs(l.y-item.y)<=2.2);
-      if(!line){
-        line={y:item.y,items:[]};
-        lineMap.push(line);
+
+    if(rotation===90 || rotation===270){
+      for(const item of items){
+        let line=lineMap.find(l=>Math.abs(l.axis-item.x)<=5.5);
+        if(!line){
+          line={axis:item.x,items:[]};
+          lineMap.push(line);
+        }
+        line.items.push(item);
       }
-      line.items.push(item);
+      lineMap.sort((a,b)=>rotation===90 ? a.axis-b.axis : b.axis-a.axis);
+      for(const l of lineMap){
+        l.items.sort((a,b)=>rotation===90 ? b.y-a.y : a.y-b.y);
+      }
+    }else{
+      for(const item of items){
+        let line=lineMap.find(l=>Math.abs(l.axis-item.y)<=5.5);
+        if(!line){
+          line={axis:item.y,items:[]};
+          lineMap.push(line);
+        }
+        line.items.push(item);
+      }
+      lineMap.sort((a,b)=>rotation===0 ? b.axis-a.axis : a.axis-b.axis);
+      for(const l of lineMap){
+        l.items.sort((a,b)=>rotation===0 ? a.x-b.x : b.x-a.x);
+      }
     }
-    lineMap.sort((a,b)=>b.y-a.y);
-    const lines=lineMap.map(l=>l.items.sort((a,b)=>a.x-b.x).map(i=>i.text).join(' ').replace(/\s+/g,' ').trim());
+
+    const lines=lineMap.map(l=>l.items.map(i=>i.text).join(' ').replace(/\s+/g,' ').trim());
 
     pages.push(lines);
     fullText += '\n' + lines.join('\n');
@@ -727,11 +750,11 @@ async function parseSalesPdf(file){
     throw new Error('目前 PDF 自動辨識優先支援「每日銷售報表 - 依單品」。其他 PDF 請改用 Excel / CSV，避免錯讀。');
   }
 
-  return parseDailyItemSalesPdf(pages,file.name);
+  return await parseDailyItemSalesPdf(pages,file.name);
 }
 
-function parseDailyItemSalesPdf(pages,fileName){
-  const clean=s=>String(s??'').replace(/\u00a0/g,' ').replace(/\s+/g,' ').trim();
+async function parseDailyItemSalesPdf(pages,fileName){
+  const clean=s=>String(s??'').replace(/\u00a0/g,' ').replace(/[−–—]/g,'-').replace(/\s+/g,' ').trim();
   const toNum=v=>{
     const n=Number(String(v??'').replace(/,/g,'').replace(/[^\d.-]/g,''));
     return Number.isFinite(n)?n:null;
@@ -835,8 +858,77 @@ function parseDailyItemSalesPdf(pages,fileName){
       });
     }
   }
+  if(!rows.length && window.__opsPdfDoc){
+    for(let p=1;p<=window.__opsPdfDoc.numPages;p++){
+      const page=await window.__opsPdfDoc.getPage(p);
+      const content=await page.getTextContent();
+      const items=content.items
+        .filter(x=>String(x.str||'').trim())
+        .map(x=>({text:clean(x.str),x:x.transform?.[4]||0,y:x.transform?.[5]||0}));
+
+      const rotation=((page.rotate||0)%360+360)%360;
+      const skuItems=items.filter(x=>/^\d{6}$/.test(x.text));
+
+      for(const skuItem of skuItems){
+        const sameRow=(rotation===90 || rotation===270
+          ? items.filter(x=>Math.abs(x.x-skuItem.x)<=7)
+          : items.filter(x=>Math.abs(x.y-skuItem.y)<=7))
+          .sort((a,b)=>{
+            if(rotation===90)return b.y-a.y;
+            if(rotation===270)return a.y-b.y;
+            if(rotation===180)return b.x-a.x;
+            return a.x-b.x;
+          });
+
+        const tokens=sameRow.map(x=>x.text).filter(Boolean);
+        const skuIndex=tokens.findIndex(t=>t===skuItem.text);
+        if(skuIndex<0)continue;
+
+        let npIndex=-1;
+        for(let k=skuIndex+1;k<tokens.length;k++){
+          if(/^[NP]$/i.test(tokens[k]) && k>0 && /^\d{3}$/.test(tokens[k-1])){
+            npIndex=k;
+            break;
+          }
+        }
+        if(npIndex<0)continue;
+
+        const detailIndex=npIndex-1;
+        const item=clean(tokens.slice(skuIndex+1,detailIndex).join(' '));
+        const nums=tokens.slice(npIndex+1)
+          .map(t=>clean(t))
+          .filter(t=>/^-?[\d,.]+$/.test(t));
+
+        if(!item || nums.length<11)continue;
+
+        const qty=toNum(nums[0])??0;
+        const salesEx=toNum(nums[1])??0;
+        const tax=toNum(nums[2])??0;
+        const salesInc=toNum(nums[3])??0;
+        const margin=toNum(nums[4]);
+        const commercial=toNum(nums[5]);
+        const inventory=toNum(nums[6]);
+        const nearExpiryQty=toNum(nums[7])??0;
+        const nearExpiryAmt=toNum(nums[8])??0;
+        const markdownQty=toNum(nums[9])??0;
+        const markdownAmt=toNum(nums[10])??0;
+
+        rows.push({
+          date:startDate && endDate && startDate.getTime()===endDate.getTime() ? startDate : null,
+          periodStart:startDate,periodEnd:endDate,store,
+          sku:skuItem.text,item,qty,sales:salesInc,salesExTax:salesEx,tax,
+          grossMargin:margin,commercialReturn:commercial,inventory,
+          nearExpiryQty,nearExpiryAmt,markdownQty,markdownAmt,
+          clearance:nearExpiryAmt+markdownAmt,waste:0,
+          npType:tokens[npIndex].toUpperCase(),
+          sourceType:'pdf-daily-item-sales',sourceFile:fileName
+        });
+      }
+    }
+  }
+
   if(!rows.length){
-    throw new Error('已辨識到報表格式，但沒有成功解析單品明細。請確認 PDF 不是掃描圖片版。');
+    throw new Error('PDF 文字可以讀取，但目前沒有安全地解析出單品明細。');
   }
 
   // The same product commonly appears in separate N/P rows. Merge them to one product record
