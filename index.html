@@ -1131,33 +1131,38 @@ function getOpsPilotParserApi(){
   return String(stored||meta||'').trim().replace(/\/$/,'');
 }
 
-async function parsePdfViaBackend(file){
+async function parseFileViaBackend(file){
   const base=getOpsPilotParserApi();
   if(!base)return null;
   const ctrl=new AbortController();
-  const timer=setTimeout(()=>ctrl.abort(),75000);
+  const timer=setTimeout(()=>ctrl.abort(),90000);
   try{
-    const fd=new FormData();fd.append('file',file,file.name||'upload.pdf');
-    const res=await fetch(base+'/parse-pdf',{method:'POST',body:fd,signal:ctrl.signal,mode:'cors'});
-    if(res.status===422)return null; // 後端尚未支援的 PDF，交回原本前端解析器。
+    const fd=new FormData();fd.append('file',file,file.name||'upload');
+    const res=await fetch(base+'/parse-file',{method:'POST',body:fd,signal:ctrl.signal,mode:'cors'});
+    let payload=null;try{payload=await res.json()}catch{}
     if(!res.ok){
-      let msg='';try{const j=await res.json();msg=j?.detail||''}catch{}
-      throw new Error(msg||`後端 PDF 解析失敗（HTTP ${res.status}）`);
+      const detail=typeof payload?.detail==='string'?payload.detail:(payload?.detail?.message||payload?.message||'');
+      const e=new Error(detail||`後端檔案解析失敗（HTTP ${res.status}）`);
+      e.httpStatus=res.status;e.apiPayload=payload;throw e;
     }
-    const payload=await res.json();
-    if(!payload?.ok||!Array.isArray(payload.rows)||!payload.rows.length)return null;
-    const rows=payload.rows;
+    if(!payload?.ok||!Array.isArray(payload.rows)||!payload.rows.length)throw new Error('後端沒有回傳可分析資料列');
+    const out=payload.rows;
     const documentType=payload.documentType||'';
     const reportType=documentType==='inventory_adjustment'?'庫存調整單':(payload.meta?.reportType||'');
-    Object.defineProperty(rows,'pdfMeta',{
-      value:{...(payload.meta||{}),sourceType:'pdf',parserSource:'backend-api',documentType,reportType},
-      enumerable:false,configurable:true
+    const sourceType=(file.name||'').split('.').pop()?.toLowerCase()||payload.meta?.sourceType||'file';
+    Object.defineProperty(out,'importMeta',{
+      value:{
+        ...(payload.meta||{}),sourceType,sourceFile:file.name||payload.meta?.sourceFile||'',
+        parserSource:'backend-api-v3',documentType,reportType,
+        confidence:payload.confidence??null,validation:payload.validation||null,apiTotals:payload.totals||null,
+        apiVerified:payload.validation?.status==='passed',requiresReview:!!payload.meta?.requiresReview
+      },enumerable:false,configurable:true
     });
-    return rows;
+    if(sourceType==='pdf')Object.defineProperty(out,'pdfMeta',{value:out.importMeta,enumerable:false,configurable:true});
+    return out;
   }catch(err){
     window.__opsParserApiLastError=String(err?.name==='AbortError'?'後端解析逾時':(err?.message||err));
-    console.warn('OpsPilot parser API fallback:',err);
-    return null;
+    throw err;
   }finally{clearTimeout(timer)}
 }
 
@@ -1167,241 +1172,29 @@ async function parseFile(file){
   if(['png','jpg','jpeg','webp'].includes(ext)){
     throw new Error('圖片檔已辨識。目前此版本尚未接 OCR；不會假裝讀懂圖片內容。');
   }
-
-  if(ext==='pdf'){
-    // Product path: server-side parser first (stable across iPhone/Safari/Desktop),
-    // then preserve the existing browser parser as a fallback.
-    const apiResult=await parsePdfViaBackend(file);
-    const result=apiResult||await parseSalesPdf(file);
-    Object.defineProperty(result,'importMeta',{
-      value:{...(result.pdfMeta||{}),sourceType:'pdf',sourceFile:name},
-      enumerable:false,
-      configurable:true
-    });
-    return result;
+  const apiSupported=['pdf','xlsx','xls','xlsm','ods','csv','tsv','txt'];
+  if(apiSupported.includes(ext)){
+    try{return await parseFileViaBackend(file)}
+    catch(err){
+      // Verification failures must never be bypassed by a looser browser parser.
+      if(err?.httpStatus===422||err?.httpStatus===413||err?.httpStatus===415)throw err;
+      console.warn('OpsPilot parser API unavailable; using local unverified fallback:',err);
+    }
   }
 
-  if(['csv','tsv','txt'].includes(ext)){
-    const text=await file.text();
-    const rows=parseDelimited(text,name);
-    if(!rows.length) throw new Error('文字檔已開啟，但沒有可分析的資料列。');
-    Object.defineProperty(rows,'importMeta',{
-      value:{sourceType:'delimited',sourceFile:name},
-      enumerable:false,
-      configurable:true
-    });
-    return rows;
-  }
-
-  if(['xlsx','xls','xlsm','xlsb','ods'].includes(ext)){
+  // Availability fallback only. Data parsed here is explicitly marked unverified.
+  let result=null;
+  if(ext==='pdf')result=await parseSalesPdf(file);
+  else if(['csv','tsv','txt'].includes(ext)){
+    const text=await file.text();result=parseDelimited(text,name);
+  }else if(['xlsx','xls','xlsm','ods'].includes(ext)){
     if(!window.XLSX) throw new Error('試算表解析元件尚未載入，請重新整理後再試。');
-    const buf=await file.arrayBuffer();
-    const wb=XLSX.read(buf,{type:'array',cellDates:true});
-    return parseWorkbook(wb,name);
+    const buf=await file.arrayBuffer();const wb=XLSX.read(buf,{type:'array',cellDates:true});result=parseWorkbook(wb,name);
   }
-
-  throw new Error(`不支援的檔案格式：${ext||'未知'}`);
-}
-
-
-
-function parseDmyDateStrict(s){
-  const m=String(s??'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if(!m)return null;
-  const d=new Date(Number(m[3]),Number(m[2])-1,Number(m[1]));
-  return (d.getFullYear()===Number(m[3])&&d.getMonth()===Number(m[2])-1&&d.getDate()===Number(m[1]))?d:null;
-}
-function isoLocalDate(d){
-  if(!(d instanceof Date)||isNaN(d))return null;
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-function extractReportPeriod(rawPages){
-  const counts=new Map();
-  for(const p of (rawPages||[])){
-    const seen=new Set((p.items||[]).map(i=>String(i.text||'').trim())
-      .filter(t=>/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(t)));
-    for(const s of seen)counts.set(s,(counts.get(s)||0)+1);
-  }
-  const ranked=[...counts].map(([s,count])=>({s,count,d:parseDmyDateStrict(s)}))
-    .filter(x=>x.d).sort((a,b)=>b.count-a.count||a.d-b.d);
-  if(!ranked.length)return {start:null,end:null,printDate:null,confidence:'none'};
-  const threshold=Math.max(1,Math.floor((rawPages?.length||1)*0.35));
-  const repeated=ranked.filter(x=>x.count>=threshold);
-  const pool=(repeated.length>=2?repeated:ranked.slice(0,3)).sort((a,b)=>a.d-b.d);
-  if(pool.length===1){
-    return {start:isoLocalDate(pool[0].d),end:isoLocalDate(pool[0].d),printDate:null,confidence:'medium'};
-  }
-  return {
-    start:isoLocalDate(pool[0].d),
-    end:isoLocalDate(pool[1].d),
-    printDate:pool.length>=3?isoLocalDate(pool[pool.length-1].d):null,
-    confidence:repeated.length>=2?'high':'medium'
-  };
-}
-function applyReportPeriod(rows,period){
-  if(!Array.isArray(rows))return rows;
-  for(const r of rows){
-    // periodStart/end describe the report range. They are NOT per-item transaction dates.
-    r.periodStart=period?.start||null;
-    r.periodEnd=period?.end||null;
-    r.printDate=period?.printDate||null;
-    if(!r.date)r.date=null;
-  }
-  return rows;
-}
-function periodDates(startIso,endIso){
-  if(!startIso||!endIso)return [];
-  const [sy,sm,sd]=startIso.split('-').map(Number),[ey,em,ed]=endIso.split('-').map(Number);
-  let d=new Date(sy,sm-1,sd),e=new Date(ey,em-1,ed),out=[];
-  if(isNaN(d)||isNaN(e)||d>e)return [];
-  for(let i=0;d<=e&&i<370;i++){
-    out.push(new Date(d));
-    d=new Date(d.getFullYear(),d.getMonth(),d.getDate()+1);
-  }
-  return out;
-}
-function classifyAggregatePeriod(startIso,endIso){
-  const days=periodDates(startIso,endIso).map(d=>({
-    date:isoLocalDate(d),
-    holiday:[0,6].includes(d.getDay())
-  }));
-  if(!days.length)return {kind:'unknown',days,weekday:[],holiday:[]};
-  const holiday=days.filter(x=>x.holiday),weekday=days.filter(x=>!x.holiday);
-  if(!holiday.length)return {kind:'weekday',days,weekday,holiday};
-  if(!weekday.length)return {kind:'holiday',days,weekday,holiday};
-  return {kind:'mixed',days,weekday,holiday};
-}
-
-function groupPdfItemsIntoLines(items,tolerance=2.6){
-  const sorted=[...(items||[])].sort((a,b)=>b.y-a.y||a.x-b.x);
-  const lines=[];
-  for(const it of sorted){
-    let line=lines.find(l=>Math.abs(l.y-it.y)<=tolerance);
-    if(!line){line={y:it.y,items:[]};lines.push(line)}
-    line.items.push(it);
-  }
-  return lines.sort((a,b)=>b.y-a.y).map(l=>({
-    y:l.y,
-    items:l.items.sort((a,b)=>a.x-b.x),
-    text:l.items.sort((a,b)=>a.x-b.x).map(x=>String(x.text||'').trim()).filter(Boolean).join(' ')
-  }));
-}
-function parseInventoryAdjustmentPdf(rawPages,fileName,reportPeriod){
-  const clean=s=>String(s??'').replace(/\u00a0/g,' ').replace(/[−–—]/g,'-').replace(/\s+/g,' ').trim();
-  const toN=v=>{const n=Number(String(v).replace(/,/g,''));return Number.isFinite(n)?n:null};
-  const isNum=s=>/^-?[\d,]+(?:\.\d+)?$/.test(clean(s));
-  const isDate=s=>/^\d{2}\/\d{2}\/\d{4}$/.test(clean(s));
-  const rows=[];const seen=new Set();let rawTransactionCount=0;const reasons=new Set();
-
-  const pushParsed=(o,reason)=>{
-    if(!o||!o.sku||!o.adjustDate||o.adjustmentQty==null||o.unitCost==null)return false;
-    const key=[o.sku,o.ref||'',o.adjustDate,o.postDate||'',o.adjustmentQty,o.stockBefore,o.stockAfter].join('|');
-    if(seen.has(key))return false;seen.add(key);
-    const adjustmentAmount=Math.round(o.unitCost*o.adjustmentQty*100)/100;
-    const isLossReason=/Breakage|Expiry/i.test(reason||'');
-    rows.push({
-      date:isoLocalDate(parseDmyDateStrict(o.adjustDate))||o.adjustDate,
-      sku:o.sku,item:clean(o.item||''),qty:null,sales:null,
-      waste:isLossReason?Math.round((-adjustmentAmount)*100)/100:null,clearance:null,
-      periodStart:reportPeriod?.start||null,periodEnd:reportPeriod?.end||null,printDate:reportPeriod?.printDate||null,
-      adjustmentReason:reason||'未辨識',adjustmentQty:o.adjustmentQty,adjustmentAmount,
-      unitCost:o.unitCost,stockBefore:o.stockBefore,stockAfter:o.stockAfter,
-      detailCode:o.detail||'',partnership:o.partnership||'',clearanceFlag:o.clearanceFlag||'',diffPct:o.diffPct,
-      ref:o.ref||'',postDate:isoLocalDate(parseDmyDateStrict(o.postDate))||o.postDate||'',
-      sourceType:'pdf-inventory-adjustment',sourceFile:fileName
-    });
-    return true;
-  };
-
-  for(const page of (rawPages||[])){
-    const pageText=(page.items||[]).map(x=>clean(x.text)).join(' ');
-    let reason='';
-    const reasonHit=pageText.match(/(?:調整\s*原因\s*)?([A-Z]-[A-Za-z][A-Za-z-]*)/);
-    if(reasonHit)reason=reasonHit[1];
-    if(reason)reasons.add(reason);
-
-    // Primary parser: reconstruct each transaction from items sharing the SKU baseline.
-    // This works even when PDF.js splits one visual row into many independent text objects.
-    const sourceItems=(page.explodedAtomic&&page.explodedAtomic.length)?page.explodedAtomic:
-      ((page.explodedCombined&&page.explodedCombined.length)?page.explodedCombined:(page.items||[]));
-    const items=sourceItems.map(x=>({...x,text:clean(x.text)})).filter(x=>x.text);
-    const skuItems=items.filter(x=>/^\d{6}$/.test(x.text));
-    rawTransactionCount+=skuItems.length;
-    for(const skuIt of skuItems){
-      let parsed=false;
-      for(const tol of [2.6,4.5,7.0,10.0,14.0]){
-        const line=items.filter(x=>Math.abs(x.y-skuIt.y)<=tol).sort((a,b)=>a.x-b.x);
-        let toks=line.map(x=>x.text).filter(Boolean);
-        const si=toks.findIndex(t=>t===skuIt.text);
-        if(si<0)continue;
-        toks=toks.slice(Math.max(0,si-1));
-        // Locate the structural anchors instead of assuming the product name is one text item.
-        const skuIdx=toks.findIndex(t=>t===skuIt.text);
-        const detailIdx=toks.findIndex((t,i)=>i>skuIdx&&/^\d{3}$/.test(t));
-        if(detailIdx<0)continue;
-        const partIdx=toks.findIndex((t,i)=>i>detailIdx&&/^[YN]$/.test(t));
-        if(partIdx<0)continue;
-        const refIdx=toks.findIndex((t,i)=>i>partIdx&&/^F\d{6,}$/.test(t));
-        if(refIdx<0)continue;
-        const dates=[];for(let i=refIdx+1;i<toks.length;i++)if(isDate(toks[i]))dates.push(toks[i]);
-        if(dates.length<2)continue;
-        const nums=[];for(let i=partIdx+1;i<refIdx;i++)if(isNum(toks[i]))nums.push(toks[i]);
-        // Expected numeric block: unit cost, stock before, stock after, adjustment qty, diff %.
-        if(nums.length<5)continue;
-        const unitCost=toN(nums[0]),stockBefore=toN(nums[1]),stockAfter=toN(nums[2]),adjustmentQty=toN(nums[3]),diffPct=toN(nums[nums.length-1]);
-        const flag=toks.slice(partIdx+1,refIdx).find(t=>/^[YN]$/.test(t))||'';
-        const item=toks.slice(skuIdx+1,detailIdx).join(' ');
-        parsed=pushParsed({sku:skuIt.text,item,detail:toks[detailIdx],partnership:toks[partIdx],unitCost,stockBefore,stockAfter,adjustmentQty,clearanceFlag:flag,diffPct,ref:toks[refIdx],adjustDate:dates[0],postDate:dates[1]},reason);
-        if(parsed)break;
-      }
-    }
-
-    // Secondary parser: relaxed whole-line reconstruction for PDFs that already combine cells.
-    const num='-?[\\d,]+(?:\\.\\d+)?';
-    const rowRe=new RegExp('(?:^|\\s)20\\s+(\\d{6})\\s+(.+?)\\s+(\\d{3})\\s+([YN])\\s+('+num+')\\s+('+num+')\\s+('+num+')\\s+('+num+')\\s+([YN])\\s+('+num+')\\s+(F\\d{6,})\\s+(\\d{2}\\/\\d{2}\\/\\d{4})\\s+(\\d{2}\\/\\d{2}\\/\\d{4})(?:\\s|$)');
-    for(const tol of [2.6,4.5,7.0,10.0,14.0]){
-      for(const line of groupPdfItemsIntoLines(sourceItems,tol)){
-        const text=clean(line.text),m=text.match(rowRe);if(!m)continue;
-        const [,sku,item,detail,partnership,unitCost0,stockBefore0,stockAfter0,adjQty0,clearanceFlag,diffPct0,ref,adjustDate,postDate]=m;
-        pushParsed({sku,item,detail,partnership,unitCost:toN(unitCost0),stockBefore:toN(stockBefore0),stockAfter:toN(stockAfter0),adjustmentQty:toN(adjQty0),clearanceFlag,diffPct:toN(diffPct0),ref,adjustDate,postDate},reason);
-      }
-    }
-  }
-
-  // Tertiary parser: PDF.js content-stream order. Some ERP PDFs expose perfect text
-  // but their cell baselines differ enough that geometry grouping is unreliable on iOS/Safari.
-  // `hasEOL` preserves the visual transaction row without changing the user's PDF.
-  if(rows.length < rawTransactionCount){
-    const num='-?[\d,]+(?:\.\d+)?';
-    const rowRe=new RegExp('(?:^|\n)\s*20\s+(\d{6})\s+(.+?)\s+(\d{3})\s+([YN])\s+('+num+')\s+('+num+')\s+('+num+')\s+('+num+')\s+([YN])\s+('+num+')\s+(F\d{6,})\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})(?=\s|$)','gm');
-    for(const page of (rawPages||[])){
-      let reason='';
-      const ptxt=(page.items||[]).map(x=>clean(x.text)).join(' ');
-      const rh=ptxt.match(/(?:調整\s*原因\s*)?([A-Z]-[A-Za-z][A-Za-z-]*)/); if(rh)reason=rh[1];
-      let ordered='',lastY=null;
-      for(const it of [...(page.items||[])].sort((a,b)=>a.index-b.index)){
-        const t=clean(it.text); if(!t)continue;
-        // Respect explicit PDF line endings first; y-jumps are a fallback for producers that omit hasEOL.
-        if(ordered && lastY!=null && Math.abs(it.y-lastY)>8) ordered+='\n';
-        ordered+=(ordered && !ordered.endsWith('\n')?' ':'')+t;
-        if(it.hasEOL)ordered+='\n';
-        lastY=it.y;
-      }
-      let m; rowRe.lastIndex=0;
-      while((m=rowRe.exec(ordered))){
-        const [,sku,item,detail,partnership,unitCost0,stockBefore0,stockAfter0,adjQty0,clearanceFlag,diffPct0,ref,adjustDate,postDate]=m;
-        pushParsed({sku,item,detail,partnership,unitCost:toN(unitCost0),stockBefore:toN(stockBefore0),stockAfter:toN(stockAfter0),adjustmentQty:toN(adjQty0),clearanceFlag,diffPct:toN(diffPct0),ref,adjustDate,postDate},reason);
-      }
-    }
-  }
-
-  if(!rows.length)return [];
-  const coverage=rawTransactionCount?rows.length/rawTransactionCount:1;
-  // Do not reject a readable inventory-adjustment PDF merely because decorative/layout rows
-  // make exact coverage imperfect. Core transaction fields are validated row-by-row above.
-  const meta={parser:'inventory-adjustment-detail-v3',reportType:'庫存調整單',sourceType:'pdf',parsedTransactions:rows.length,rawTransactionCount,coverage,adjustmentReasons:[...reasons],partial:rawTransactionCount>=20&&coverage<0.90};
-  Object.defineProperty(rows,'pdfMeta',{value:meta,enumerable:false,configurable:true});
-  return rows;
+  if(!Array.isArray(result)||!result.length)throw new Error('檔案已開啟，但沒有可分析的資料列。');
+  const old=result.importMeta||result.pdfMeta||{};
+  Object.defineProperty(result,'importMeta',{value:{...old,sourceFile:name,parserSource:'browser-fallback',apiVerified:false,validation:{status:'unverified',checks:[]},requiresReview:true},enumerable:false,configurable:true});
+  return result;
 }
 
 async function parseSalesPdf(file){
@@ -2242,7 +2035,7 @@ function buildImportPreview(){
 async function handleFiles(files){
   if(!files.length)return;
   staged=[];mapping={};
-  window.__opsImportContext={signature:'',headers:[],quality:null,sourceTypes:new Set()};
+  window.__opsImportContext={signature:'',headers:[],quality:null,sourceTypes:new Set(),fileValidations:[]};
   $('#fileList').innerHTML='';
   $('#mappingBox').style.display='none';$('#qualityBox').style.display='none';
   $('#nextImportStep').disabled=true;$('#confirmImport').disabled=true;
@@ -2260,7 +2053,11 @@ async function handleFiles(files){
       staged.push(...raw);successCount++;
       const meta=raw.importMeta||raw.pdfMeta||{};
       window.__opsImportContext.sourceTypes.add(meta.sourceType||'unknown');
+      if(meta.validation)window.__opsImportContext.fileValidations.push({file:f.name,status:meta.validation.status||'unverified',confidence:meta.confidence,validation:meta.validation,totals:meta.apiTotals||null,documentType:meta.documentType||'',requiresReview:!!meta.requiresReview});
       let detail=`讀取成功・${raw.length.toLocaleString()} 筆`;
+      if(meta.apiVerified)detail+='・API 已驗證';
+      else if(meta.validation?.status==='partial')detail+='・部分驗證';
+      else if(meta.validation?.status==='unverified'||meta.requiresReview)detail+='・待確認';
       if(meta.sheet)detail+=`・${meta.sheet}`;
       if(meta.headerRow)detail+=`・表頭第 ${meta.headerRow} 列`;
       if(meta.sourceType==='spreadsheet'&&meta.parser==='daily-sales-by-item-xlsx-v2'){
@@ -2389,7 +2186,10 @@ function updateImportReadiness(headers=[]){
     const labels={date:'日期',sku:'商品編號',item:'商品名稱',qty:'銷售量',sales:'營業額',waste:'報廢',clearance:'出清',inventory:'庫存',category:'分類'};
     const inferred=Object.entries(sem).filter(([k])=>mapping[k]).map(([k,v])=>`${labels[k]||k} ${v}%`).join('、');
     const warnings=validations.filter(x=>!x.ok).map(x=>x.name);
-    $('#importStatus').textContent=`${adjustmentCount?`已辨識庫存調整明細 ${adjustmentCount.toLocaleString()} 筆。`:''}已辨識：${available}。未提供：${absent}。${inferred?`推定信心：${inferred}。`:''}${warnings.length?`需留意：${warnings.join('、')}。`:''}沒有的欄位會顯示「無資料」，不會阻擋其他分析。`;
+    const fv=window.__opsImportContext.fileValidations||[];
+    const verified=fv.filter(x=>x.status==='passed').length, partial=fv.filter(x=>x.status==='partial').length, unverified=fv.filter(x=>!['passed','partial'].includes(x.status)).length;
+    const verifyText=fv.length?(verified===fv.length?`後端驗算：${verified}/${fv.length} 個檔案已驗證通過。`:`後端驗算：已驗證 ${verified}、部分驗證 ${partial}、待確認 ${unverified}。`):'';
+    $('#importStatus').textContent=`${verifyText}${adjustmentCount?`已辨識庫存調整明細 ${adjustmentCount.toLocaleString()} 筆。`:''}已辨識：${available}。未提供：${absent}。${inferred?`推定信心：${inferred}。`:''}${warnings.length?`需留意：${warnings.join('、')}。`:''}沒有的欄位會顯示「無資料」，不會阻擋其他分析。`;
   }
 }
 
