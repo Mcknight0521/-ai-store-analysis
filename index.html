@@ -128,6 +128,10 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
 
 .period-banner{margin:0 0 12px;padding:12px 14px;border:1px solid #DDE6F3;background:#F8FAFC;border-radius:14px;color:#344054;font-size:13px;font-weight:750;line-height:1.55}
 .period-banner strong{color:#111827}
+
+.clearance-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #EEF2F6}
+.clearance-row:last-child{border-bottom:0}.clearance-row .name{font-weight:800;color:#111827}.clearance-row .meta{font-size:11px;color:#7A8699;margin-top:3px}.clearance-row .rate{text-align:right;font-weight:900}
+#clearanceModeSwitch button:disabled{opacity:.35}
 </style>
 
 <style id="improvement-center-v2">
@@ -381,6 +385,15 @@ html.has-hash .page.active:not(:target){display:none!important}
         <div id="salesTop10List" class="sales-top10-list">
           <div class="empty">等待資料</div>
         </div>
+      </section>
+      <section class="panel" style="margin-top:12px">
+        <div class="panel-head"><div><div class="panel-kicker">CLEARANCE RATE</div><h3>出清率分析</h3><p id="clearanceModeHint">依資料日期粒度自動決定可用模式。</p></div></div>
+        <div class="segmented" id="clearanceModeSwitch" style="margin-bottom:12px">
+          <button type="button" data-clearance-mode="period" class="active">期間</button>
+          <button type="button" data-clearance-mode="daily">每日</button>
+        </div>
+        <div id="clearanceRateSummary" class="metric-grid"></div>
+        <div id="clearanceRateDetail" style="margin-top:12px"></div>
       </section>
     </section>
 
@@ -2184,6 +2197,47 @@ function renderFocus(stats,a){
  '<div class="empty" style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.13);color:#AFC0D4">'+(total==null?'損耗資料：無資料；其他分析仍可使用':'目前沒有可排序的正數損耗')+'</div>';
 }
 $('#analysisTabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;analysisMode=b.dataset.mode;$$('#analysisTabs button').forEach(x=>x.classList.toggle('active',x===b));renderAnalysis()}
+
+let clearanceMode='period';
+function clearanceRate(n,d){return n!=null&&d!=null&&Number(d)>0?Number(n)/Number(d):null}
+function clearanceGrain(list=rows){
+ const dated=list.filter(r=>r.date instanceof Date&&!isNaN(r.date));
+ return {dailyAvailable:new Set(dated.map(r=>isoLocalDate(r.date))).size>0};
+}
+function clearanceByDay(list=rows){
+ const m=new Map();
+ for(const r of list){if(!(r.date instanceof Date)||isNaN(r.date))continue;const k=isoLocalDate(r.date);if(!m.has(k))m.set(k,[]);m.get(k).push(r)}
+ return [...m].sort((a,b)=>a[0].localeCompare(b[0]));
+}
+function clearanceByItem(list=rows){
+ const m=new Map();
+ for(const r of list){
+  const key=String(r.sku||r.item||'').trim();if(!key)continue;
+  if(!m.has(key))m.set(key,{sku:r.sku||'',item:r.item||'',sales:null,clearance:null});
+  const x=m.get(key);if(r.sales!=null)x.sales=(x.sales??0)+Number(r.sales);if(r.clearance!=null)x.clearance=(x.clearance??0)+Number(r.clearance);
+ }
+ return [...m.values()].map(x=>({...x,rate:clearanceRate(x.clearance,x.sales)})).filter(x=>x.rate!=null).sort((a,b)=>b.rate-a.rate);
+}
+function renderClearanceRates(){
+ const caps=detectCapabilities(rows),grain=clearanceGrain(rows),daily=document.querySelector('[data-clearance-mode="daily"]');
+ if(daily)daily.disabled=!grain.dailyAvailable;
+ if(clearanceMode==='daily'&&!grain.dailyAvailable)clearanceMode='period';
+ document.querySelectorAll('[data-clearance-mode]').forEach(b=>b.classList.toggle('active',b.dataset.clearanceMode===clearanceMode));
+ if(!caps.sales||!caps.clearance){$('#clearanceModeHint').textContent='需要營業額與出清金額才能計算出清率。';$('#clearanceRateSummary').innerHTML='<div class="empty">出清率：無資料</div>';$('#clearanceRateDetail').innerHTML='';return}
+ if(clearanceMode==='daily'){
+  const groups=clearanceByDay(rows);
+  $('#clearanceModeHint').textContent=`已辨識 ${groups.length} 天逐日資料。每日出清率＝當日出清金額 ÷ 當日含稅營業額。`;
+  $('#clearanceRateSummary').innerHTML=groups.map(([day,list])=>{const a=aggregate(list),r=clearanceRate(a.clearance,a.sales);return `<div class="metric"><span>${day.replaceAll('-','/')}</span><strong>${r==null?'無資料':pct(r)}</strong><small>出清 ${maybeMoney(a.clearance)} ／ 營業額 ${maybeMoney(a.sales)}</small></div>`}).join('');
+  $('#clearanceRateDetail').innerHTML='';return
+ }
+ const a=aggregate(rows),r=clearanceRate(a.clearance,a.sales),p=activePeriodInfo(rows);
+ $('#clearanceModeHint').textContent=grain.dailyAvailable?'目前顯示期間；可切換每日。期間率＝期間總出清 ÷ 期間總營業額，不平均每日百分比。':'目前只有期間彙總；每日模式停用，不強拆每日數字。';
+ $('#clearanceRateSummary').innerHTML=`<div class="metric"><span>${p?'期間出清率':'整體出清率'}</span><strong>${r==null?'無資料':pct(r)}</strong><small>${maybeMoney(a.clearance)} ÷ ${maybeMoney(a.sales)}</small></div>`;
+ const items=clearanceByItem(rows).slice(0,20);
+ $('#clearanceRateDetail').innerHTML=items.length?`<div class="panel-kicker" style="margin:10px 0 4px">單品${p?'期間':''}出清率 TOP 20</div>`+items.map((x,i)=>`<div class="clearance-row"><div><div class="name">${i+1}. ${esc(x.item||x.sku||'未命名商品')}</div><div class="meta">${esc(x.sku||'')}　出清 ${maybeMoney(x.clearance)} ／ 營業額 ${maybeMoney(x.sales)}</div></div><div class="rate">${pct(x.rate)}</div></div>`).join(''):'<div class="empty">沒有可計算單品出清率的資料。</div>';
+}
+document.addEventListener('click',e=>{const b=e.target.closest?.('[data-clearance-mode]');if(!b||b.disabled)return;clearanceMode=b.dataset.clearanceMode;renderClearanceRates()});
+
 function renderAnalysis(){
  if(!confirmed)return;
  const c=detectCapabilities(rows);
