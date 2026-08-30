@@ -2866,16 +2866,19 @@ window.addEventListener('unhandledrejection', function(e){
   function cacheGet(key,maxAge=7*864e5){try{const x=JSON.parse(localStorage.getItem(key)||'null');return x&&Date.now()-x.t<maxAge?x.v:null}catch(e){return null}}
   function cacheSet(key,v){try{localStorage.setItem(key,JSON.stringify({t:Date.now(),v}))}catch(e){}}
   function climateLabels(row){
-    const out=[];if(Number(row.precipitation_sum)>=200)out.push('大豪雨');else if(Number(row.precipitation_sum)>=80)out.push('豪雨');else if(Number(row.precipitation_sum)>=40)out.push('明顯降雨');
-    if(Number(row.wind_gusts_10m_max)>=24.5)out.push('強陣風');else if(Number(row.wind_gusts_10m_max)>=17.2)out.push('強風');
-    if(Number(row.temperature_2m_max)>=36)out.push('高溫');if(Number(row.temperature_2m_min)<=10)out.push('低溫');return out;
+    const out=[];
+    // Keep only operationally meaningful heavy-rain events. Wind and ordinary rain are intentionally ignored.
+    if(Number(row.precipitation_sum)>=350)out.push('超大豪雨');
+    else if(Number(row.precipitation_sum)>=200)out.push('大豪雨');
+    else if(Number(row.precipitation_sum)>=80)out.push('豪雨');
+    return out;
   }
   async function loadHistoricalClimate(range){
-    if(!range)return [];const coord=COUNTY_COORDS[state.region]||COUNTY_COORDS['屏東縣'];const start=iso(range.start),end=iso(range.end),key=`opsClimate:${state.region}:${start}:${end}`,cached=cacheGet(key,30*864e5);if(cached)return cached;
+    if(!range)return [];const coord=COUNTY_COORDS[state.region]||COUNTY_COORDS['屏東縣'];const start=iso(range.start),end=iso(range.end),key=`opsClimateRainV3:${state.region}:${start}:${end}`,cached=cacheGet(key,30*864e5);if(cached)return cached;
     const today=iso(new Date());if(start>today)return [];
     const endPast=end>today?today:end;
     const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${coord[0]}&longitude=${coord[1]}&start_date=${start}&end_date=${endPast}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_gusts_10m_max&timezone=Asia%2FTaipei`;
-    const j=await fetchJSONSmart(url),d=j.daily||{},out=[];(d.time||[]).forEach((date,i)=>{const row={date,temperature_2m_max:d.temperature_2m_max?.[i],temperature_2m_min:d.temperature_2m_min?.[i],precipitation_sum:d.precipitation_sum?.[i],wind_gusts_10m_max:d.wind_gusts_10m_max?.[i]},labels=climateLabels(row);if(labels.length)out.push({type:'climate',date,name:labels.join('、'),detail:`雨量 ${Number(row.precipitation_sum||0).toFixed(0)} mm · 最大陣風 ${Number(row.wind_gusts_10m_max||0).toFixed(1)} m/s`,source:'歷史氣象再分析',raw:row})});cacheSet(key,out);return out;
+    const j=await fetchJSONSmart(url),d=j.daily||{},out=[];(d.time||[]).forEach((date,i)=>{const row={date,temperature_2m_max:d.temperature_2m_max?.[i],temperature_2m_min:d.temperature_2m_min?.[i],precipitation_sum:d.precipitation_sum?.[i],wind_gusts_10m_max:d.wind_gusts_10m_max?.[i]},labels=climateLabels(row);if(labels.length)out.push({type:'climate',date,name:labels.join('、'),detail:`雨量 ${Number(row.precipitation_sum||0).toFixed(0)} mm`,source:'歷史氣象再分析',raw:row})});cacheSet(key,out);return out;
   }
   function rocDateToISO(y,m,d){const yy=Number(y)+1911;return `${yy}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
   function extractDgpaList(text){
@@ -2905,9 +2908,10 @@ window.addEventListener('unhandledrejection', function(e){
     for(const y of years){const key=`opsCwaTyphoons:${y}`,cached=cacheGet(key,90*864e5);if(cached){all.push(...cached);continue}const found=[];for(let i=1;i<=35;i+=7){const ids=Array.from({length:Math.min(7,36-i)},(_,k)=>`${y}${String(i+k).padStart(2,'0')}`),rr=await Promise.allSettled(ids.map(id=>fetchTextSmart(`https://rdc28.cwa.gov.tw/TDB/public/typhoon_detail?typhoon_id=${id}`)));rr.forEach(r=>{if(r.status==='fulfilled'){const t=parseTyphoonDetail(r.value.text);if(t)found.push(t)}})}cacheSet(key,found);all.push(...found)}
     const start=iso(range.start),end=iso(range.end),out=[];all.forEach(t=>{if(t.end<start||t.start>end)return;let d=new Date(Math.max(new Date(t.start),range.start));const until=new Date(Math.min(new Date(t.end),range.end));while(d<=until){out.push({type:'typhoon',date:iso(d),name:`${t.name}颱風`,detail:t.detail,source:'中央氣象署颱風資料庫'});d=addDays(d,1)}});return out;
   }
-  function historyByDate(){const map=new Map();(state.historyEvents||[]).forEach(e=>{if(!map.has(e.date))map.set(e.date,[]);map.get(e.date).push(e)});return map}
+  function allowedHistoryEvent(e){if(!e)return false;if(e.type==='climate')return /^(豪雨|大豪雨|超大豪雨)$/.test(String(e.name||''));return true}
+  function historyByDate(){const map=new Map();(state.historyEvents||[]).filter(allowedHistoryEvent).forEach(e=>{if(!map.has(e.date))map.set(e.date,[]);map.get(e.date).push(e)});return map}
   function groupHistory(type){
-    const arr=(state.historyEvents||[]).filter(x=>x.type===type).sort((a,b)=>a.date.localeCompare(b.date)),groups=[];
+    const arr=(state.historyEvents||[]).filter(allowedHistoryEvent).filter(x=>x.type===type).sort((a,b)=>a.date.localeCompare(b.date)),groups=[];
     arr.forEach(e=>{const last=groups[groups.length-1];if(last&&last.name===e.name&&iso(addDays(last.end,1))===e.date){last.end=new Date(e.date);last.days++}else groups.push({name:e.name,start:new Date(e.date),end:new Date(e.date),days:1,detail:e.detail,source:e.source})});return groups;
   }
   function renderCards(){
