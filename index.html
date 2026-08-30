@@ -3158,9 +3158,9 @@ window.addEventListener('unhandledrejection', function(e){
     for(const url of extractDgpaAttachmentUrls(detail.text,it.url)){try{const r=await fetchTextSmart(url);parsed=parseDGPA(r.text,state.region);if(parsed.found)return parsed}catch{}}
     return parsed;
   }
-  async function loadHistoricalClosures(range){
+  async function loadHistoricalClosures(range,force=false){
     if(!range)return [];
-    const start=iso(range.start),end=iso(range.end),key=`opsDGPAV4:${state.region}:${start}:${end}`,cached=cacheGet(key,14*864e5);if(cached)return cached;
+    const start=iso(range.start),end=iso(range.end),key=`opsDGPAV5:${state.region}:${start}:${end}`,cached=force?null:cacheGet(key,14*864e5);if(cached){state.transportUsage.add('停班停課快取');return cached;}
 
     // Preferred path: ask OpsPilot backend to query DGPA server-side.
     // This avoids iPhone Safari CORS / proxy parsing failures on DGPA historical pages.
@@ -3224,19 +3224,20 @@ window.addEventListener('unhandledrejection', function(e){
     if(state.syncTimer)clearTimeout(state.syncTimer);
     state.syncTimer=setTimeout(()=>{state.syncTimer=null;syncExternalEvents()},delay);
   }
-  async function syncExternalEvents(){
+  async function syncExternalEvents(force=false){
     state.region=$e('eventRegion')?.value||state.region;localStorage.setItem('opsEventRegion',state.region);const range=analysisRange();renderTimeline();renderCards();if(!range){setStatus('warn','匯入含日期的報表後，會依該期間同步歷史事件');return}
     const token=++state.syncToken;
     state.status='loading';state.failedSources=[];state.transportUsage=new Set();
     // 節慶先由本機立即顯示；停班停課走後端優先回來；較慢的颱風資料在背景並行同步。
     setStatus('warn',`正在查 ${iso(range.start)}～${iso(range.end)} 的停班停課；節慶已先顯示…`);
-    const closureP=loadHistoricalClosures(range),typhoonP=loadHistoricalTyphoons(range);
+    const closureP=loadHistoricalClosures(range,force),typhoonP=loadHistoricalTyphoons(range);
     const closureR=await Promise.allSettled([closureP]);
     if(token!==state.syncToken)return;
     const history=[],okSources=[];
     if(closureR[0].status==='fulfilled'){history.push(...closureR[0].value);okSources.push('停班停課')}else state.failedSources.push('停班停課');
     state.historyEvents=history;renderCards();renderTimeline();
-    setStatus('warn',`${okSources.includes('停班停課')?'停班停課已完成':'停班停課讀取失敗'}；颱風資料背景同步中…`);
+    const closureCount=history.filter(e=>e.type==='closure').length;
+    setStatus('warn',`${okSources.includes('停班停課')?`停班停課已完成${closureCount?` · 找到 ${closureCount} 筆`:' · 此縣市期間 0 筆'}`:'停班停課讀取失敗'}；颱風資料背景同步中…`);
     const typhoonR=await Promise.allSettled([typhoonP]);
     if(token!==state.syncToken)return;
     if(typhoonR[0].status==='fulfilled'){history.push(...typhoonR[0].value);okSources.push('颱風')}else state.failedSources.push('颱風');
@@ -3246,7 +3247,7 @@ window.addEventListener('unhandledrejection', function(e){
     else if(state.status==='partial')setStatus('warn',`部分資料讀取失敗：${state.failedSources.join('、')} · 已成功：${okSources.join('、')||'無'} · ${via}`);
     else setStatus('bad',`外部資料讀取失敗：${state.failedSources.join('、')}。這不代表沒有事件；節慶日曆仍可使用。`);
   }
-  function init(){const sel=$e('eventRegion');if(!sel)return;if([...sel.options].some(o=>o.value===state.region))sel.value=state.region;$e('refreshExternalEvents')?.addEventListener('click',syncExternalEvents);sel.addEventListener('change',syncExternalEvents);renderTimeline();renderCards();scheduleExternalSync(30);const old=window.renderAll;if(typeof old==='function'&&!old.__eventWrapped){const wrapped=function(){const r=old.apply(this,arguments);renderTimeline();renderCards();scheduleExternalSync();return r};wrapped.__eventWrapped=true;window.renderAll=wrapped}}
+  function init(){const sel=$e('eventRegion');if(!sel)return;if([...sel.options].some(o=>o.value===state.region))sel.value=state.region;$e('refreshExternalEvents')?.addEventListener('click',()=>syncExternalEvents(true));sel.addEventListener('change',syncExternalEvents);renderTimeline();renderCards();scheduleExternalSync(30);const old=window.renderAll;if(typeof old==='function'&&!old.__eventWrapped){const wrapped=function(){const r=old.apply(this,arguments);renderTimeline();renderCards();scheduleExternalSync();return r};wrapped.__eventWrapped=true;window.renderAll=wrapped}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
