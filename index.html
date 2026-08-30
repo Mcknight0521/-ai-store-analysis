@@ -739,8 +739,8 @@ function assessImportedRecords(records,map){
   const sample=records.slice(0,Math.min(records.length,200));
   let salesNumeric=0,qtyNumeric=0,dateValid=0,itemValid=0;
   for(const r of sample){
-    if(map.sales&&Number.isFinite(toNumber(r[map.sales])))salesNumeric++;
-    if(map.qty&&Number.isFinite(toNumber(r[map.qty])))qtyNumeric++;
+    if(map.sales&&Number.isFinite(toNum(r[map.sales])))salesNumeric++;
+    if(map.qty&&Number.isFinite(toNum(r[map.qty])))qtyNumeric++;
     if(map.date&&parseDate(r[map.date]))dateValid++;
     if((map.item&&String(r[map.item]??'').trim())||(map.sku&&String(r[map.sku]??'').trim()))itemValid++;
   }
@@ -822,11 +822,11 @@ function validateInferredMapping(records,map){
     checks.push({name:'商品編號結構',ok:!v.length||ok/v.length>=.5});
   }
   if(map.sales){
-    const v=sample.map(r=>toNumber(r[map.sales])).filter(Number.isFinite);
+    const v=sample.map(r=>toNum(r[map.sales])).filter(Number.isFinite);
     checks.push({name:'營業額數值結構',ok:v.length>=Math.max(1,sample.length*.4)});
   }
   if(map.qty){
-    const v=sample.map(r=>toNumber(r[map.qty])).filter(Number.isFinite);
+    const v=sample.map(r=>toNum(r[map.qty])).filter(Number.isFinite);
     checks.push({name:'銷售量數值結構',ok:v.length>=Math.max(1,sample.length*.4)});
   }
   return checks;
@@ -884,11 +884,18 @@ function normalize(raw,map){
 function parseDelimited(text,name){
  const sep=name.toLowerCase().endsWith('.tsv')?'\t':(text.includes('\t')?'\t':',');
  const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());
- const cells=lines.map(l=>{let a=[],cur='',q=false;for(let i=0;i<l.length;i++){const c=l[i];if(c==='"'){if(q&&l[i+1]==='"'){cur+='"';i++}else q=!q}else if(c===sep&&!q){a.push(cur.trim());cur=''}else cur+=c}a.push(cur.trim());return a});
- if(!cells.length)return [];
- let best=0,bscore=-1;
- for(let i=0;i<Math.min(25,cells.length);i++){const sc=Object.keys(findMapping(cells[i])).length;if(sc>bscore){best=i;bscore=sc}}
- const h=cells[best];return cells.slice(best+1).map(r=>Object.fromEntries(h.map((x,j)=>[x,r[j]??''])))
+ const matrix=lines.map(l=>{
+   let a=[],cur='',q=false;
+   for(let i=0;i<l.length;i++){
+     const c=l[i];
+     if(c==='"'){if(q&&l[i+1]==='"'){cur+='"';i++}else q=!q}
+     else if(c===sep&&!q){a.push(cur.trim());cur=''}
+     else cur+=c;
+   }
+   a.push(cur.trim());return a;
+ });
+ const parsed=matrixToRecords(matrix);
+ return parsed.records;
 }
 async function parseFile(file){
   const name=file.name||'';
@@ -975,6 +982,9 @@ async function parseSalesPdf(file){
     const parsed=parseDailyItemByLayout(rawPages,file.name);
     if(parsed.length) return parsed;
 
+    const stream=parseDailyItemByTokenStream(rawPages,file.name);
+    if(stream.length) return stream;
+
     const fallback=parseDailyItemByGeometryFallback(rawPages,file.name);
     if(fallback.length) return fallback;
   }
@@ -997,6 +1007,108 @@ function inferRetailPdfHeaders(items){
   return {found,coverage:Object.keys(found).length/defs.length};
 }
 
+
+
+function parseDailyItemByTokenStream(rawPages,fileName){
+  const clean=s=>String(s??'').replace(/\u00a0/g,' ').replace(/[−–—]/g,'-').replace(/\s+/g,' ').trim();
+  const isNum=s=>/^-?[\d,]+(?:\.\d+)?$/.test(clean(s));
+  const val=s=>{
+    if(s==null||s==='')return null;
+    const n=Number(clean(s).replace(/,/g,''));
+    return Number.isFinite(n)?n:null;
+  };
+  const detailRows=[];
+
+  for(const page of rawPages){
+    const t=(page.items||[]).map(x=>clean(x.text)).filter(Boolean);
+    for(let i=0;i<t.length;i++){
+      if(!/^\d{6}$/.test(t[i]))continue;
+      const sku=t[i];
+
+      // Find N/P shortly after SKU. The report may split product names into several text objects.
+      let np=-1;
+      for(let j=i+1;j<Math.min(t.length,i+18);j++){
+        if(/^[NP]$/i.test(t[j])){np=j;break}
+        if(/總計|小分類編號|合計/i.test(t[j]))break;
+      }
+      if(np<0)continue;
+
+      // Find 3-digit detail code immediately before N/P area.
+      let detail=-1;
+      for(let j=np-1;j>i;j--){
+        if(/^\d{3}$/.test(t[j])){detail=j;break}
+      }
+      if(detail<0)continue;
+
+      // Product name = textual objects between SKU and detail code.
+      const names=t.slice(i+1,detail)
+        .filter(x=>x && !isNum(x) && !/^[NP]$/i.test(x))
+        .filter(x=>!/總計|小分類編號|合計|subtotal|total/i.test(x));
+      const item=clean(names[0]||'');
+      if(!item)continue;
+
+      // After N/P, collect business numeric values. Some PDFs split punctuation/spacing,
+      // so we skip nonnumeric tokens rather than assuming fixed token indexes.
+      const nums=[];
+      let stop=np+1;
+      for(let j=np+1;j<Math.min(t.length,np+35)&&nums.length<11;j++){
+        if(/^\d{6}$/.test(t[j]) && nums.length<11)break;
+        if(isNum(t[j]))nums.push(val(t[j]));
+        stop=j;
+      }
+      if(nums.length<11)continue;
+
+      const [qty,salesEx,tax,sales,margin,commercial,inventory,nearQty,nearAmt,markdownQty,markdownAmt]=nums;
+      if([qty,salesEx,tax,sales].some(v=>v==null))continue;
+
+      // Accounting relationship is the strongest safety check in this report.
+      if(Math.abs((salesEx+tax)-sales)>Math.max(2,Math.abs(sales)*0.025))continue;
+
+      detailRows.push({
+        date:null,periodStart:null,periodEnd:null,
+        sku,item,detail:t[detail],npType:t[np].toUpperCase(),
+        qty,sales,salesExTax:salesEx,tax,
+        grossMargin:margin,commercialReturn:commercial,inventory,
+        nearExpiryQty:nearQty,nearExpiryAmt:nearAmt,
+        markdownQty,markdownAmt,
+        clearance:(nearAmt??0)+(markdownAmt??0),
+        sourceType:'pdf-token-stream',sourceFile:fileName
+      });
+      i=Math.max(i,stop-2);
+    }
+  }
+  if(!detailRows.length)return [];
+
+  const bySku=new Map();
+  for(const r of detailRows){
+    const k=r.sku;
+    if(!bySku.has(k)){
+      bySku.set(k,{
+        ...r,qty:0,sales:0,salesExTax:0,tax:0,
+        nearExpiryQty:0,nearExpiryAmt:0,markdownQty:0,markdownAmt:0,clearance:0,
+        npTypes:new Set()
+      });
+    }
+    const x=bySku.get(k);
+    x.qty+=(r.qty??0);x.sales+=(r.sales??0);x.salesExTax+=(r.salesExTax??0);x.tax+=(r.tax??0);
+    x.nearExpiryQty+=(r.nearExpiryQty??0);x.nearExpiryAmt+=(r.nearExpiryAmt??0);
+    x.markdownQty+=(r.markdownQty??0);x.markdownAmt+=(r.markdownAmt??0);x.clearance+=(r.clearance??0);
+    x.npTypes.add(r.npType);
+    if(r.inventory!=null)x.inventory=r.inventory;
+    if(r.grossMargin!=null)x.grossMargin=r.grossMargin;
+    if(r.commercialReturn!=null)x.commercialReturn=r.commercialReturn;
+  }
+  const merged=[...bySku.values()].map(x=>{
+    const z={...x,npType:[...x.npTypes].join('/')};delete z.npTypes;delete z.waste;return z;
+  });
+  Object.defineProperty(merged,'pdfMeta',{
+    value:{reportType:'每日銷售報表 - 依單品',parser:'token-stream-v1',
+      parsedDetailRows:detailRows.length,parsedProducts:merged.length,
+      periodStart:null,periodEnd:null},
+    enumerable:false,configurable:true
+  });
+  return merged;
+}
 
 function parseDailyItemByGeometryFallback(rawPages,fileName){
   const clean=s=>String(s??'').replace(/\u00a0/g,' ').replace(/[−–—]/g,'-').replace(/\s+/g,' ').trim();
@@ -1598,8 +1710,21 @@ async function handleFiles(files){
     return;
   }
   const sourceType=[...window.__opsImportContext.sourceTypes].join('+');
-  const candidate=analyzeImportCandidate(staged,sourceType);
-  Object.assign(window.__opsImportContext,{signature:candidate.signature,headers:candidate.headers,quality:candidate.quality});
+  let candidate=analyzeImportCandidate(staged,sourceType);
+  const canonicalKeys=['date','sku','item','qty','sales','waste','clearance'];
+  const canonicalPresent=canonicalKeys.filter(k=>staged.some(r=>Object.prototype.hasOwnProperty.call(r,k)));
+  if(canonicalPresent.length>=2){
+    const exact={...candidate.map};
+    for(const k of canonicalPresent)exact[k]=k;
+    candidate={...candidate,map:exact};
+  }
+  Object.assign(window.__opsImportContext,{
+    signature:candidate.signature,
+    headers:candidate.headers,
+    quality:candidate.quality,
+    semanticConfidence:candidate.semanticConfidence||{},
+    validations:candidate.validations||[]
+  });
   mapping=candidate.map;
   renderMapping(candidate.headers);
   setImportStep(2);
