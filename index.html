@@ -455,7 +455,7 @@ html.has-hash .page.active:not(:target){display:none!important}
       <div>
         <div class="eyebrow">SMART IMPORT · V2</div>
         <h2>智慧匯入中心</h2>
-        <p class="import-subtitle">先辨識、再確認，系統不會在不確定時直接猜欄位。</p>
+        <p class="import-subtitle">有什麼辨識什麼；缺少的欄位顯示「無資料」，不會阻擋其他分析。</p>
       </div>
       <button class="icon-btn" data-close><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
     </div>
@@ -1173,7 +1173,7 @@ $('#nextImportStep').onclick=()=>{
     setImportStep(2);return;
   }
   if(importStep===2){
-    if(!mapping.sales||(!mapping.item&&!mapping.sku)){toast('請先確認營業額與商品欄位');return}
+    if(!staged.length){toast('目前沒有可確認的資料');return}
     buildImportPreview();setImportStep(3);
   }
 };
@@ -1204,25 +1204,69 @@ function setImportStep(step){
   $('#nextImportStep').hidden=importStep===3;
   $('#confirmImport').hidden=importStep!==3;
 }
+
+function hasMappedField(key){ return !!mapping[key]; }
+function maybeMoney(v){ return v==null?'無資料':money(v); }
+function maybeNum(v){ return v==null?'無資料':num(v); }
+function sumOptional(...vals){
+  const present=vals.filter(v=>v!=null && Number.isFinite(Number(v))).map(Number);
+  return present.length?present.reduce((a,b)=>a+b,0):null;
+}
+function avgOptional(vals){
+  const present=vals.filter(v=>v!=null && Number.isFinite(Number(v))).map(Number);
+  return present.length?present.reduce((a,b)=>a+b,0)/present.length:null;
+}
+function detectCapabilities(list=rows){
+  const has=v=>list.some(r=>r[v]!=null && !(typeof r[v]==='string' && !r[v].trim()));
+  const product=list.some(r=>(r.item&&String(r.item).trim())||(r.sku&&String(r.sku).trim()));
+  const caps={
+    product,
+    date:list.some(r=>r.date instanceof Date&&!isNaN(r.date)),
+    qty:has('qty'),
+    sales:has('sales'),
+    waste:has('waste'),
+    clearance:has('clearance')
+  };
+  caps.loss=caps.waste||caps.clearance;
+  caps.topQty=caps.product&&caps.qty;
+  caps.topSales=caps.product&&caps.sales;
+  caps.week=caps.date&&(caps.sales||caps.qty||caps.loss);
+  return caps;
+}
+function capabilitySummary(c){
+  const ok=[],missing=[];
+  const push=(cond,label)=>cond?ok.push(label):missing.push(label);
+  push(c.product,'商品');
+  push(c.qty,'銷售量');
+  push(c.sales,'營業額');
+  push(c.date,'日期');
+  push(c.waste,'報廢');
+  push(c.clearance,'出清');
+  return {ok,missing};
+}
+
 function buildImportPreview(){
   const normalized=normalize(staged,mapping);
   const cols=[['date','日期'],['sku','商品編號'],['item','商品名稱'],['qty','銷售量'],['sales','營業額'],['waste','報廢'],['clearance','出清']];
   $('#importPreviewHead').innerHTML='<tr>'+cols.map(c=>`<th>${c[1]}</th>`).join('')+'</tr>';
   $('#importPreviewBody').innerHTML=normalized.slice(0,8).map(r=>`<tr>
-    <td>${r.date instanceof Date&&!isNaN(r.date)?r.date.toLocaleDateString('zh-TW'):'—'}</td>
-    <td>${esc(r.sku||'—')}</td><td>${esc(r.item||'—')}</td>
-    <td>${num(r.qty||0)}</td><td>${money(r.sales||0)}</td>
-    <td>${money(r.waste||0)}</td><td>${money(r.clearance||0)}</td>
+    <td>${r.date instanceof Date&&!isNaN(r.date)?r.date.toLocaleDateString('zh-TW'):'無資料'}</td>
+    <td>${esc(r.sku||'無資料')}</td><td>${esc(r.item||'無資料')}</td>
+    <td>${maybeNum(r.qty)}</td><td>${maybeMoney(r.sales)}</td>
+    <td>${maybeMoney(r.waste)}</td><td>${maybeMoney(r.clearance)}</td>
   </tr>`).join('');
   $('#previewCount').textContent=`${normalized.length.toLocaleString()} 筆`;
-  const notes=[];
-  if(!mapping.date)notes.push('沒有日期：平日/假日、星期與時間趨勢將無法計算。');
-  if(!mapping.qty)notes.push('沒有銷售數量：平均銷量將顯示無資料。');
-  if(!mapping.waste&&!mapping.clearance)notes.push('沒有損耗欄位：損耗相關分析將顯示無資料。');
-  $('#importWarning').hidden=!notes.length;
+
+  const c=detectCapabilities(normalized),s=capabilitySummary(c),notes=[];
+  notes.push(`已辨識：${s.ok.length?s.ok.join('、'):'尚無可用分析欄位'}`);
+  if(s.missing.length)notes.push(`未提供：${s.missing.join('、')}；相關區塊會顯示「無資料」，不影響其他分析。`);
+  if(c.topQty)notes.push('可用：商品銷量排行');
+  if(c.topSales)notes.push('可用：商品營業額排行');
+  if(c.week)notes.push('可用：日期／平假日相關分析');
+  if(c.loss)notes.push('可用：損耗相關分析');
+  $('#importWarning').hidden=false;
   $('#importWarning').innerHTML=notes.join('<br>');
 }
-
 
 async function handleFiles(files){
   if(!files.length)return;
@@ -1294,35 +1338,45 @@ function renderMapping(headers){
 
 function updateImportReadiness(headers=[]){
   const n=staged.length,mapped=Object.keys(mapping).filter(k=>!k.startsWith('_')).length;
-  const hasDate=!!mapping.date,hasItem=!!mapping.item||!!mapping.sku,hasSales=!!mapping.sales;
   const score=mappingScore(headers,mapping),q=assessImportedRecords(staged,mapping);
   window.__opsImportContext=window.__opsImportContext||{};window.__opsImportContext.quality=q;
+
+  const temp=n?normalize(staged,mapping):[];
+  const c=detectCapabilities(temp),s=capabilitySummary(c);
+  const usable=c.product||c.qty||c.sales||c.date||c.waste||c.clearance;
+
   $('#mappingConfidence').textContent=`辨識 ${score}%`;
-  $('#mappingConfidence').classList.toggle('ok',score>=70&&!q.problems.length);
+  $('#mappingConfidence').classList.toggle('ok',usable);
+
   $('#qualityBox').style.display='block';
   $('#qualityGrid').innerHTML=`
     <div class="mini-card"><span>資料列</span><strong>${n.toLocaleString()}</strong></div>
     <div class="mini-card"><span>辨識欄位</span><strong>${mapped}</strong></div>
-    <div class="mini-card"><span>營業額數字率</span><strong>${hasSales?Math.round(q.salesNumericRate*100)+'%':'—'}</strong></div>
-    <div class="mini-card"><span>商品完整率</span><strong>${Math.round(q.itemValidRate*100)}%</strong></div>`;
-  const canContinue=n>0&&hasSales&&hasItem&&q.salesNumericRate>=.5&&q.itemValidRate>=.5;
-  $('#nextImportStep').disabled=!canContinue;$('#confirmImport').disabled=!canContinue;
-  if(!n)$('#importStatus').textContent='沒有解析到資料。';
-  else if(!hasSales)$('#importStatus').textContent='系統不確定哪一欄是營業額，請手動指定。';
-  else if(!hasItem)$('#importStatus').textContent='系統找不到商品名稱或商品編號，請手動指定。';
-  else if(q.salesNumericRate<.5)$('#importStatus').textContent='你選的營業額欄位不像數字欄，請重新確認。';
-  else if(q.itemValidRate<.5)$('#importStatus').textContent='商品欄位空白比例太高，請重新確認。';
-  else if(q.problems.length)$('#importStatus').textContent='資料可繼續，但有提醒：'+q.problems.join('；');
-  else if(!hasDate)$('#importStatus').textContent='可以做整體商品分析；因沒有日期欄位，平日/假日與時間趨勢會停用。';
-  else $('#importStatus').textContent='核心欄位與資料型態檢查通過。請檢查欄位對應後再看資料預覽。';
+    <div class="mini-card"><span>可用資料</span><strong>${s.ok.length}</strong></div>
+    <div class="mini-card"><span>未提供</span><strong>${s.missing.length}</strong></div>`;
+
+  const canContinue=n>0&&usable;
+  $('#nextImportStep').disabled=!canContinue;
+  $('#confirmImport').disabled=!canContinue;
+
+  if(!n){
+    $('#importStatus').textContent='沒有解析到資料。';
+  }else if(!usable){
+    $('#importStatus').textContent='檔案已讀取，但目前沒有辨識到可分析欄位。你可以手動指定任一可用欄位。';
+  }else{
+    const available=s.ok.length?s.ok.join('、'):'—';
+    const absent=s.missing.length?s.missing.join('、'):'無';
+    $('#importStatus').textContent=`已辨識：${available}。未提供：${absent}。沒有的欄位會顯示「無資料」，不會阻擋其他分析。`;
+  }
 }
 $('#confirmImport').onclick=()=>{
-  if(!mapping.sales || (!mapping.item&&!mapping.sku)){
-    toast('請先確認營業額與商品欄位');
+  rows=normalize(staged,mapping);
+  if(!rows.length){toast('目前沒有可分析資料');return}
+  const c=detectCapabilities(rows);
+  if(!(c.product||c.qty||c.sales||c.date||c.waste||c.clearance)){
+    toast('請至少確認一個可用欄位');
     return;
   }
-  rows=normalize(staged,mapping);
-  if(!rows.length){toast('沒有可分析資料');return}
   const sig=window.__opsImportContext?.signature;
   if(sig)saveRememberedMapping(sig,mapping);
   confirmed=true;
@@ -1332,67 +1386,198 @@ $('#confirmImport').onclick=()=>{
 };
 function groupBy(list,keyFn){const m=new Map();for(const r of list){const k=keyFn(r);if(!m.has(k))m.set(k,[]);m.get(k).push(r)}return m}
 function aggregate(list){
- return list.reduce((a,r)=>(a.sales+=r.sales,a.qty+=r.qty,a.waste+=r.waste,a.clearance+=r.clearance,a),{sales:0,qty:0,waste:0,clearance:0})
+ const field=key=>{
+   const vals=list.map(r=>r[key]).filter(v=>v!=null&&Number.isFinite(Number(v))).map(Number);
+   return vals.length?vals.reduce((s,v)=>s+v,0):null;
+ };
+ return {sales:field('sales'),qty:field('qty'),waste:field('waste'),clearance:field('clearance')};
 }
 function getPlans(){try{return JSON.parse(localStorage.getItem('opsImprovementPlansV2')||'[]')}catch{return[]}}
 function renderAll(){
- const a=aggregate(rows), loss=a.waste+a.clearance, lr=a.sales?loss/a.sales:null;
+ const c=detectCapabilities(rows);
+ const a=aggregate(rows), loss=sumOptional(a.waste,a.clearance);
+ const lr=(a.sales!=null&&a.sales!==0&&loss!=null)?loss/a.sales:null;
  const skuGroups=groupBy(rows,r=>r.item||r.sku||'未命名品項');
- const skuStats=[...skuGroups].map(([name,rr])=>({name,...aggregate(rr)})).map(x=>({...x,loss:x.waste+x.clearance})).sort((x,y)=>y.loss-x.loss);
- const top=skuStats[0];
+ const skuStats=[...skuGroups].map(([name,rr])=>{
+   const x={name,...aggregate(rr)};
+   x.loss=sumOptional(x.waste,x.clearance);
+   return x;
+ }).sort((x,y)=>(y.loss??-Infinity)-(x.loss??-Infinity));
+ const topLoss=skuStats.find(x=>x.loss!=null&&x.loss>0)||null;
  const plans=getPlans(), saved=plans.filter(x=>x.status==='成功'&&Number.isFinite(x.saving)).reduce((s,x)=>s+x.saving,0);
- $('#sourceStatus').textContent=`${rows.length.toLocaleString()} 筆已確認`;$('#sourceStatus').classList.add('ready');$('#overviewStatus').textContent='資料已確認';$('#overviewStatus').classList.add('ready');
- $('#kpiSales').textContent=money(a.sales);$('#kpiLoss').textContent=money(loss);$('#kpiLossRate').textContent=lr==null?'營業額不足，無法計算':`損耗率 ${pct(lr)}`;
- $('#kpiTopSku').textContent=top?top.name:'無資料';$('#kpiTopSkuLoss').textContent=top?`損耗 ${money(top.loss)}`:'—';$('#kpiSaved').textContent=money(saved);
- if(loss>0&&top){$('#headline').textContent=`本期已發生 ${money(loss)} 損耗`;$('#summary').textContent=`損耗金額最高品項為「${top.name}」，占本期損耗 ${loss?((top.loss/loss)*100).toFixed(1):'0'}%。這是排序結果，不等同已證實原因。`}
- else{$('#headline').textContent='目前匯入資料未顯示損耗金額';$('#summary').textContent='若資料沒有報廢或出清欄位，系統不會自行補值。'}
- $('#ovSales').textContent=money(a.sales);$('#ovQty').textContent=num(a.qty);$('#ovWaste').textContent=money(a.waste);$('#ovClearance').textContent=money(a.clearance);$('#ovWasteRate').textContent=a.sales?pct(a.waste/a.sales):'無資料';$('#ovClearanceRate').textContent=a.sales?pct(a.clearance/a.sales):'無資料';
- renderTop3(skuStats,loss);renderWeek();renderFocus(skuStats,a);renderAnalysis();renderAnomalies(skuStats,a);renderPlans();renderReport();
+
+ $('#sourceStatus').textContent=`${rows.length.toLocaleString()} 筆已確認`;
+ $('#sourceStatus').classList.add('ready');
+ $('#overviewStatus').textContent='資料已確認';
+ $('#overviewStatus').classList.add('ready');
+
+ $('#kpiSales').textContent=maybeMoney(a.sales);
+ $('#kpiLoss').textContent=maybeMoney(loss);
+ $('#kpiLossRate').textContent=lr==null?'無資料':`損耗率 ${pct(lr)}`;
+ $('#kpiTopSku').textContent=topLoss?topLoss.name:'無資料';
+ $('#kpiTopSkuLoss').textContent=topLoss?`損耗 ${money(topLoss.loss)}`:'無資料';
+ $('#kpiSaved').textContent=money(saved);
+
+ if(loss!=null&&loss>0&&topLoss){
+   $('#headline').textContent=`本期已發生 ${money(loss)} 損耗`;
+   $('#summary').textContent=`損耗金額最高品項為「${topLoss.name}」，占本期損耗 ${((topLoss.loss/loss)*100).toFixed(1)}%。這是排序結果，不等同已證實原因。`;
+ }else if(!c.loss){
+   $('#headline').textContent='損耗資料：無資料';
+   $('#summary').textContent='原始資料沒有報廢或出清欄位；系統不會把缺少資料當成 0。其他已辨識欄位仍可正常分析。';
+ }else{
+   $('#headline').textContent='目前資料沒有正數損耗';
+   $('#summary').textContent='此結論只基於已提供的報廢／出清欄位。';
+ }
+
+ $('#ovSales').textContent=maybeMoney(a.sales);
+ $('#ovQty').textContent=maybeNum(a.qty);
+ $('#ovWaste').textContent=maybeMoney(a.waste);
+ $('#ovClearance').textContent=maybeMoney(a.clearance);
+ $('#ovWasteRate').textContent=(a.sales!=null&&a.sales!==0&&a.waste!=null)?pct(a.waste/a.sales):'無資料';
+ $('#ovClearanceRate').textContent=(a.sales!=null&&a.sales!==0&&a.clearance!=null)?pct(a.clearance/a.sales):'無資料';
+
+ renderTop3(skuStats,loss);
+ renderWeek();
+ renderFocus(skuStats,a);
+ renderAnalysis();
+ renderAnomalies(skuStats,a);
+ renderPlans();
+ renderReport();
 }
 function renderTop3(stats,total){
- $('#top3').innerHTML=stats.filter(x=>x.loss>0).slice(0,3).map((x,i)=>`<div class="rank-item"><div class="rank-no">${i+1}</div><div class="rank-main"><b>${esc(x.name)}</b><small>報廢 ${money(x.waste)} · 出清 ${money(x.clearance)}</small></div><div class="rank-money"><b>${money(x.loss)}</b><small>${total?((x.loss/total)*100).toFixed(1)+'%':'—'}</small></div></div>`).join('')||'<div class="empty">目前沒有可排序的損耗資料</div>';
+ if(total==null){
+   $('#top3').innerHTML='<div class="empty">損耗資料：無資料</div>';
+   return;
+ }
+ $('#top3').innerHTML=stats.filter(x=>x.loss!=null&&x.loss>0).slice(0,3).map((x,i)=>`<div class="rank-item"><div class="rank-no">${i+1}</div><div class="rank-main"><b>${esc(x.name)}</b><small>報廢 ${maybeMoney(x.waste)} · 出清 ${maybeMoney(x.clearance)}</small></div><div class="rank-money"><b>${money(x.loss)}</b><small>${total?((x.loss/total)*100).toFixed(1)+'%':'—'}</small></div></div>`).join('')||'<div class="empty">已提供損耗欄位，但目前沒有正數損耗</div>';
 }
 function renderWeek(){
- const valid=rows.filter(r=>r.date);if(!valid.length){$('#weekCompare').innerHTML='<div class="empty">沒有日期欄位，無法比較平日與假日</div>';return}
+ const valid=rows.filter(r=>r.date instanceof Date&&!isNaN(r.date));
+ if(!valid.length){$('#weekCompare').innerHTML='<div class="empty">日期資料：無資料，無法比較平日與假日</div>';return}
  const dayGroups=groupBy(valid,r=>r.date.toISOString().slice(0,10));
  const days=[...dayGroups].map(([d,rr])=>({d,date:new Date(d),...aggregate(rr)}));
- const wk=days.filter(x=>![0,6].includes(x.date.getDay())), we=days.filter(x=>[0,6].includes(x.date.getDay()));
- const avg=arr=>arr.length?{sales:arr.reduce((s,x)=>s+x.sales,0)/arr.length,waste:arr.reduce((s,x)=>s+x.waste,0)/arr.length,clearance:arr.reduce((s,x)=>s+x.clearance,0)/arr.length}:null;
+ const wk=days.filter(x=>![0,6].includes(x.date.getDay())),we=days.filter(x=>[0,6].includes(x.date.getDay()));
+ const avg=arr=>arr.length?{
+   sales:avgOptional(arr.map(x=>x.sales)),
+   waste:avgOptional(arr.map(x=>x.waste)),
+   clearance:avgOptional(arr.map(x=>x.clearance))
+ }:null;
  const a=avg(wk),b=avg(we);
- $('#weekCompare').innerHTML=`<div class="mini-grid"><div class="mini-card"><span>平日平均營業額</span><strong>${a?money(a.sales):'無資料'}</strong><small>${wk.length} 天樣本</small></div><div class="mini-card"><span>假日平均營業額</span><strong>${b?money(b.sales):'無資料'}</strong><small>${we.length} 天樣本</small></div><div class="mini-card"><span>平日平均損耗</span><strong>${a?money(a.waste+a.clearance):'無資料'}</strong></div><div class="mini-card"><span>假日平均損耗</span><strong>${b?money(b.waste+b.clearance):'無資料'}</strong></div></div><div class="insight">${a&&b?'以上只呈現實際平均值；是否需要調整供給，仍需搭配品項與樣本期間判讀。':'平日或假日樣本不足，因此不下比較結論。'}</div>`;
+ const aloss=a?sumOptional(a.waste,a.clearance):null,bloss=b?sumOptional(b.waste,b.clearance):null;
+ $('#weekCompare').innerHTML=`<div class="mini-grid">
+   <div class="mini-card"><span>平日平均營業額</span><strong>${a?maybeMoney(a.sales):'無資料'}</strong><small>${wk.length} 天樣本</small></div>
+   <div class="mini-card"><span>假日平均營業額</span><strong>${b?maybeMoney(b.sales):'無資料'}</strong><small>${we.length} 天樣本</small></div>
+   <div class="mini-card"><span>平日平均損耗</span><strong>${maybeMoney(aloss)}</strong></div>
+   <div class="mini-card"><span>假日平均損耗</span><strong>${maybeMoney(bloss)}</strong></div>
+ </div><div class="insight">${wk.length&&we.length?'以上只呈現原始資料可支持的平均值；沒有的欄位維持「無資料」。':'平日或假日樣本不足，因此不下比較結論。'}</div>`;
 }
 function renderFocus(stats,a){
- const total=a.waste+a.clearance, items=[];
- if(stats[0]&&stats[0].loss>0)items.push({n:'1',title:`先看 ${stats[0].name}`,desc:`本期損耗 ${money(stats[0].loss)}，為目前最高。`,tag:'損耗排序'});
- if(a.waste>0)items.push({n:'2',title:'檢查報廢結構',desc:`本期報廢 ${money(a.waste)}；到分析頁看集中品項。`,tag:'實際數字'});
- if(a.clearance>0)items.push({n:'3',title:'檢查出清結構',desc:`本期出清 ${money(a.clearance)}；先找集中區域。`,tag:'實際數字'});
- $('#focusList').innerHTML=items.slice(0,3).map(x=>`<div class="focus"><div class="focus-icon">${x.n}</div><div><b>${esc(x.title)}</b><small>${esc(x.desc)}</small></div><div class="focus-tag">${x.tag}</div></div>`).join('')||'<div class="empty" style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.13);color:#AFC0D4">目前資料不足以產生處理重點</div>';
+ const total=sumOptional(a.waste,a.clearance),items=[];
+ const first=stats.find(x=>x.loss!=null&&x.loss>0);
+ if(first)items.push({n:'1',title:`先看 ${first.name}`,desc:`本期損耗 ${money(first.loss)}，為目前最高。`,tag:'損耗排序'});
+ if(a.waste!=null&&a.waste>0)items.push({n:'2',title:'檢查報廢結構',desc:`本期報廢 ${money(a.waste)}；到分析頁看集中品項。`,tag:'實際數字'});
+ if(a.clearance!=null&&a.clearance>0)items.push({n:'3',title:'檢查出清結構',desc:`本期出清 ${money(a.clearance)}；先找集中區域。`,tag:'實際數字'});
+ $('#focusList').innerHTML=items.slice(0,3).map(x=>`<div class="focus"><div class="focus-icon">${x.n}</div><div><b>${esc(x.title)}</b><small>${esc(x.desc)}</small></div><div class="focus-tag">${x.tag}</div></div>`).join('')||
+ '<div class="empty" style="background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.13);color:#AFC0D4">'+(total==null?'損耗資料：無資料；其他分析仍可使用':'目前沒有可排序的正數損耗')+'</div>';
 }
 $('#analysisTabs').onclick=e=>{const b=e.target.closest('button');if(!b)return;analysisMode=b.dataset.mode;$$('#analysisTabs button').forEach(x=>x.classList.toggle('active',x===b));renderAnalysis()}
 function renderAnalysis(){
  if(!confirmed)return;
+ const c=detectCapabilities(rows);
+
  if(analysisMode==='sku'){
-  $('#analysisTitle').textContent='品項損耗排行';const gs=groupBy(rows,r=>r.item||r.sku||'未命名品項');const st=[...gs].map(([name,rr])=>({name,...aggregate(rr)})).map(x=>({...x,loss:x.waste+x.clearance})).sort((a,b)=>b.loss-a.loss).slice(0,10);const mx=Math.max(...st.map(x=>x.loss),1);
-  $('#analysisBars').innerHTML=st.map(x=>`<div class="bar-row"><div class="bar-label">${esc(x.name)}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,x.loss/mx*100)}%"></div></div><div class="bar-val">${money(x.loss)}</div></div>`).join('')||'<div class="empty">沒有損耗資料</div>';
-  $('#detailHead').innerHTML='<tr><th>品項</th><th>營業額</th><th>報廢</th><th>出清</th><th>損耗</th></tr>';$('#detailBody').innerHTML=st.map(x=>`<tr><td>${esc(x.name)}</td><td>${money(x.sales)}</td><td>${money(x.waste)}</td><td>${money(x.clearance)}</td><td>${money(x.loss)}</td></tr>`).join('');
- } else {
-  $('#analysisTitle').textContent='每日損耗趨勢';const gs=groupBy(rows.filter(r=>r.date),r=>r.date.toISOString().slice(0,10));const st=[...gs].map(([name,rr])=>({name,...aggregate(rr)})).map(x=>({...x,loss:x.waste+x.clearance})).sort((a,b)=>a.name.localeCompare(b.name));const mx=Math.max(...st.map(x=>x.loss),1);
-  $('#analysisBars').innerHTML=st.map(x=>`<div class="bar-row"><div class="bar-label">${x.name}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,x.loss/mx*100)}%"></div></div><div class="bar-val">${money(x.loss)}</div></div>`).join('')||'<div class="empty">沒有日期資料</div>';
-  $('#detailHead').innerHTML='<tr><th>日期</th><th>營業額</th><th>報廢</th><th>出清</th><th>損耗</th></tr>';$('#detailBody').innerHTML=st.map(x=>`<tr><td>${x.name}</td><td>${money(x.sales)}</td><td>${money(x.waste)}</td><td>${money(x.clearance)}</td><td>${money(x.loss)}</td></tr>`).join('');
+   const gs=groupBy(rows,r=>r.item||r.sku||'未命名品項');
+
+   if(c.loss){
+     $('#analysisTitle').textContent='品項損耗排行';
+     const st=[...gs].map(([name,rr])=>{const x={name,...aggregate(rr)};x.loss=sumOptional(x.waste,x.clearance);return x})
+       .filter(x=>x.loss!=null).sort((a,b)=>b.loss-a.loss).slice(0,10);
+     const mx=Math.max(...st.map(x=>x.loss||0),1);
+     $('#analysisBars').innerHTML=st.map(x=>`<div class="bar-row"><div class="bar-label">${esc(x.name)}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,(x.loss||0)/mx*100)}%"></div></div><div class="bar-val">${maybeMoney(x.loss)}</div></div>`).join('')||'<div class="empty">沒有可排序的損耗資料</div>';
+     $('#detailHead').innerHTML='<tr><th>品項</th><th>營業額</th><th>報廢</th><th>出清</th><th>損耗</th></tr>';
+     $('#detailBody').innerHTML=st.map(x=>`<tr><td>${esc(x.name)}</td><td>${maybeMoney(x.sales)}</td><td>${maybeMoney(x.waste)}</td><td>${maybeMoney(x.clearance)}</td><td>${maybeMoney(x.loss)}</td></tr>`).join('');
+   }else if(c.topSales){
+     $('#analysisTitle').textContent='品項營業額排行';
+     const st=[...gs].map(([name,rr])=>({name,...aggregate(rr)})).filter(x=>x.sales!=null).sort((a,b)=>b.sales-a.sales).slice(0,10);
+     const mx=Math.max(...st.map(x=>x.sales||0),1);
+     $('#analysisBars').innerHTML=st.map(x=>`<div class="bar-row"><div class="bar-label">${esc(x.name)}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,(x.sales||0)/mx*100)}%"></div></div><div class="bar-val">${money(x.sales)}</div></div>`).join('');
+     $('#detailHead').innerHTML='<tr><th>品項</th><th>營業額</th><th>銷售量</th><th>報廢</th><th>出清</th></tr>';
+     $('#detailBody').innerHTML=st.map(x=>`<tr><td>${esc(x.name)}</td><td>${maybeMoney(x.sales)}</td><td>${maybeNum(x.qty)}</td><td>無資料</td><td>無資料</td></tr>`).join('');
+   }else if(c.topQty){
+     $('#analysisTitle').textContent='品項銷量排行';
+     const st=[...gs].map(([name,rr])=>({name,...aggregate(rr)})).filter(x=>x.qty!=null).sort((a,b)=>b.qty-a.qty).slice(0,10);
+     const mx=Math.max(...st.map(x=>x.qty||0),1);
+     $('#analysisBars').innerHTML=st.map(x=>`<div class="bar-row"><div class="bar-label">${esc(x.name)}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,(x.qty||0)/mx*100)}%"></div></div><div class="bar-val">${num(x.qty)}</div></div>`).join('');
+     $('#detailHead').innerHTML='<tr><th>品項</th><th>銷售量</th><th>營業額</th><th>報廢</th><th>出清</th></tr>';
+     $('#detailBody').innerHTML=st.map(x=>`<tr><td>${esc(x.name)}</td><td>${maybeNum(x.qty)}</td><td>無資料</td><td>無資料</td><td>無資料</td></tr>`).join('');
+   }else{
+     $('#analysisTitle').textContent='品項分析';
+     $('#analysisBars').innerHTML='<div class="empty">商品資料不足，無法建立品項排行</div>';
+     $('#detailHead').innerHTML='';$('#detailBody').innerHTML='';
+   }
+ }else{
+   if(!c.date){
+     $('#analysisTitle').textContent='日期分析';
+     $('#analysisBars').innerHTML='<div class="empty">日期資料：無資料</div>';
+     $('#detailHead').innerHTML='';$('#detailBody').innerHTML='';return;
+   }
+   const gs=groupBy(rows.filter(r=>r.date),r=>r.date.toISOString().slice(0,10));
+   if(c.loss){
+     $('#analysisTitle').textContent='每日損耗趨勢';
+     const st=[...gs].map(([name,rr])=>{const x={name,...aggregate(rr)};x.loss=sumOptional(x.waste,x.clearance);return x}).sort((a,b)=>a.name.localeCompare(b.name));
+     const mx=Math.max(...st.map(x=>x.loss||0),1);
+     $('#analysisBars').innerHTML=st.map(x=>`<div class="bar-row"><div class="bar-label">${x.name}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,(x.loss||0)/mx*100)}%"></div></div><div class="bar-val">${maybeMoney(x.loss)}</div></div>`).join('');
+     $('#detailHead').innerHTML='<tr><th>日期</th><th>營業額</th><th>報廢</th><th>出清</th><th>損耗</th></tr>';
+     $('#detailBody').innerHTML=st.map(x=>`<tr><td>${x.name}</td><td>${maybeMoney(x.sales)}</td><td>${maybeMoney(x.waste)}</td><td>${maybeMoney(x.clearance)}</td><td>${maybeMoney(x.loss)}</td></tr>`).join('');
+   }else if(c.sales){
+     $('#analysisTitle').textContent='每日營業額趨勢';
+     const st=[...gs].map(([name,rr])=>({name,...aggregate(rr)})).sort((a,b)=>a.name.localeCompare(b.name));
+     const mx=Math.max(...st.map(x=>x.sales||0),1);
+     $('#analysisBars').innerHTML=st.map(x=>`<div class="bar-row"><div class="bar-label">${x.name}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,(x.sales||0)/mx*100)}%"></div></div><div class="bar-val">${maybeMoney(x.sales)}</div></div>`).join('');
+     $('#detailHead').innerHTML='<tr><th>日期</th><th>營業額</th><th>銷售量</th><th>報廢</th><th>出清</th></tr>';
+     $('#detailBody').innerHTML=st.map(x=>`<tr><td>${x.name}</td><td>${maybeMoney(x.sales)}</td><td>${maybeNum(x.qty)}</td><td>無資料</td><td>無資料</td></tr>`).join('');
+   }else if(c.qty){
+     $('#analysisTitle').textContent='每日銷量趨勢';
+     const st=[...gs].map(([name,rr])=>({name,...aggregate(rr)})).sort((a,b)=>a.name.localeCompare(b.name));
+     const mx=Math.max(...st.map(x=>x.qty||0),1);
+     $('#analysisBars').innerHTML=st.map(x=>`<div class="bar-row"><div class="bar-label">${x.name}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,(x.qty||0)/mx*100)}%"></div></div><div class="bar-val">${maybeNum(x.qty)}</div></div>`).join('');
+     $('#detailHead').innerHTML='<tr><th>日期</th><th>銷售量</th><th>營業額</th></tr>';
+     $('#detailBody').innerHTML=st.map(x=>`<tr><td>${x.name}</td><td>${maybeNum(x.qty)}</td><td>無資料</td></tr>`).join('');
+   }else{
+     $('#analysisTitle').textContent='日期分析';
+     $('#analysisBars').innerHTML='<div class="empty">有日期，但沒有可彙總的數值欄位</div>';
+     $('#detailHead').innerHTML='';$('#detailBody').innerHTML='';
+   }
  }
 }
 function renderAnomalies(stats,a){
- const total=a.waste+a.clearance;if(!total){$('#anomalyList').innerHTML='<div class="empty">目前沒有可判讀的損耗資料</div>';return}
- const arr=stats.filter(x=>x.loss>0).slice(0,5);$('#anomalyList').innerHTML=arr.map((x,i)=>{const share=x.loss/total;return `<div class="anomaly ${share>=.25?'high':''}"><div class="anomaly-dot"></div><div><b>${esc(x.name)}</b><p>規則：依本期損耗金額排序；目前占總損耗 ${(share*100).toFixed(1)}%。這不是根因判定。</p></div><div class="money">${money(x.loss)}</div></div>`}).join('');
+ const total=sumOptional(a.waste,a.clearance);
+ if(total==null){$('#anomalyList').innerHTML='<div class="empty">損耗資料：無資料，因此不產生損耗異常判定</div>';return}
+ if(total<=0){$('#anomalyList').innerHTML='<div class="empty">已提供損耗欄位，但目前沒有正數損耗</div>';return}
+ const arr=stats.filter(x=>x.loss!=null&&x.loss>0).slice(0,5);
+ $('#anomalyList').innerHTML=arr.map((x,i)=>{const share=x.loss/total;return `<div class="anomaly ${share>=.25?'high':''}"><div class="anomaly-dot"></div><div><b>${esc(x.name)}</b><p>規則：依本期損耗金額排序；目前占總損耗 ${(share*100).toFixed(1)}%。這不是根因判定。</p></div><div class="money">${money(x.loss)}</div></div>`}).join('');
 }
 function renderPlans(){}
 function renderReport(){
- if(!confirmed)return;const a=aggregate(rows),loss=a.waste+a.clearance, gs=groupBy(rows,r=>r.item||r.sku||'未命名品項'),st=[...gs].map(([name,rr])=>({name,...aggregate(rr)})).map(x=>({...x,loss:x.waste+x.clearance})).sort((a,b)=>b.loss-a.loss),top=st[0],plans=getPlans(),success=plans.filter(x=>x.status==='成功');
+ if(!confirmed)return;
+ const c=detectCapabilities(rows),a=aggregate(rows),loss=sumOptional(a.waste,a.clearance);
+ const gs=groupBy(rows,r=>r.item||r.sku||'未命名品項');
+ const st=[...gs].map(([name,rr])=>{const x={name,...aggregate(rr)};x.loss=sumOptional(x.waste,x.clearance);return x})
+   .filter(x=>x.loss!=null).sort((a,b)=>b.loss-a.loss);
+ const plans=getPlans(),success=plans.filter(x=>x.status==='成功');
+
+ let conclusion=[];
+ conclusion.push(`營業額 ${maybeMoney(a.sales)}`);
+ conclusion.push(`銷售量 ${maybeNum(a.qty)}`);
+ conclusion.push(`報廢 ${maybeMoney(a.waste)}`);
+ conclusion.push(`出清 ${maybeMoney(a.clearance)}`);
+ if(a.sales!=null&&a.sales!==0&&loss!=null) conclusion.push(`損耗率 ${pct(loss/a.sales)}`);
+
  const parts=[
- ['本期結論',`營業額 ${money(a.sales)}；已發生損耗 ${money(loss)}${a.sales?`，損耗率 ${pct(loss/a.sales)}`:''}。`],
- ['前三大損耗品項',st.filter(x=>x.loss>0).slice(0,3).map((x,i)=>`${i+1}. ${x.name}：${money(x.loss)}`).join('；')||'無資料'],
- ['可能原因','目前資料只能證明損耗發生在哪些品項，不能直接證明原因。需搭配生產量、時段、庫存或作業紀錄才能確認原因。'],
- ['改善追蹤',plans.length?`已建立 ${plans.length} 項改善計畫，其中 ${success.length} 項標記成功。`:'尚未建立改善計畫。']
+  ['本期結論',conclusion.join('；')+'。'],
+  ['前三大損耗品項',c.loss?(st.filter(x=>x.loss>0).slice(0,3).map((x,i)=>`${i+1}. ${x.name}：${money(x.loss)}`).join('；')||'已提供損耗欄位，但目前沒有正數損耗'):'無資料'],
+  ['可能原因',c.loss?'目前資料只能證明損耗發生在哪些品項，不能直接證明原因。需搭配生產量、時段、庫存或作業紀錄才能確認原因。':'目前沒有損耗欄位，因此不推測損耗原因。'],
+  ['改善追蹤',plans.length?`已建立 ${plans.length} 項改善計畫，其中 ${success.length} 項標記成功。`:'尚未建立改善計畫。']
  ];
  $('#reportCard').innerHTML=parts.map(([h,p])=>`<div class="report-section"><h4>${h}</h4><p>${esc(p)}</p></div>`).join('');
 }
