@@ -230,6 +230,18 @@ html.has-hash .page.active:not(:target){display:none!important}
 .pdf-import-notice span{display:block;margin-top:4px;font-size:8px;line-height:1.55;color:var(--muted)}
 </style>
 
+
+<style id="import-rebuild-v13-style">
+.map-select-item{display:flex!important;flex-direction:column;align-items:stretch!important;gap:6px}
+.map-select-item span{font-size:8px;font-weight:800;color:var(--muted)}
+.map-select-item select{
+  width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;
+  background:#fff;color:var(--ink);padding:9px 10px;font:inherit;font-size:9px;
+}
+#dropzone{cursor:pointer}
+#confirmImport:disabled{opacity:.42;cursor:not-allowed;filter:saturate(.5)}
+</style>
+
 </head>
 <body>
 <div class="app">
@@ -518,13 +530,13 @@ const pct=n=>Number.isFinite(n)?(n*100).toFixed(1)+'%':'—';
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)};
 const aliases={
- date:['日期','date','交易日期','營業日期','銷售日期','訂單日期','年月日','day'],
- sku:['sku','商品編號','品號','貨號','item code','product code'],
- item:['品項','品名','商品','商品名稱','產品','產品名稱','item','product','description'],
- qty:['數量','銷售量','銷量','qty','quantity','units'],
- sales:['營業額','銷售額','銷售金額','營收','銷售淨額','sales','revenue','amount','net sales'],
+ date:['日期','date','交易日期','營業日期','銷售日期','訂單日期','年月日','交易日','銷售日','day'],
+ sku:['sku','商品編號','單品編號','品號','貨號','商品代碼','產品編號','item code','product code'],
+ item:['品項','品名','單品名稱','商品','商品名稱','產品','產品名稱','item','product','description'],
+ qty:['數量','銷售量','銷量','銷售數量','售出數量','qty','quantity','units'],
+ sales:['營業額','銷售額','銷售金額','銷售額(含稅)','含稅銷售額','實收金額','營收','銷售淨額','sales','revenue','amount','net sales'],
  waste:['報廢','報廢金額','廢棄','廢棄金額','報損','報損金額','waste','shrink','shrinkage'],
- clearance:['出清','出清金額','折價','折扣金額','即期折扣','markdown','discount','clearance']
+ clearance:['出清','出清金額','降價出清金額','即期出清金額','折價','折扣金額','即期折扣','markdown','discount','clearance']
 };
 let staged=[], rows=[], mapping={}, confirmed=false, analysisMode='sku';
 function norm(s){return String(s??'').trim().toLowerCase().replace(/\s+/g,' ')}
@@ -547,6 +559,68 @@ function toDate(v){
  if(typeof v==='number'&&window.XLSX){const p=XLSX.SSF.parse_date_code(v);if(p)return new Date(p.y,p.m-1,p.d)}
  const d=new Date(v);return isNaN(d)?null:d
 }
+
+function workbookSheetToRecords(ws){
+  const matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,dateNF:'yyyy-mm-dd'});
+  if(!matrix.length)return [];
+
+  let bestRow=0,bestScore=-1;
+  for(let i=0;i<Math.min(30,matrix.length);i++){
+    const headers=matrix[i].map(v=>String(v??'').trim());
+    const score=Object.keys(findMapping(headers)).length;
+    const nonEmpty=headers.filter(Boolean).length;
+    const weighted=score*10+Math.min(nonEmpty,10);
+    if(weighted>bestScore){bestScore=weighted;bestRow=i;}
+  }
+
+  const headers=matrix[bestRow].map((v,j)=>{
+    let h=String(v??'').trim();
+    if(!h)h=`未命名欄位_${j+1}`;
+    return h;
+  });
+
+  return matrix.slice(bestRow+1)
+    .filter(row=>row.some(v=>String(v??'').trim()!==''))
+    .map(row=>Object.fromEntries(headers.map((h,j)=>[h,row[j]??''])));
+}
+
+function parseWorkbook(wb,name=''){
+  let best={records:[],score:-1,sheet:''};
+
+  for(const sheetName of wb.SheetNames||[]){
+    const ws=wb.Sheets[sheetName];
+    if(!ws)continue;
+
+    const records=workbookSheetToRecords(ws);
+    if(!records.length)continue;
+
+    const headers=Object.keys(records[0]||{});
+    const map=findMapping(headers);
+    const score=Object.keys(map).length*100 + Math.min(records.length,99);
+
+    if(score>best.score){
+      best={records,score,sheet:sheetName};
+    }
+  }
+
+  if(!best.records.length){
+    throw new Error('檔案可以開啟，但找不到可分析的資料表。');
+  }
+
+  Object.defineProperty(best.records,'importMeta',{
+    value:{sourceType:'spreadsheet',sourceFile:name,sheet:best.sheet},
+    enumerable:false,
+    configurable:true
+  });
+  return best.records;
+}
+
+function detectFileKind(file){
+  const name=String(file?.name||'');
+  const ext=(name.split('.').pop()||'').toLowerCase();
+  return ext;
+}
+
 function normalize(raw,map){
  return raw.map((r,i)=>({
   _i:i+1,date:map.date?toDate(r[map.date]):null,sku:map.sku?String(r[map.sku]??'').trim():'',
@@ -565,20 +639,32 @@ function parseDelimited(text,name){
 }
 async function parseFile(file){
   const name=file.name||'';
-  const ext=name.split('.').pop().toLowerCase();
+  const ext=detectFileKind(file);
 
   if(ext==='pdf'){
-    return await parseSalesPdf(file);
+    const result=await parseSalesPdf(file);
+    Object.defineProperty(result,'importMeta',{
+      value:{...(result.pdfMeta||{}),sourceType:'pdf',sourceFile:name},
+      enumerable:false,
+      configurable:true
+    });
+    return result;
   }
 
   if(['csv','tsv','txt'].includes(ext)){
     const text=await file.text();
-    const sep=ext==='tsv' ? '\t' : (text.includes('\t') ? '\t' : ',');
-    const wb=XLSX.read(text,{type:'string',FS:sep});
-    return parseWorkbook(wb,name);
+    const rows=parseDelimited(text,name);
+    if(!rows.length) throw new Error('文字檔已開啟，但沒有可分析的資料列。');
+    Object.defineProperty(rows,'importMeta',{
+      value:{sourceType:'delimited',sourceFile:name},
+      enumerable:false,
+      configurable:true
+    });
+    return rows;
   }
 
   if(['xlsx','xls','xlsm','xlsb','ods'].includes(ext)){
+    if(!window.XLSX) throw new Error('試算表解析元件尚未載入，請重新整理後再試。');
     const buf=await file.arrayBuffer();
     const wb=XLSX.read(buf,{type:'array',cellDates:true});
     return parseWorkbook(wb,name);
@@ -811,25 +897,129 @@ function showDrawer(){ $('#importDrawer').classList.add('open') }
 function hideDrawer(){ $('#importDrawer').classList.remove('open') }
 $('#openImport').onclick=showDrawer; $$('[data-close]').forEach(x=>x.onclick=hideDrawer);
 $('#dropzone').ondragover=e=>{e.preventDefault();e.currentTarget.classList.add('drag')};$('#dropzone').ondragleave=e=>e.currentTarget.classList.remove('drag');$('#dropzone').ondrop=e=>{e.preventDefault();e.currentTarget.classList.remove('drag');handleFiles([...e.dataTransfer.files])};
-$('#fileInput').onchange=e=>handleFiles([...e.target.files]);
+$('#fileInput').onchange=e=>{const files=[...e.target.files];handleFiles(files).finally(()=>{e.target.value='';});};
 async function handleFiles(files){
- if(!files.length)return;
- staged=[];$('#fileList').innerHTML='';
- for(const f of files){
-  const row=document.createElement('div');row.className='file-row';row.innerHTML=`<div><b>${esc(f.name)}</b><small>解析中…</small></div><span>…</span>`;$('#fileList').appendChild(row);
-  try{const raw=await parseFile(f);staged.push(...raw);row.querySelector('small').textContent=`已解析 ${raw.length.toLocaleString()} 個品項`;row.querySelector('span').textContent='✓'}
-  catch(err){row.querySelector('small').textContent=err.message;row.querySelector('span').textContent='!'}
- }
- if(!staged.length){$('#confirmImport').disabled=!(Array.isArray(rows)&&rows.length>0);return}
- const headers=[...new Set(staged.flatMap(r=>Object.keys(r)))];mapping=findMapping(headers);renderMapping(headers);$('#confirmImport').disabled=!mapping.sales;
+  if(!files.length)return;
+
+  staged=[];
+  mapping={};
+  $('#fileList').innerHTML='';
+  $('#mappingBox').style.display='none';
+  $('#qualityBox').style.display='none';
+  $('#confirmImport').disabled=true;
+
+  let successCount=0;
+
+  for(const f of files){
+    const row=document.createElement('div');
+    row.className='file-row';
+    row.innerHTML=`<div><b>${esc(f.name)}</b><small>解析中…</small></div><span>…</span>`;
+    $('#fileList').appendChild(row);
+
+    try{
+      const raw=await parseFile(f);
+      if(!Array.isArray(raw)||!raw.length) throw new Error('沒有解析到資料');
+
+      staged.push(...raw);
+      successCount++;
+
+      const meta=raw.importMeta||raw.pdfMeta||{};
+      let detail=`已解析 ${raw.length.toLocaleString()} 筆`;
+      if(meta.sheet) detail+=`・工作表：${meta.sheet}`;
+      row.querySelector('small').textContent=detail;
+      row.querySelector('span').textContent='✓';
+
+      if(typeof showPdfNotice==='function')showPdfNotice(raw);
+    }catch(err){
+      console.error('Import failed:',f.name,err);
+      row.querySelector('small').textContent=String(err?.message||err);
+      row.querySelector('span').textContent='!';
+    }
+  }
+
+  if(!staged.length){
+    $('#confirmImport').disabled=true;
+    const status=$('#importStatus');
+    if(status) status.textContent='目前沒有成功辨識的資料，請查看上方檔案錯誤訊息。';
+    return;
+  }
+
+  const headers=[...new Set(staged.flatMap(r=>Object.keys(r)))];
+  mapping=findMapping(headers);
+  renderMapping(headers);
+
+  if(successCount<files.length){
+    toast(`已成功讀取 ${successCount}/${files.length} 個檔案`);
+  }else{
+    toast(`已讀取 ${successCount} 個檔案`);
+  }
 }
 function renderMapping(headers){
- $('#mappingBox').style.display='block';$('#mappingGrid').innerHTML=Object.entries(aliases).map(([k])=>`<div class="map-item"><span>${k}</span><b>${esc(mapping[k]||'未辨識')}</b></div>`).join('');
- const n=staged.length, mapped=Object.keys(mapping).length, hasDate=!!mapping.date, hasItem=!!mapping.item||!!mapping.sku;
- $('#qualityBox').style.display='block';$('#qualityGrid').innerHTML=`<div class="mini-card"><span>資料列</span><strong>${n.toLocaleString()}</strong></div><div class="mini-card"><span>辨識欄位</span><strong>${mapped}/7</strong></div><div class="mini-card"><span>日期欄位</span><strong>${hasDate?'已辨識':'無資料'}</strong></div><div class="mini-card"><span>品項識別</span><strong>${hasItem?'已辨識':'無資料'}</strong></div>`;
+  const labels={
+    date:'日期',sku:'商品編號',item:'商品名稱',qty:'銷售數量',
+    sales:'營業額',waste:'報廢金額',clearance:'出清金額'
+  };
+
+  $('#mappingBox').style.display='block';
+  $('#mappingGrid').innerHTML=Object.keys(aliases).map(k=>{
+    const options=['',...headers].map(h=>`<option value="${esc(h)}"${mapping[k]===h?' selected':''}>${esc(h||'— 不使用 —')}</option>`).join('');
+    return `<div class="map-item map-select-item">
+      <span>${labels[k]}</span>
+      <select data-map-key="${k}" aria-label="${labels[k]}欄位">${options}</select>
+    </div>`;
+  }).join('');
+
+  $$('#mappingGrid select[data-map-key]').forEach(sel=>{
+    sel.addEventListener('change',()=>{
+      const key=sel.dataset.mapKey;
+      if(sel.value) mapping[key]=sel.value; else delete mapping[key];
+      updateImportReadiness(headers);
+    });
+  });
+
+  updateImportReadiness(headers);
+}
+
+function updateImportReadiness(headers=[]){
+  const n=staged.length;
+  const mapped=Object.keys(mapping).length;
+  const hasDate=!!mapping.date;
+  const hasItem=!!mapping.item||!!mapping.sku;
+  const hasSales=!!mapping.sales;
+
+  $('#qualityBox').style.display='block';
+  $('#qualityGrid').innerHTML=`
+    <div class="mini-card"><span>資料列</span><strong>${n.toLocaleString()}</strong></div>
+    <div class="mini-card"><span>辨識欄位</span><strong>${mapped}/7</strong></div>
+    <div class="mini-card"><span>日期欄位</span><strong>${hasDate?'已辨識':'未辨識'}</strong></div>
+    <div class="mini-card"><span>商品識別</span><strong>${hasItem?'已辨識':'未辨識'}</strong></div>`;
+
+  const canAnalyze=n>0 && hasSales && hasItem;
+  $('#confirmImport').disabled=!canAnalyze;
+
+  let msg='';
+  if(!n) msg='尚未解析到資料。';
+  else if(!hasSales) msg='請指定哪一欄是「營業額」。';
+  else if(!hasItem) msg='請指定「商品名稱」或「商品編號」。';
+  else if(!hasDate) msg='可以分析整體銷售，但沒有日期欄位時無法做平日／假日與時間趨勢。';
+  else msg='欄位已可分析，請確認辨識結果後開始。';
+
+  const status=$('#importStatus');
+  if(status) status.textContent=msg;
 }
 $('#clearImport').onclick=()=>{staged=[];mapping={};$('#fileList').innerHTML='';$('#mappingBox').style.display='none';$('#qualityBox').style.display='none';$('#confirmImport').disabled=true;$('#fileInput').value=''};
-$('#confirmImport').onclick=()=>{rows=normalize(staged,mapping);if(!rows.length){toast('沒有可分析資料');return}confirmed=true;hideDrawer();renderAll();toast(`已確認 ${rows.length.toLocaleString()} 筆資料`)};
+$('#confirmImport').onclick=()=>{
+  if(!mapping.sales || (!mapping.item&&!mapping.sku)){
+    toast('請先確認營業額與商品欄位');
+    return;
+  }
+  rows=normalize(staged,mapping);
+  if(!rows.length){toast('沒有可分析資料');return}
+  confirmed=true;
+  hideDrawer();
+  renderAll();
+  toast(`已確認 ${rows.length.toLocaleString()} 筆資料`);
+};
 function groupBy(list,keyFn){const m=new Map();for(const r of list){const k=keyFn(r);if(!m.has(k))m.set(k,[]);m.get(k).push(r)}return m}
 function aggregate(list){
  return list.reduce((a,r)=>(a.sales+=r.sales,a.qty+=r.qty,a.waste+=r.waste,a.clearance+=r.clearance,a),{sales:0,qty:0,waste:0,clearance:0})
@@ -1149,19 +1339,7 @@ Object.defineProperty(window,'rows',{get:()=>rows});
 </script>
 
 
-<script id="upload-accessibility-v7">
-(function(){
-  const pick=document.getElementById('pickFiles');
-  if(pick){
-    pick.addEventListener('keydown',function(e){
-      if(e.key==='Enter'||e.key===' '){
-        e.preventDefault();
-        document.getElementById('fileInput')?.click();
-      }
-    });
-  }
-})();
-</script>
+
 
 
 <script id="pdf-import-v9-hook">
@@ -1197,5 +1375,35 @@ window.addEventListener('unhandledrejection', function(e){
   }
 });
 </script>
+
+<script id="import-picker-v13">
+(function(){
+  const zone=document.getElementById('dropzone');
+  const input=document.getElementById('fileInput');
+  const pick=document.getElementById('pickFiles');
+
+  if(zone && input){
+    zone.setAttribute('role','button');
+    zone.setAttribute('tabindex','0');
+    zone.addEventListener('click',function(e){
+      if(e.target.closest('#pickFiles')) return;
+      input.click();
+    });
+    zone.addEventListener('keydown',function(e){
+      if(e.key==='Enter'||e.key===' '){
+        e.preventDefault();
+        input.click();
+      }
+    });
+  }
+
+  if(pick && input){
+    pick.addEventListener('click',function(e){
+      // label's native for=fileInput behavior is used; no programmatic second click.
+    });
+  }
+})();
+</script>
+
 </body>
 </html>
