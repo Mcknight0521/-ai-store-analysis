@@ -1197,12 +1197,14 @@ function parseInventoryAdjustmentPdf(rawPages,fileName,reportPeriod){
 
     // Primary parser: reconstruct each transaction from items sharing the SKU baseline.
     // This works even when PDF.js splits one visual row into many independent text objects.
-    const items=(page.items||[]).map(x=>({...x,text:clean(x.text)})).filter(x=>x.text);
+    const sourceItems=(page.explodedAtomic&&page.explodedAtomic.length)?page.explodedAtomic:
+      ((page.explodedCombined&&page.explodedCombined.length)?page.explodedCombined:(page.items||[]));
+    const items=sourceItems.map(x=>({...x,text:clean(x.text)})).filter(x=>x.text);
     const skuItems=items.filter(x=>/^\d{6}$/.test(x.text));
     rawTransactionCount+=skuItems.length;
     for(const skuIt of skuItems){
       let parsed=false;
-      for(const tol of [2.6,4.5,7.0]){
+      for(const tol of [2.6,4.5,7.0,10.0,14.0]){
         const line=items.filter(x=>Math.abs(x.y-skuIt.y)<=tol).sort((a,b)=>a.x-b.x);
         let toks=line.map(x=>x.text).filter(Boolean);
         const si=toks.findIndex(t=>t===skuIt.text);
@@ -1232,9 +1234,36 @@ function parseInventoryAdjustmentPdf(rawPages,fileName,reportPeriod){
     // Secondary parser: relaxed whole-line reconstruction for PDFs that already combine cells.
     const num='-?[\\d,]+(?:\\.\\d+)?';
     const rowRe=new RegExp('(?:^|\\s)20\\s+(\\d{6})\\s+(.+?)\\s+(\\d{3})\\s+([YN])\\s+('+num+')\\s+('+num+')\\s+('+num+')\\s+('+num+')\\s+([YN])\\s+('+num+')\\s+(F\\d{6,})\\s+(\\d{2}\\/\\d{2}\\/\\d{4})\\s+(\\d{2}\\/\\d{2}\\/\\d{4})(?:\\s|$)');
-    for(const tol of [2.6,4.5,7.0]){
-      for(const line of groupPdfItemsIntoLines(page.items,tol)){
+    for(const tol of [2.6,4.5,7.0,10.0,14.0]){
+      for(const line of groupPdfItemsIntoLines(sourceItems,tol)){
         const text=clean(line.text),m=text.match(rowRe);if(!m)continue;
+        const [,sku,item,detail,partnership,unitCost0,stockBefore0,stockAfter0,adjQty0,clearanceFlag,diffPct0,ref,adjustDate,postDate]=m;
+        pushParsed({sku,item,detail,partnership,unitCost:toN(unitCost0),stockBefore:toN(stockBefore0),stockAfter:toN(stockAfter0),adjustmentQty:toN(adjQty0),clearanceFlag,diffPct:toN(diffPct0),ref,adjustDate,postDate},reason);
+      }
+    }
+  }
+
+  // Tertiary parser: PDF.js content-stream order. Some ERP PDFs expose perfect text
+  // but their cell baselines differ enough that geometry grouping is unreliable on iOS/Safari.
+  // `hasEOL` preserves the visual transaction row without changing the user's PDF.
+  if(rows.length < rawTransactionCount){
+    const num='-?[\d,]+(?:\.\d+)?';
+    const rowRe=new RegExp('(?:^|\n)\s*20\s+(\d{6})\s+(.+?)\s+(\d{3})\s+([YN])\s+('+num+')\s+('+num+')\s+('+num+')\s+('+num+')\s+([YN])\s+('+num+')\s+(F\d{6,})\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})(?=\s|$)','gm');
+    for(const page of (rawPages||[])){
+      let reason='';
+      const ptxt=(page.items||[]).map(x=>clean(x.text)).join(' ');
+      const rh=ptxt.match(/(?:調整\s*原因\s*)?([A-Z]-[A-Za-z][A-Za-z-]*)/); if(rh)reason=rh[1];
+      let ordered='',lastY=null;
+      for(const it of [...(page.items||[])].sort((a,b)=>a.index-b.index)){
+        const t=clean(it.text); if(!t)continue;
+        // Respect explicit PDF line endings first; y-jumps are a fallback for producers that omit hasEOL.
+        if(ordered && lastY!=null && Math.abs(it.y-lastY)>8) ordered+='\n';
+        ordered+=(ordered && !ordered.endsWith('\n')?' ':'')+t;
+        if(it.hasEOL)ordered+='\n';
+        lastY=it.y;
+      }
+      let m; rowRe.lastIndex=0;
+      while((m=rowRe.exec(ordered))){
         const [,sku,item,detail,partnership,unitCost0,stockBefore0,stockAfter0,adjQty0,clearanceFlag,diffPct0,ref,adjustDate,postDate]=m;
         pushParsed({sku,item,detail,partnership,unitCost:toN(unitCost0),stockBefore:toN(stockBefore0),stockAfter:toN(stockAfter0),adjustmentQty:toN(adjQty0),clearanceFlag,diffPct:toN(diffPct0),ref,adjustDate,postDate},reason);
       }
@@ -1245,8 +1274,7 @@ function parseInventoryAdjustmentPdf(rawPages,fileName,reportPeriod){
   const coverage=rawTransactionCount?rows.length/rawTransactionCount:1;
   // Do not reject a readable inventory-adjustment PDF merely because decorative/layout rows
   // make exact coverage imperfect. Core transaction fields are validated row-by-row above.
-  if(rawTransactionCount>=20&&coverage<0.35)return [];
-  const meta={parser:'inventory-adjustment-detail-v2',reportType:'庫存調整單',sourceType:'pdf',parsedTransactions:rows.length,rawTransactionCount,coverage,adjustmentReasons:[...reasons]};
+  const meta={parser:'inventory-adjustment-detail-v3',reportType:'庫存調整單',sourceType:'pdf',parsedTransactions:rows.length,rawTransactionCount,coverage,adjustmentReasons:[...reasons],partial:rawTransactionCount>=20&&coverage<0.90};
   Object.defineProperty(rows,'pdfMeta',{value:meta,enumerable:false,configurable:true});
   return rows;
 }
@@ -1270,29 +1298,60 @@ async function parseSalesPdf(file){
 
   for(let p=1;p<=pdf.numPages;p++){
     const page=await pdf.getPage(p);
-    const content=await page.getTextContent({disableCombineTextItems:false});
-    const items=(content.items||[])
+    // Read the page twice. iOS Safari/PDF.js can combine text runs very differently
+    // from desktop browsers, so keep both the combined and atomic streams.
+    const [contentCombined,contentAtomic]=await Promise.all([
+      page.getTextContent({disableCombineTextItems:false}),
+      page.getTextContent({disableCombineTextItems:true})
+    ]);
+    const mapItems=(content,stream)=> (content.items||[])
       .map((x,index)=>({
         text:String(x.str||'').replace(/\u00a0/g,' ').trim(),
         x:Number(x.transform?.[4]||0),
         y:Number(x.transform?.[5]||0),
         w:Number(x.width||0),
         h:Number(x.height||0),
-        index
+        index,
+        hasEOL:!!x.hasEOL,
+        stream
       }))
       .filter(x=>x.text);
+    const combinedItems=mapItems(contentCombined,'combined');
+    const atomicItems=mapItems(contentAtomic,'atomic');
 
-    rawPages.push({page:p,rotation:((page.rotate||0)%360+360)%360,items});
-    searchableText += '\n' + items.map(x=>x.text).join(' ');
+    // Split text runs that contain several logical cells. This is the key iPhone-safe
+    // fallback: a run such as "20 000002 烤雞 001 N 44.00 ..." no longer hides the SKU.
+    const explodeRuns=items=>{
+      const out=[];
+      for(const it of items){
+        const parts=String(it.text||'').split(/\s+/).filter(Boolean);
+        if(parts.length<=1){out.push(it);continue}
+        const totalChars=Math.max(1,parts.reduce((n,t)=>n+t.length,0));
+        let cursor=it.x;
+        for(let j=0;j<parts.length;j++){
+          const part=parts[j],pw=(it.w||0)*(part.length/totalChars);
+          out.push({...it,text:part,x:cursor,w:pw,index:it.index*100+j,hasEOL:j===parts.length-1?it.hasEOL:false});
+          cursor+=pw;
+        }
+      }
+      return out;
+    };
+    const explodedCombined=explodeRuns(combinedItems);
+    const explodedAtomic=explodeRuns(atomicItems);
+    // Prefer atomic geometry, but retain every representation for fallback parsing.
+    const items=atomicItems.length?atomicItems:combinedItems;
+
+    rawPages.push({
+      page:p,rotation:((page.rotate||0)%360+360)%360,items,
+      combinedItems,atomicItems,explodedCombined,explodedAtomic
+    });
+    searchableText += '\n' + [...combinedItems,...atomicItems].map(x=>x.text).join(' ');
   }
 
   const reportPeriod=extractReportPeriod(rawPages);
-  const looksLikeInventoryAdjustment=
-    /庫存\s*調整\s*單/.test(searchableText) &&
-    /調整\s*原因/.test(searchableText) &&
-    /調整\s*量/.test(searchableText) &&
-    /單品\s*編號/.test(searchableText) &&
-    (/Ref\s*#?/i.test(searchableText)||/F\d{6,}/.test(searchableText));
+  // ERP inventory-adjustment PDFs are identified by the report title first.
+  // Header cells can be split differently by PDF.js across browsers, so do not require every header token.
+  const looksLikeInventoryAdjustment=/庫存\s*調整\s*單/.test(searchableText);
 
   if(looksLikeInventoryAdjustment){
     const adjustmentRows=parseInventoryAdjustmentPdf(rawPages,file.name,reportPeriod);
