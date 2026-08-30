@@ -331,9 +331,9 @@ body{background:radial-gradient(circle at 18% -5%,#EEF3FF 0,transparent 28%),var
 <style id="external-event-engine-v1">
 .event-panel{margin-top:12px}.event-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.event-toolbar select,.event-toolbar button{height:38px;border-radius:11px;border:1px solid var(--line);background:#fff;padding:0 11px;font-size:10px;font-weight:800;color:var(--text)}.event-toolbar button{background:var(--navy);color:#fff;border-color:var(--navy)}
 .event-source-status{display:flex;align-items:center;gap:7px;margin-top:9px;color:var(--muted);font-size:9px;line-height:1.45}.event-dot{width:8px;height:8px;border-radius:50%;background:#98A2B3;flex:0 0 auto}.event-dot.ok{background:#16A36A}.event-dot.warn{background:#E0A21A}.event-dot.bad{background:#D64545}
-.event-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:11px}.event-card{padding:13px;border:1px solid var(--line);border-radius:15px;background:#fff}.event-card .tag{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;font-size:8px;font-weight:900;background:#F2F4F7;color:#475467}.event-card.typhoon .tag{background:#E9F1FF;color:#245EA8}.event-card.closure .tag{background:#FFEDEE;color:#B42318}.event-card.peak .tag{background:#FFF4DF;color:#9A6700}.event-card h4{margin:8px 0 3px;font-size:13px}.event-card p{margin:0;color:var(--muted);font-size:9px;line-height:1.5}.event-card strong{display:block;margin-top:9px;font-size:17px;letter-spacing:-.03em}.event-card small{display:block;margin-top:3px;color:#98A2B3;font-size:8px}
-.event-timeline{margin-top:10px;display:grid;gap:7px}.event-day{display:grid;grid-template-columns:88px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 11px;border:1px solid var(--line);border-radius:13px;background:#fff}.event-day .date{font-size:10px;font-weight:900}.event-day .event-main b{font-size:10px}.event-day .event-main small{display:block;margin-top:3px;color:var(--muted);font-size:8px;line-height:1.4}.event-day .delta{font-size:10px;font-weight:900;white-space:nowrap}.event-day.special{border-color:#CFE0FF;background:#F8FBFF}.event-day.closure{border-color:#FFD2D5;background:#FFF9F9}.event-note{margin-top:10px;padding:10px 11px;border-radius:12px;background:#F8FAFC;border:1px solid var(--line);color:#667085;font-size:9px;line-height:1.55}
-@media(max-width:760px){.event-cards{grid-template-columns:1fr}.event-day{grid-template-columns:72px minmax(0,1fr);gap:7px}.event-day .delta{grid-column:2}.event-toolbar{align-items:stretch}.event-toolbar select{flex:1;min-width:150px}.event-toolbar button{flex:0 0 auto}}
+.event-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:11px}.event-card{padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff}.event-card .tag{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;font-size:9px;font-weight:900;background:#F2F4F7;color:#475467}.event-card.typhoon .tag{background:#E9F1FF;color:#245EA8}.event-card.closure .tag{background:#FFEDEE;color:#B42318}.event-card.festival .tag{background:#F3ECFF;color:#6F3CC3}.event-card.peak .tag{background:#FFF4DF;color:#9A6700}.event-card h4{margin:9px 0 2px;font-size:14px}.event-card p{margin:0;color:var(--muted);font-size:10px;line-height:1.45}.event-card strong{display:block;margin-top:8px;font-size:18px;letter-spacing:-.03em}.event-card small{display:block;margin-top:3px;color:#98A2B3;font-size:8px}.event-pin{display:inline-flex;align-items:center;gap:4px;font-weight:900;white-space:nowrap}.event-pin svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}.event-pin.festival{color:#6F3CC3}.event-pin.typhoon{color:#245EA8}.event-pin.closure{color:#B42318}.event-pin.peak{color:#9A6700}.event-pin.neutral{color:#667085}.event-plus{display:inline-block;margin:0 5px;color:#98A2B3;font-weight:700}
+.event-timeline{margin-top:12px;display:grid;gap:7px}.event-day{display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 12px;border:1px solid var(--line);border-radius:14px;background:#fff}.event-day .date{font-size:11px;font-weight:900}.event-day .event-main b{font-size:11px}.event-day .event-main small{display:block;margin-top:3px;color:var(--muted);font-size:9px;line-height:1.4}.event-day .delta{font-size:12px;font-weight:900;white-space:nowrap}.event-day.special{border-color:#CFE0FF;background:#F8FBFF}.event-day.festival{border-color:#DDD0FF;background:#FBF9FF}.event-day.closure{border-color:#FFD2D5;background:#FFF9F9}.event-note{margin-top:10px;padding:10px 11px;border-radius:12px;background:#F8FAFC;border:1px solid var(--line);color:#667085;font-size:9px;line-height:1.55}
+@media(max-width:760px){.event-cards{grid-template-columns:1fr}.event-card{padding:13px}.event-day{grid-template-columns:70px minmax(0,1fr) auto;gap:7px}.event-day .event-main small{font-size:9px}.event-day .delta{font-size:11px}.event-toolbar{align-items:stretch}.event-toolbar select{flex:1;min-width:150px}.event-toolbar button{flex:0 0 auto}}
 </style>
 
 </head>
@@ -444,13 +444,13 @@ body{background:radial-gradient(circle at 18% -5%,#EEF3FF 0,transparent 28%),var
       <div class="page-head"><div><div class="eyebrow">ANOMALY CENTER</div><h1>異常</h1><p>把真正偏離目前資料結構的項目集中起來。</p></div></div>
       <section class="panel anomaly-center-panel"><div class="panel-head"><div><div class="panel-kicker">ANOMALY TRIAGE</div><h3>異常決策中心</h3><p>先判斷嚴重度與影響，再提供資料能支持的原因方向與下一步；不把推測寫成事實。</p></div></div><div id="anomalySummary" class="anomaly-summary-grid"><div class="anomaly-summary-card"><span>異常項目</span><strong>—</strong></div><div class="anomaly-summary-card danger"><span>重大異常</span><strong>—</strong></div><div class="anomaly-summary-card warn"><span>結構異常</span><strong>—</strong></div><div class="anomaly-summary-card"><span>主力品觀察</span><strong>—</strong></div></div><div id="anomalyList" class="anomaly-list"><div class="empty">等待資料</div></div></section>
       <section class="panel event-panel" id="externalEventPanel">
-        <div class="panel-head"><div><div class="panel-kicker">EXTERNAL EVENT CONTEXT</div><h3>特殊事件辨識</h3><p>自動比對官方颱風／停班停課資訊，並用逐日營業額偵測疑似特殊高峰，避免把外部事件誤判成營運異常。</p></div>
+        <div class="panel-head"><div><div class="panel-kicker">EXTERNAL EVENT CONTEXT</div><h3>特殊事件辨識</h3><p>把節慶、颱風、停班停課與異常高峰一起標在日期上，快速看出「哪天、發生什麼事」。</p></div>
           <div class="event-toolbar"><select id="eventRegion" aria-label="事件地區"><option>屏東縣</option><option>高雄市</option><option>臺南市</option><option>嘉義縣</option><option>嘉義市</option><option>臺中市</option><option>彰化縣</option><option>雲林縣</option><option>南投縣</option><option>臺北市</option><option>新北市</option><option>桃園市</option><option>新竹縣</option><option>新竹市</option><option>苗栗縣</option><option>宜蘭縣</option><option>花蓮縣</option><option>臺東縣</option><option>基隆市</option><option>澎湖縣</option><option>金門縣</option><option>連江縣</option></select><button id="refreshExternalEvents" type="button">同步官方事件</button></div>
         </div>
         <div class="event-source-status"><i id="eventSourceDot" class="event-dot"></i><span id="eventSourceStatus">尚未同步官方事件</span></div>
         <div id="externalEventCards" class="event-cards"><div class="empty">等待同步</div></div>
         <div id="salesEventTimeline" class="event-timeline"></div>
-        <div class="event-note">判讀原則：有颱風或停班停課時，標為「外部事件」而不是一般營運異常；逐日營業額若明顯偏離同星期基準，會另外標示「疑似特殊事件」。即時官方來源適合目前／近期狀態，較久的歷史日期仍需歷史示警資料才能完整回填。</div>
+        <div class="event-note">判讀原則：節慶、颱風或停班停課會優先標註日期；沒有已知事件但營業額明顯偏離時，才標為「疑似特殊高峰／低谷」。</div>
       </section>
     </section>
 
@@ -2801,14 +2801,41 @@ window.addEventListener('unhandledrejection', function(e){
     const regionMention=plain.includes(region);
     return {typhoon:hasTyphoon,regionMention,detail};
   }
+  function lunarMD(date){
+    try{
+      const parts=new Intl.DateTimeFormat('zh-TW-u-ca-chinese',{month:'numeric',day:'numeric'}).formatToParts(date);
+      const m=Number(parts.find(x=>x.type==='month')?.value),d=Number(parts.find(x=>x.type==='day')?.value);
+      return Number.isFinite(m)&&Number.isFinite(d)?{m,d}:null;
+    }catch(e){return null}
+  }
+  function festivalForDate(date){
+    const lm=lunarMD(date),m=date.getMonth()+1,d=date.getDate(),dow=date.getDay();
+    if(lm){
+      if((lm.m===12&&lm.d>=25)||(lm.m===1&&lm.d<=5))return {name:'春節'};
+      if(lm.m===5&&lm.d>=1&&lm.d<=5)return {name:'端午節慶期'};
+      if(lm.m===7&&lm.d>=1&&lm.d<=15)return {name:'中元節慶期'};
+      if(lm.m===8&&lm.d>=10&&lm.d<=15)return {name:'中秋節慶期'};
+    }
+    if(m===5&&dow===0&&d>=8&&d<=14)return {name:'母親節'};
+    if(m===8&&d>=1&&d<=8)return {name:'父親節檔期'};
+    if((m===12&&d>=29)||(m===1&&d===1))return {name:'跨年／元旦'};
+    if(m===12&&d>=20&&d<=25)return {name:'聖誕檔期'};
+    return null;
+  }
+  function festivalDays(){return buildDailySales().map(x=>({...x,festival:festivalForDate(x.date)})).filter(x=>x.festival)}
+  function eventPin(label,type='neutral'){
+    return `<span class="event-pin ${type}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>${label}</span>`;
+  }
   function renderCards(dgpa,cwa,via=[]){
     const box=$e('externalEventCards');if(!box)return;
-    const cards=[];
-    cards.push(`<div class="event-card ${cwa?.typhoon?'typhoon':''}"><span class="tag">🌀 颱風警報</span><h4>${cwa?.typhoon?'偵測到颱風警報':'目前未偵測到颱風警報'}</h4><p>${esc2(cwa?.detail||'尚未取得中央氣象署資訊')}</p><strong>${cwa?.typhoon?(cwa.regionMention?'影響區含 '+esc2(state.region):'全臺警報資訊'):'正常'}</strong><small>來源：中央氣象署官方警報頁</small></div>`);
-    cards.push(`<div class="event-card ${dgpa?.closure?'closure':''}"><span class="tag">🔴 停班停課</span><h4>${dgpa?.closure?esc2(state.region)+'有停班停課資訊':'目前未辨識停班停課'}</h4><p>${esc2(dgpa?.detail||'尚未取得人事行政總處資訊')}</p><strong>${dgpa?.closure?'特殊日':'正常'}</strong><small>來源：行政院人事行政總處</small></div>`);
+    const festivals=festivalDays(),festivalNames=[...new Set(festivals.map(x=>x.festival.name))];
     const peaks=buildDailySales().filter(x=>Math.abs(x.delta)>=.30).length;
-    cards.push(`<div class="event-card peak"><span class="tag">🟡 銷售高峰偵測</span><h4>${peaks?`偵測到 ${peaks} 個明顯偏離日`:'目前沒有明顯偏離日'}</h4><p>以同星期幾的其他日期作基準，偏離 ±30% 以上才標記，避免只因週末型態不同就誤判。</p><strong>${peaks?peaks+' 天':'0 天'}</strong><small>來源：你匯入的逐日營業額</small></div>`);
-    box.innerHTML=cards.join('');
+    const officialActive=!!(cwa?.typhoon||dgpa?.closure);
+    const officialText=[cwa?.typhoon?eventPin('颱風','typhoon'):'',dgpa?.closure?eventPin('停班停課','closure'):''].filter(Boolean).join('<span class="event-plus">＋</span>');
+    box.innerHTML=`
+      <div class="event-card festival"><span class="tag">${eventPin('節慶','festival')}</span><h4>${festivalNames.length?festivalNames.join('、'):'目前資料未碰到節慶期'}</h4><p>依匯入日期自動辨識零售節慶區間。</p><strong>${festivals.length} 天</strong></div>
+      <div class="event-card ${officialActive?(dgpa?.closure?'closure':'typhoon'):''}"><span class="tag">${officialActive?officialText:eventPin('官方事件','neutral')}</span><h4>${officialActive?'目前有外部事件':'目前無颱風／停班停課'}</h4><p>${officialActive?esc2(state.region)+' 已納入判讀':'同步後自動標在日期上。'}</p><strong>${officialActive?'特殊日':'正常'}</strong></div>
+      <div class="event-card peak"><span class="tag">${eventPin('高峰偵測','peak')}</span><h4>${peaks?`${peaks} 個明顯偏離日`:'沒有明顯偏離日'}</h4><p>相較同星期基準偏離 ±30% 以上才顯示。</p><strong>${peaks} 天</strong></div>`;
   }
   function buildDailySales(){
     const rows=Array.isArray(window.rows)?window.rows:[];
@@ -2820,13 +2847,22 @@ window.addEventListener('unhandledrejection', function(e){
   }
   function renderTimeline(){
     const box=$e('salesEventTimeline');if(!box)return;
-    const days=buildDailySales();if(!days.length){box.innerHTML='<div class="empty">需要逐日日期＋營業額，才能標示特殊高峰日期。</div>';return}
-    const interesting=days.filter(x=>x.baseline!=null&&Math.abs(x.delta)>=.30).sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta)).slice(0,12);
-    if(!interesting.length){box.innerHTML='<div class="empty">逐日營業額目前沒有偏離同星期基準 ±30% 以上的日期。</div>';return}
+    const days=buildDailySales();if(!days.length){box.innerHTML='<div class="empty">需要逐日日期＋營業額，才能標示節慶與特殊高峰。</div>';return}
     const today=iso(new Date());
     const closureToday=state.events.some(e=>e.type==='closure'&&e.active);
     const typhoonToday=state.events.some(e=>e.type==='typhoon'&&e.active);
-    box.innerHTML=interesting.map(x=>{const day=iso(x.date),isToday=day===today;const labels=[];let cls='special';if(isToday&&closureToday){labels.push('🔴 停班停課');cls+=' closure'}if(isToday&&typhoonToday)labels.push('🌀 颱風警報');if(!labels.length)labels.push(x.delta>0?'🟡 疑似特殊高峰':'🟡 疑似特殊低谷');return `<div class="event-day ${cls}"><div class="date">${day.replaceAll('-','/')}</div><div class="event-main"><b>${labels.join(' ＋ ')}</b><small>營業額 ${money2(x.sales)}；同星期基準 ${money2(x.baseline)}。${isToday&&(closureToday||typhoonToday)?'官方事件已納入判讀。':'目前僅能由銷售資料辨識偏離，尚未有對應官方歷史事件。'}</small></div><div class="delta">${x.delta>=0?'+':''}${(x.delta*100).toFixed(1)}%</div></div>`}).join('');
+    const display=days.map(x=>({...x,festival:festivalForDate(x.date)})).filter(x=>x.festival||(x.baseline!=null&&Math.abs(x.delta)>=.30)||iso(x.date)===today&&(closureToday||typhoonToday)).sort((a,b)=>b.date-a.date).slice(0,14);
+    if(!display.length){box.innerHTML='<div class="empty">目前沒有節慶、官方事件或明顯銷售偏離。</div>';return}
+    box.innerHTML=display.map(x=>{
+      const day=iso(x.date),isToday=day===today,labels=[],classes=['event-day'];
+      if(x.festival){labels.push(eventPin(x.festival.name,'festival'));classes.push('festival')}
+      if(isToday&&closureToday){labels.push(eventPin('停班停課','closure'));classes.push('closure')}
+      if(isToday&&typhoonToday)labels.push(eventPin('颱風警報','typhoon'));
+      if(!x.festival&&!(isToday&&(closureToday||typhoonToday))&&x.baseline!=null&&Math.abs(x.delta)>=.30)labels.push(eventPin(x.delta>0?'疑似特殊高峰':'疑似特殊低谷','peak'));
+      const delta=x.baseline==null?'—':`${x.delta>=0?'+':''}${(x.delta*100).toFixed(1)}%`;
+      const detail=x.baseline==null?`營業額 ${money2(x.sales)}`:`營業額 ${money2(x.sales)} · 平常 ${money2(x.baseline)}`;
+      return `<div class="${classes.join(' ')}"><div class="date">${day.slice(5).replace('-','/')}</div><div class="event-main"><b>${labels.join('<span class="event-plus">＋</span>')}</b><small>${detail}</small></div><div class="delta">${delta}</div></div>`;
+    }).join('');
   }
   async function syncExternalEvents(){
     state.region=$e('eventRegion')?.value||state.region;localStorage.setItem('opsEventRegion',state.region);setStatus('warn','正在同步官方颱風／停班停課資訊…');
