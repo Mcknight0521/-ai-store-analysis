@@ -471,13 +471,13 @@ html.has-hash .page.active:not(:target){display:none!important}
           <svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m8 8 4-4 4 4"/><path d="M5 20h14"/></svg>
           <h3>把銷售檔案丟進來</h3>
           <p>Excel、CSV、ODS、TXT、PDF 都可以。系統會先做結構辨識，不會直接開始分析。</p>
-          <input type="file" id="fileInput" multiple accept=".xlsx,.xls,.xlsm,.xlsb,.ods,.csv,.tsv,.txt,.pdf,application/pdf">
+          <input type="file" id="fileInput" multiple accept=".xlsx,.xls,.xlsm,.xlsb,.ods,.csv,.tsv,.txt,.pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp">
           <div style="margin-top:12px"><label class="primary-btn" id="pickFiles" for="fileInput" role="button" tabindex="0">選擇檔案</label></div>
         </div>
         <div class="supported-strip">
           <span>試算表</span><b>XLSX / XLS / ODS</b>
           <span>文字</span><b>CSV / TSV / TXT</b>
-          <span>報表</span><b>文字型 PDF</b>
+          <span>報表</span><b>文字型 PDF</b><span>圖片</span><b>PNG / JPG（OCR 下一階段）</b>
         </div>
         <div class="file-list" id="fileList"></div>
       </section>
@@ -497,7 +497,7 @@ html.has-hash .page.active:not(:target){display:none!important}
           <div><div class="panel-kicker">PREVIEW</div><h3>確認資料</h3></div>
           <span class="confidence-pill ok" id="previewCount">—</span>
         </div>
-        <div class="preview-note">先看前幾筆是否對得上原始檔，再開始分析。</div>
+        <div class="preview-note">先看前幾筆是否對得上原始檔，再開始分析。確認後會記住這種欄位格式，下次自動套用。</div>
         <div class="import-preview-wrap">
           <table class="import-preview">
             <thead id="importPreviewHead"></thead>
@@ -610,13 +610,15 @@ const pct=n=>Number.isFinite(n)?(n*100).toFixed(1)+'%':'—';
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const toast=m=>{const t=$('#toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)};
 const aliases={
- date:['日期','date','交易日期','營業日期','銷售日期','訂單日期','年月日','交易日','銷售日','day'],
- sku:['sku','商品編號','單品編號','品號','貨號','商品代碼','產品編號','item code','product code'],
- item:['品項','品名','單品名稱','商品','商品名稱','產品','產品名稱','item','product','description'],
- qty:['數量','銷售量','銷量','銷售數量','售出數量','qty','quantity','units'],
- sales:['營業額','銷售額','銷售金額','銷售額(含稅)','含稅銷售額','實收金額','營收','銷售淨額','sales','revenue','amount','net sales'],
- waste:['報廢','報廢金額','廢棄','廢棄金額','報損','報損金額','waste','shrink','shrinkage'],
- clearance:['出清','出清金額','降價出清金額','即期出清金額','折價','折扣金額','即期折扣','markdown','discount','clearance']
+ date:['日期','date','交易日期','營業日期','銷售日期','訂單日期','年月日','交易日','銷售日','日期時間','交易時間','day','datetime'],
+ sku:['sku','商品編號','單品編號','品號','貨號','商品代碼','產品編號','產品代碼','item code','product code','barcode','條碼'],
+ item:['品項','品名','單品名稱','商品','商品名稱','產品','產品名稱','品項名稱','item','product','description','product name','item name'],
+ qty:['數量','銷售量','銷量','銷售數量','售出數量','件數','數量合計','qty','quantity','units','units sold'],
+ sales:['營業額','銷售額','銷售金額','銷售額(含稅)','銷售額（含稅）','含稅銷售額','實收金額','實收','淨銷售額','營收','銷售淨額','sales','revenue','amount','net sales','gross sales'],
+ waste:['報廢','報廢金額','廢棄','廢棄金額','報損','報損金額','耗損','損耗金額','waste','shrink','shrinkage'],
+ clearance:['出清','出清金額','降價出清金額','即期出清金額','折價','折扣金額','即期折扣','markdown','discount','clearance'],
+ inventory:['庫存','剩餘庫存','庫存量','現有庫存','stock','inventory','on hand'],
+ category:['分類','品類','小分類','大分類','部門','category','department']
 };
 let staged=[], rows=[], mapping={}, confirmed=false, analysisMode='sku';
 function norm(s){return String(s??'').trim().toLowerCase().replace(/\s+/g,' ')}
@@ -640,58 +642,139 @@ function toDate(v){
  const d=new Date(v);return isNaN(d)?null:d
 }
 
+
+function canon(s){
+  return String(s??'').normalize('NFKC').toLowerCase()
+    .replace(/[\s_\-()（）[\]【】:：/\\.%％]+/g,'').trim();
+}
+function aliasScore(header,alias){
+  const h=canon(header),a=canon(alias);
+  if(!h||!a)return 0;
+  if(h===a)return 1;
+  if(h.includes(a)||a.includes(h))return .82;
+  let same=0;const chars=new Set(a);
+  for(const ch of h)if(chars.has(ch))same++;
+  return Math.max(h.length,a.length)?same/Math.max(h.length,a.length)*.55:0;
+}
+function smartFindMapping(headers){
+  const result={},confidence={};
+  for(const [key,list] of Object.entries(aliases)){
+    let best='',bestScore=0;
+    for(const h of headers)for(const a of list){
+      const s=aliasScore(h,a);
+      if(s>bestScore){bestScore=s;best=h}
+    }
+    if(best&&bestScore>=.72){result[key]=best;confidence[key]=bestScore}
+  }
+  Object.defineProperty(result,'_confidence',{value:confidence,enumerable:false});
+  return result;
+}
+function dataShapeScore(matrix,headerRow){
+  if(!matrix?.length)return -Infinity;
+  const headers=(matrix[headerRow]||[]).map(v=>String(v??'').trim());
+  const map=smartFindMapping(headers);
+  let numeric=0,dateLike=0,rows=0;
+  for(let r=headerRow+1;r<Math.min(matrix.length,headerRow+16);r++){
+    const row=matrix[r]||[];
+    if(!row.some(v=>String(v??'').trim()))continue;
+    rows++;
+    for(const v of row){
+      const s=String(v??'').trim();
+      if(/^-?[\d,.]+$/.test(s))numeric++;
+      if(/\d{1,4}[\/-]\d{1,2}[\/-]\d{1,4}/.test(s))dateLike++;
+    }
+  }
+  return Object.keys(map).length*100+headers.filter(Boolean).length*2+Math.min(numeric,60)+Math.min(dateLike,10)*2+Math.min(rows,15);
+}
+function detectHeaderRow(matrix){
+  let bestRow=0,bestScore=-Infinity;
+  for(let i=0;i<Math.min(60,matrix.length);i++){
+    const score=dataShapeScore(matrix,i);
+    if(score>bestScore){bestScore=score;bestRow=i}
+  }
+  return {row:bestRow,score:bestScore};
+}
+function createUniqueHeaders(rawHeaders){
+  const seen=new Map();
+  return rawHeaders.map((v,i)=>{
+    let h=String(v??'').trim()||`未命名欄位_${i+1}`;
+    const n=seen.get(h)||0;seen.set(h,n+1);
+    return n?`${h}_${n+1}`:h;
+  });
+}
+function matrixToRecords(matrix){
+  if(!matrix?.length)return {records:[],headerRow:0,headers:[],score:-Infinity};
+  const detected=detectHeaderRow(matrix);
+  const headers=createUniqueHeaders(matrix[detected.row]||[]);
+  const records=matrix.slice(detected.row+1)
+    .filter(row=>Array.isArray(row)&&row.some(v=>String(v??'').trim()!==''))
+    .map(row=>Object.fromEntries(headers.map((h,j)=>[h,row?.[j]??''])));
+  return {records,headerRow:detected.row,headers,score:detected.score};
+}
+function importSignature(headers,sourceType=''){
+  const body=[sourceType,...headers.map(canon).filter(Boolean).sort()].join('|');
+  let hash=2166136261;
+  for(let i=0;i<body.length;i++){hash^=body.charCodeAt(i);hash=Math.imul(hash,16777619)}
+  return (hash>>>0).toString(16);
+}
+function loadRememberedMapping(signature,headers){
+  try{
+    const saved=JSON.parse(localStorage.getItem('opsImportMappingsV1')||'{}')[signature];
+    if(!saved)return null;
+    const valid={};
+    for(const [k,h] of Object.entries(saved))if(headers.includes(h))valid[k]=h;
+    return Object.keys(valid).length?valid:null;
+  }catch{return null}
+}
+function saveRememberedMapping(signature,map){
+  try{
+    const all=JSON.parse(localStorage.getItem('opsImportMappingsV1')||'{}');
+    all[signature]={};
+    for(const [k,v] of Object.entries(map))if(typeof v==='string'&&v)all[signature][k]=v;
+    localStorage.setItem('opsImportMappingsV1',JSON.stringify(all));
+  }catch{}
+}
+function assessImportedRecords(records,map){
+  const sample=records.slice(0,Math.min(records.length,200));
+  let salesNumeric=0,qtyNumeric=0,dateValid=0,itemValid=0;
+  for(const r of sample){
+    if(map.sales&&Number.isFinite(toNumber(r[map.sales])))salesNumeric++;
+    if(map.qty&&Number.isFinite(toNumber(r[map.qty])))qtyNumeric++;
+    if(map.date&&parseDate(r[map.date]))dateValid++;
+    if((map.item&&String(r[map.item]??'').trim())||(map.sku&&String(r[map.sku]??'').trim()))itemValid++;
+  }
+  const n=Math.max(sample.length,1),problems=[];
+  if(map.sales&&salesNumeric/n<.7)problems.push('營業額欄位有較多非數字資料');
+  if(map.qty&&qtyNumeric/n<.6)problems.push('銷售數量欄位有較多非數字資料');
+  if(map.date&&dateValid/n<.6)problems.push('日期欄位有較多無法辨識的日期');
+  if(itemValid/n<.7)problems.push('部分資料列沒有商品識別');
+  return {sample:sample.length,salesNumericRate:salesNumeric/n,qtyNumericRate:qtyNumeric/n,dateValidRate:dateValid/n,itemValidRate:itemValid/n,problems};
+}
+function analyzeImportCandidate(records,sourceType=''){
+  const headers=[...new Set(records.flatMap(r=>Object.keys(r)))];
+  let map=smartFindMapping(headers);
+  const signature=importSignature(headers,sourceType);
+  const remembered=loadRememberedMapping(signature,headers);
+  if(remembered)map={...map,...remembered};
+  return {headers,map,signature,quality:assessImportedRecords(records,map),remembered:!!remembered};
+}
+
 function workbookSheetToRecords(ws){
   const matrix=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,dateNF:'yyyy-mm-dd'});
-  if(!matrix.length)return [];
-
-  let bestRow=0,bestScore=-1;
-  for(let i=0;i<Math.min(30,matrix.length);i++){
-    const headers=matrix[i].map(v=>String(v??'').trim());
-    const score=Object.keys(findMapping(headers)).length;
-    const nonEmpty=headers.filter(Boolean).length;
-    const weighted=score*10+Math.min(nonEmpty,10);
-    if(weighted>bestScore){bestScore=weighted;bestRow=i;}
-  }
-
-  const headers=matrix[bestRow].map((v,j)=>{
-    let h=String(v??'').trim();
-    if(!h)h=`未命名欄位_${j+1}`;
-    return h;
-  });
-
-  return matrix.slice(bestRow+1)
-    .filter(row=>row.some(v=>String(v??'').trim()!==''))
-    .map(row=>Object.fromEntries(headers.map((h,j)=>[h,row[j]??''])));
+  return matrixToRecords(matrix);
 }
 
 function parseWorkbook(wb,name=''){
-  let best={records:[],score:-1,sheet:''};
-
+  let best={records:[],score:-Infinity,sheet:'',headerRow:0,headers:[]};
   for(const sheetName of wb.SheetNames||[]){
-    const ws=wb.Sheets[sheetName];
-    if(!ws)continue;
-
-    const records=workbookSheetToRecords(ws);
-    if(!records.length)continue;
-
-    const headers=Object.keys(records[0]||{});
-    const map=findMapping(headers);
-    const score=Object.keys(map).length*100 + Math.min(records.length,99);
-
-    if(score>best.score){
-      best={records,score,sheet:sheetName};
-    }
+    const ws=wb.Sheets[sheetName];if(!ws)continue;
+    const parsed=workbookSheetToRecords(ws);if(!parsed.records.length)continue;
+    const candidate=analyzeImportCandidate(parsed.records,'spreadsheet');
+    const score=Object.keys(candidate.map).length*150+(parsed.score||0)+Math.min(parsed.records.length,500);
+    if(score>best.score)best={...parsed,score,sheet:sheetName};
   }
-
-  if(!best.records.length){
-    throw new Error('檔案可以開啟，但找不到可分析的資料表。');
-  }
-
-  Object.defineProperty(best.records,'importMeta',{
-    value:{sourceType:'spreadsheet',sourceFile:name,sheet:best.sheet},
-    enumerable:false,
-    configurable:true
-  });
+  if(!best.records.length)throw new Error('檔案可以開啟，但找不到像銷售資料表的區域。');
+  Object.defineProperty(best.records,'importMeta',{value:{sourceType:'spreadsheet',sourceFile:name,sheet:best.sheet,headerRow:best.headerRow+1},enumerable:false,configurable:true});
   return best.records;
 }
 
@@ -720,6 +803,9 @@ function parseDelimited(text,name){
 async function parseFile(file){
   const name=file.name||'';
   const ext=detectFileKind(file);
+  if(['png','jpg','jpeg','webp'].includes(ext)){
+    throw new Error('圖片檔已辨識。目前此版本尚未接 OCR；不會假裝讀懂圖片內容。');
+  }
 
   if(ext==='pdf'){
     const result=await parseSalesPdf(file);
@@ -1189,49 +1275,46 @@ function buildImportPreview(){
 async function handleFiles(files){
   if(!files.length)return;
   staged=[];mapping={};
+  window.__opsImportContext={signature:'',headers:[],quality:null,sourceTypes:new Set()};
   $('#fileList').innerHTML='';
-  $('#mappingBox').style.display='none';
-  $('#qualityBox').style.display='none';
-  $('#nextImportStep').disabled=true;
-  $('#confirmImport').disabled=true;
+  $('#mappingBox').style.display='none';$('#qualityBox').style.display='none';
+  $('#nextImportStep').disabled=true;$('#confirmImport').disabled=true;
   setImportStep(1);
 
   let successCount=0;
   for(const f of files){
     const row=document.createElement('div');
     row.className='file-row';
-    row.innerHTML=`<div><b>${esc(f.name)}</b><small>正在讀取檔案結構…</small></div><span>…</span>`;
+    row.innerHTML=`<div><b>${esc(f.name)}</b><small>正在辨識檔案與資料結構…</small></div><span>…</span>`;
     $('#fileList').appendChild(row);
     try{
       const raw=await parseFile(f);
       if(!Array.isArray(raw)||!raw.length)throw new Error('沒有取得可用資料列');
       staged.push(...raw);successCount++;
       const meta=raw.importMeta||raw.pdfMeta||{};
+      window.__opsImportContext.sourceTypes.add(meta.sourceType||'unknown');
       let detail=`讀取成功・${raw.length.toLocaleString()} 筆`;
       if(meta.sheet)detail+=`・${meta.sheet}`;
+      if(meta.headerRow)detail+=`・表頭第 ${meta.headerRow} 列`;
       if(meta.sourceType==='pdf')detail+='・PDF文字表格';
-      row.querySelector('small').textContent=detail;
-      row.querySelector('span').textContent='✓';
+      row.querySelector('small').textContent=detail;row.querySelector('span').textContent='✓';
     }catch(err){
-      row.querySelector('small').textContent=String(err?.message||err);
-      row.querySelector('span').textContent='!';
+      row.querySelector('small').textContent=String(err?.message||err);row.querySelector('span').textContent='!';
     }
   }
+
   if(!staged.length){
     $('#importStatus').textContent='沒有任何檔案成功讀取。系統不會用猜測資料繼續分析。';
     return;
   }
-  const headers=[...new Set(staged.flatMap(r=>Object.keys(r)))];
-  mapping=findMapping(headers);
-  renderMapping(headers);
+  const sourceType=[...window.__opsImportContext.sourceTypes].join('+');
+  const candidate=analyzeImportCandidate(staged,sourceType);
+  Object.assign(window.__opsImportContext,{signature:candidate.signature,headers:candidate.headers,quality:candidate.quality});
+  mapping=candidate.map;
+  renderMapping(candidate.headers);
   setImportStep(2);
+  if(candidate.remembered)$('#importStatus').textContent='找到你之前確認過的相同格式，已套用欄位對應。請再快速確認一次。';
   toast(successCount<files.length?`成功 ${successCount}/${files.length} 個檔案`:`已讀取 ${successCount} 個檔案`);
-}
-function mappingScore(headers,map){
-  const weights={sales:35,item:20,sku:20,date:15,qty:10};
-  let points=0,max=0;
-  Object.entries(weights).forEach(([k,w])=>{max+=w;if(map[k])points+=w});
-  return Math.round(points/max*100);
 }
 function renderMapping(headers){
   const labels={date:'日期',sku:'商品編號',item:'商品名稱',qty:'銷售數量',sales:'營業額',waste:'報廢金額',clearance:'出清金額'};
@@ -1254,25 +1337,28 @@ function renderMapping(headers){
 }
 
 function updateImportReadiness(headers=[]){
-  const n=staged.length,mapped=Object.keys(mapping).length;
+  const n=staged.length,mapped=Object.keys(mapping).filter(k=>!k.startsWith('_')).length;
   const hasDate=!!mapping.date,hasItem=!!mapping.item||!!mapping.sku,hasSales=!!mapping.sales;
-  const score=mappingScore(headers,mapping);
+  const score=mappingScore(headers,mapping),q=assessImportedRecords(staged,mapping);
+  window.__opsImportContext=window.__opsImportContext||{};window.__opsImportContext.quality=q;
   $('#mappingConfidence').textContent=`辨識 ${score}%`;
-  $('#mappingConfidence').classList.toggle('ok',score>=70);
+  $('#mappingConfidence').classList.toggle('ok',score>=70&&!q.problems.length);
   $('#qualityBox').style.display='block';
   $('#qualityGrid').innerHTML=`
     <div class="mini-card"><span>資料列</span><strong>${n.toLocaleString()}</strong></div>
-    <div class="mini-card"><span>辨識欄位</span><strong>${mapped}/7</strong></div>
-    <div class="mini-card"><span>日期</span><strong>${hasDate?'已辨識':'未辨識'}</strong></div>
-    <div class="mini-card"><span>商品</span><strong>${hasItem?'已辨識':'未辨識'}</strong></div>`;
-  const canContinue=n>0&&hasSales&&hasItem;
-  $('#nextImportStep').disabled=!canContinue;
-  $('#confirmImport').disabled=!canContinue;
+    <div class="mini-card"><span>辨識欄位</span><strong>${mapped}</strong></div>
+    <div class="mini-card"><span>營業額數字率</span><strong>${hasSales?Math.round(q.salesNumericRate*100)+'%':'—'}</strong></div>
+    <div class="mini-card"><span>商品完整率</span><strong>${Math.round(q.itemValidRate*100)}%</strong></div>`;
+  const canContinue=n>0&&hasSales&&hasItem&&q.salesNumericRate>=.5&&q.itemValidRate>=.5;
+  $('#nextImportStep').disabled=!canContinue;$('#confirmImport').disabled=!canContinue;
   if(!n)$('#importStatus').textContent='沒有解析到資料。';
   else if(!hasSales)$('#importStatus').textContent='系統不確定哪一欄是營業額，請手動指定。';
   else if(!hasItem)$('#importStatus').textContent='系統找不到商品名稱或商品編號，請手動指定。';
+  else if(q.salesNumericRate<.5)$('#importStatus').textContent='你選的營業額欄位不像數字欄，請重新確認。';
+  else if(q.itemValidRate<.5)$('#importStatus').textContent='商品欄位空白比例太高，請重新確認。';
+  else if(q.problems.length)$('#importStatus').textContent='資料可繼續，但有提醒：'+q.problems.join('；');
   else if(!hasDate)$('#importStatus').textContent='可以做整體商品分析；因沒有日期欄位，平日/假日與時間趨勢會停用。';
-  else $('#importStatus').textContent='核心欄位已辨識。請檢查欄位對應後再看資料預覽。';
+  else $('#importStatus').textContent='核心欄位與資料型態檢查通過。請檢查欄位對應後再看資料預覽。';
 }
 $('#confirmImport').onclick=()=>{
   if(!mapping.sales || (!mapping.item&&!mapping.sku)){
@@ -1281,6 +1367,8 @@ $('#confirmImport').onclick=()=>{
   }
   rows=normalize(staged,mapping);
   if(!rows.length){toast('沒有可分析資料');return}
+  const sig=window.__opsImportContext?.signature;
+  if(sig)saveRememberedMapping(sig,mapping);
   confirmed=true;
   hideDrawer();
   renderAll();
