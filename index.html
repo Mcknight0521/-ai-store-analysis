@@ -425,7 +425,7 @@ body{background:radial-gradient(circle at 18% -5%,#EEF3FF 0,transparent 28%),var
       <div class="page-head"><div><div class="eyebrow">OPERATIONS OVERVIEW</div><h1>營運總覽</h1><p>把今天最需要注意的營運結果放在第一眼。</p></div><div class="status-pill" id="overviewStatus">等待資料</div></div>
       <div class="overview-grid">
         <section class="panel">
-          <div class="panel-head"><div><div class="panel-kicker">PERIOD RESULT</div><h3>本期營運結果</h3><p>期間彙總維持原始總額；日均值只用總額除以報表涵蓋天數。</p></div></div>
+          <div class="panel-head"><div><div class="panel-kicker">PERIOD RESULT</div><h3>本期營運結果</h3><p>期間彙總維持原始總額；若有缺日，日均值只用總額除以實際有資料的彙總天數。</p></div></div>
           <div id="reportPeriodBanner" class="period-banner" hidden></div>
           <div class="metric-grid">
             <div class="metric"><span id="ovSalesLabel">總營業額</span><strong id="ovSales">—</strong></div>
@@ -2277,16 +2277,22 @@ function finishConfirmedImport(nextRows,periodMode){
   toast(`已確認 ${rows.length.toLocaleString()} 筆資料`);
 }
 
+function getKnownMissingDates(){
+ const fv=window.__opsImportContext?.fileValidations||[];
+ return [...new Set(fv.flatMap(x=>x.validation?.dataCompleteness?.missingDays||[]).map(String))].sort();
+}
 function activePeriodInfo(rr=rows){
  const starts=rr.map(r=>r.periodStart).filter(Boolean).sort();
  const ends=rr.map(r=>r.periodEnd).filter(Boolean).sort();
  if(!starts.length||!ends.length)return null;
  const start=starts[0],end=ends[ends.length-1],days=periodDates(start,end).length;
- return {start,end,days,label:`${start.replaceAll('-','/')} ～ ${end.replaceAll('-','/')}`};
+ const missingDates=getKnownMissingDates().filter(d=>d>=start&&d<=end);
+ const aggregateDays=Math.max(0,days-missingDates.length);
+ return {start,end,days,aggregateDays,missingDates,label:`${start.replaceAll('-','/')} ～ ${end.replaceAll('-','/')}`};
 }
 function avgOverReportDays(value,rr=rows){
  const p=activePeriodInfo(rr);
- return value!=null&&p?.days?value/p.days:null;
+ return value!=null&&p?.aggregateDays?value/p.aggregateDays:null;
 }
 
 function aggregatePeriodFromRows(rr){
@@ -2452,7 +2458,10 @@ function renderAll(){
  const pb=$('#reportPeriodBanner');
  if(period){
    pb.hidden=false;
-   pb.innerHTML=`資料期間　<strong>${period.label}</strong>　・　${period.days} 天彙總<br><span style="font-weight:500;color:#7A8699">不把期間彙總反推成任何一天的實績。</span>`;
+   const miss=period.missingDates||[];
+   const missText=miss.length?`<br><span style="font-weight:700;color:#C45555">缺少 ${miss.map(d=>d.slice(5).replace('-','/')).join('、')}</span>`:'';
+   const dayText=miss.length?`期間 ${period.days} 天・實際彙總 <strong>${period.aggregateDays} 天</strong>`:`${period.aggregateDays} 天彙總`;
+   pb.innerHTML=`資料期間　<strong>${period.label}</strong>　・　${dayText}${missText}<br><span style="font-weight:500;color:#7A8699">日均＝期間總額 ÷ ${period.aggregateDays} 個實際彙總日；缺少日期不視為 0。</span>`;
    $('#ovSalesLabel').textContent='期間總營業額';
    $('#ovQtyLabel').textContent='期間總銷售量';
    $('#ovWasteLabel').textContent='期間報廢金額';
@@ -3062,7 +3071,7 @@ window.addEventListener('unhandledrejection', function(e){
 <script id="external-event-engine-v1-js">
 (function(){
   const $e=id=>document.getElementById(id);
-  const state={region:localStorage.getItem('opsEventRegion')||'屏東縣',events:[],historyEvents:[],lastSync:null,status:'idle',failedSources:[],transportUsage:new Set()};
+  const state={region:localStorage.getItem('opsEventRegion')||'屏東縣',events:[],historyEvents:[],lastSync:null,status:'idle',failedSources:[],transportUsage:new Set(),syncToken:0,syncTimer:null};
   const esc2=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const iso=d=>{const x=new Date(d);return isNaN(x)?'':`${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`};
   const money2=n=>Number.isFinite(Number(n))?'$'+Math.round(Number(n)).toLocaleString('zh-TW'):'—';
@@ -3207,24 +3216,37 @@ window.addEventListener('unhandledrejection', function(e){
   }
   function renderTimeline(){
     const box=$e('salesEventTimeline');if(!box)return;const days=analysisDates();if(!days.length){box.innerHTML='<div class="empty">匯入含日期範圍的報表後，這裡會自動標示節慶、歷史颱風與停班停課。</div>';return}const hm=historyByDate();
-    const display=days.map(x=>({...x,festival:festivalForDate(x.date),history:hm.get(iso(x.date))||[]})).filter(x=>x.festival||x.history.length||(x.hasSales&&x.baseline!=null&&Math.abs(x.delta)>=.30)).sort((a,b)=>b.date-a.date).slice(0,60);
+    const display=days.map(x=>({...x,festival:festivalForDate(x.date),history:hm.get(iso(x.date))||[]})).filter(x=>x.festival||x.history.length||(x.hasSales&&x.baseline!=null&&Math.abs(x.delta)>=.30)).sort((a,b)=>a.date-b.date).slice(0,60);
     if(!display.length){if(state.failedSources.length){box.innerHTML=`<div class="empty warn-empty">部分外部資料讀取失敗（${esc2(state.failedSources.join('、'))}），暫時無法完整判定這段期間是否有特殊事件。</div>`}else{box.innerHTML='<div class="empty">此資料期間沒有已辨識的特殊事件。</div>'}return}
     box.innerHTML=display.map(x=>{const day=iso(x.date),labels=[],classes=['event-day'];const ordered=[...x.history].sort((a,b)=>({closure:0,typhoon:1}[a.type]??9)-({closure:0,typhoon:1}[b.type]??9));ordered.forEach(e=>{labels.push(eventPin(e.name,e.type));classes.push(e.type)});if(x.festival){labels.push(eventPin(x.festival.name,'festival'));classes.push('festival')}if(!x.festival&&!x.history.length&&x.hasSales&&x.baseline!=null&&Math.abs(x.delta)>=.30)labels.push(eventPin(x.delta>0?'疑似特殊高峰':'疑似特殊低谷','peak'));if(!x.hasSales)return `<div class="${classes.join(' ')}"><div class="date">${day.slice(5).replace('-','/')}</div><div class="event-main"><div class="event-secondary">${labels.join('<span class="event-plus">＋</span>')}</div><small>事件日曆</small></div><div class="delta">—</div></div>`;const delta=x.baseline==null?'—':`${x.delta>=0?'+':''}${(x.delta*100).toFixed(1)}%`,deltaClass=x.delta>0?'up':x.delta<0?'down':'';return `<div class="${classes.join(' ')}"><div class="date">${day.slice(5).replace('-','/')}</div><div class="event-main"><div class="sales-primary"><strong>${money(x.sales)}</strong><span>營業額</span></div><div class="event-secondary">${labels.join('<span class="event-plus">＋</span>')}</div><small>${x.baseline!=null?`平常 ${money(x.baseline)}`:''}</small></div><div class="delta ${deltaClass}">${delta}</div></div>`}).join('');
   }
+  function scheduleExternalSync(delay=240){
+    if(state.syncTimer)clearTimeout(state.syncTimer);
+    state.syncTimer=setTimeout(()=>{state.syncTimer=null;syncExternalEvents()},delay);
+  }
   async function syncExternalEvents(){
     state.region=$e('eventRegion')?.value||state.region;localStorage.setItem('opsEventRegion',state.region);const range=analysisRange();renderTimeline();renderCards();if(!range){setStatus('warn','匯入含日期的報表後，會依該期間同步歷史事件');return}
+    const token=++state.syncToken;
     state.status='loading';state.failedSources=[];state.transportUsage=new Set();
-    setStatus('warn',`正在查 ${iso(range.start)}～${iso(range.end)} 的歷史節慶／颱風／停班停課…`);
-    const sourceNames=['颱風','停班停課'];
-    const tasks=[loadHistoricalTyphoons(range),loadHistoricalClosures(range)],res=await Promise.allSettled(tasks),history=[],okSources=[];
-    res.forEach((r,i)=>{if(r.status==='fulfilled'){history.push(...r.value);okSources.push(sourceNames[i])}else state.failedSources.push(sourceNames[i])});
+    // 節慶先由本機立即顯示；停班停課走後端優先回來；較慢的颱風資料在背景並行同步。
+    setStatus('warn',`正在查 ${iso(range.start)}～${iso(range.end)} 的停班停課；節慶已先顯示…`);
+    const closureP=loadHistoricalClosures(range),typhoonP=loadHistoricalTyphoons(range);
+    const closureR=await Promise.allSettled([closureP]);
+    if(token!==state.syncToken)return;
+    const history=[],okSources=[];
+    if(closureR[0].status==='fulfilled'){history.push(...closureR[0].value);okSources.push('停班停課')}else state.failedSources.push('停班停課');
+    state.historyEvents=history;renderCards();renderTimeline();
+    setStatus('warn',`${okSources.includes('停班停課')?'停班停課已完成':'停班停課讀取失敗'}；颱風資料背景同步中…`);
+    const typhoonR=await Promise.allSettled([typhoonP]);
+    if(token!==state.syncToken)return;
+    if(typhoonR[0].status==='fulfilled'){history.push(...typhoonR[0].value);okSources.push('颱風')}else state.failedSources.push('颱風');
     state.historyEvents=history;state.lastSync=new Date();state.status=state.failedSources.length?(okSources.length?'partial':'error'):'success';renderCards();renderTimeline();
     const via=[...state.transportUsage].join('＋')||'快取';
     if(state.status==='success')setStatus('ok',`資料已同步 · ${state.region} · ${via} · ${state.lastSync.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})}`);
     else if(state.status==='partial')setStatus('warn',`部分資料讀取失敗：${state.failedSources.join('、')} · 已成功：${okSources.join('、')||'無'} · ${via}`);
     else setStatus('bad',`外部資料讀取失敗：${state.failedSources.join('、')}。這不代表沒有事件；節慶日曆仍可使用。`);
   }
-  function init(){const sel=$e('eventRegion');if(!sel)return;if([...sel.options].some(o=>o.value===state.region))sel.value=state.region;$e('refreshExternalEvents')?.addEventListener('click',syncExternalEvents);sel.addEventListener('change',syncExternalEvents);renderTimeline();renderCards();syncExternalEvents();const old=window.renderAll;if(typeof old==='function'&&!old.__eventWrapped){const wrapped=function(){const r=old.apply(this,arguments);setTimeout(()=>{renderTimeline();renderCards();syncExternalEvents()},0);return r};wrapped.__eventWrapped=true;window.renderAll=wrapped}}
+  function init(){const sel=$e('eventRegion');if(!sel)return;if([...sel.options].some(o=>o.value===state.region))sel.value=state.region;$e('refreshExternalEvents')?.addEventListener('click',syncExternalEvents);sel.addEventListener('change',syncExternalEvents);renderTimeline();renderCards();scheduleExternalSync(30);const old=window.renderAll;if(typeof old==='function'&&!old.__eventWrapped){const wrapped=function(){const r=old.apply(this,arguments);renderTimeline();renderCards();scheduleExternalSync();return r};wrapped.__eventWrapped=true;window.renderAll=wrapped}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
