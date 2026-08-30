@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0B1220">
+<!-- 部署後把 content 填成解析 API，例如 https://opspilot-parser.onrender.com -->
+<meta name="opspilot-parser-api" content="https://opspilot-parser.onrender.com">
 <title>OpsPilot｜營運決策系統</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -1039,6 +1041,47 @@ function parseDelimited(text,name){
  const parsed=matrixToRecords(matrix);
  return parsed.records;
 }
+function getOpsPilotParserApi(){
+  const fromQuery=new URLSearchParams(location.search).get('parserApi');
+  if(fromQuery){
+    try{localStorage.setItem('opspilot_parser_api',fromQuery.replace(/\/$/,''))}catch{}
+    return fromQuery.replace(/\/$/,'');
+  }
+  let stored='';try{stored=localStorage.getItem('opspilot_parser_api')||''}catch{}
+  const meta=document.querySelector('meta[name="opspilot-parser-api"]')?.content||'';
+  return String(stored||meta||'').trim().replace(/\/$/,'');
+}
+
+async function parsePdfViaBackend(file){
+  const base=getOpsPilotParserApi();
+  if(!base)return null;
+  const ctrl=new AbortController();
+  const timer=setTimeout(()=>ctrl.abort(),75000);
+  try{
+    const fd=new FormData();fd.append('file',file,file.name||'upload.pdf');
+    const res=await fetch(base+'/parse-pdf',{method:'POST',body:fd,signal:ctrl.signal,mode:'cors'});
+    if(res.status===422)return null; // 後端尚未支援的 PDF，交回原本前端解析器。
+    if(!res.ok){
+      let msg='';try{const j=await res.json();msg=j?.detail||''}catch{}
+      throw new Error(msg||`後端 PDF 解析失敗（HTTP ${res.status}）`);
+    }
+    const payload=await res.json();
+    if(!payload?.ok||!Array.isArray(payload.rows)||!payload.rows.length)return null;
+    const rows=payload.rows;
+    const documentType=payload.documentType||'';
+    const reportType=documentType==='inventory_adjustment'?'庫存調整單':(payload.meta?.reportType||'');
+    Object.defineProperty(rows,'pdfMeta',{
+      value:{...(payload.meta||{}),sourceType:'pdf',parserSource:'backend-api',documentType,reportType},
+      enumerable:false,configurable:true
+    });
+    return rows;
+  }catch(err){
+    window.__opsParserApiLastError=String(err?.name==='AbortError'?'後端解析逾時':(err?.message||err));
+    console.warn('OpsPilot parser API fallback:',err);
+    return null;
+  }finally{clearTimeout(timer)}
+}
+
 async function parseFile(file){
   const name=file.name||'';
   const ext=detectFileKind(file);
@@ -1047,7 +1090,10 @@ async function parseFile(file){
   }
 
   if(ext==='pdf'){
-    const result=await parseSalesPdf(file);
+    // Product path: server-side parser first (stable across iPhone/Safari/Desktop),
+    // then preserve the existing browser parser as a fallback.
+    const apiResult=await parsePdfViaBackend(file);
+    const result=apiResult||await parseSalesPdf(file);
     Object.defineProperty(result,'importMeta',{
       value:{...(result.pdfMeta||{}),sourceType:'pdf',sourceFile:name},
       enumerable:false,
