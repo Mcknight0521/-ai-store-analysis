@@ -858,6 +858,65 @@ async function parseDailyItemSalesPdf(pages,fileName){
       });
     }
   }
+  // Rotation-independent fallback:
+  // In this report PDF.js may expose the SKU/name and the numeric metrics as separate text lines.
+  // Remember the latest "6-digit SKU + Chinese item name", then attach the following
+  // "department detail N/P + 11 metrics" row. This does not depend on X/Y coordinates.
+  if(!rows.length){
+    for(const lines of pages){
+      let pendingSku='', pendingItem='';
+      for(let i=0;i<lines.length;i++){
+        const line=clean(lines[i]);
+
+        const skuLine=line.match(/^(\d{6})\s+(.+)$/);
+        if(skuLine){
+          pendingSku=skuLine[1];
+          pendingItem=clean(skuLine[2]);
+
+          // Join a short Chinese continuation line, but never English/header/numeric lines.
+          const next=clean(lines[i+1]||'');
+          if(next &&
+             !/^\d{6}\s+/.test(next) &&
+             !/^\d{1,3}\s+\d{3}\s+[NP]\s+/i.test(next) &&
+             !/^(小分類|部門|單品編號|每日銷售報表|店\s*[:：])/.test(next) &&
+             !/^[A-Za-z]/.test(next) &&
+             next.length<=32){
+            pendingItem=clean(pendingItem+next);
+          }
+          continue;
+        }
+
+        const tx=line.match(
+          /^(\d{1,3})\s+(\d{3})\s+([NP])\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)\s+(-?[\d,.]+)$/i
+        );
+        if(!tx || !pendingSku || !pendingItem) continue;
+
+        const np=tx[3].toUpperCase();
+        const qty=toNum(tx[4])??0;
+        const salesEx=toNum(tx[5])??0;
+        const tax=toNum(tx[6])??0;
+        const salesInc=toNum(tx[7])??0;
+        const margin=toNum(tx[8]);
+        const commercial=toNum(tx[9]);
+        const inventory=toNum(tx[10]);
+        const nearExpiryQty=toNum(tx[11])??0;
+        const nearExpiryAmt=toNum(tx[12])??0;
+        const markdownQty=toNum(tx[13])??0;
+        const markdownAmt=toNum(tx[14])??0;
+
+        rows.push({
+          date:startDate && endDate && startDate.getTime()===endDate.getTime() ? startDate : null,
+          periodStart:startDate,periodEnd:endDate,store,
+          sku:pendingSku,item:pendingItem,qty,sales:salesInc,salesExTax:salesEx,tax,
+          grossMargin:margin,commercialReturn:commercial,inventory,
+          nearExpiryQty,nearExpiryAmt,markdownQty,markdownAmt,
+          clearance:nearExpiryAmt+markdownAmt,waste:0,npType:np,
+          sourceType:'pdf-daily-item-sales',sourceFile:fileName
+        });
+      }
+    }
+  }
+
   if(!rows.length && window.__opsPdfDoc){
     for(let p=1;p<=window.__opsPdfDoc.numPages;p++){
       const page=await window.__opsPdfDoc.getPage(p);
@@ -928,7 +987,7 @@ async function parseDailyItemSalesPdf(pages,fileName){
   }
 
   if(!rows.length){
-    throw new Error('PDF 文字可以讀取，但目前沒有安全地解析出單品明細。');
+    throw new Error('PDF 文字已讀取，但三種表格解析方式都未取得明細。');
   }
 
   // The same product commonly appears in separate N/P rows. Merge them to one product record
