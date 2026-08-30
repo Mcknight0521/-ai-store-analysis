@@ -1163,70 +1163,90 @@ function groupPdfItemsIntoLines(items,tolerance=2.6){
 }
 function parseInventoryAdjustmentPdf(rawPages,fileName,reportPeriod){
   const clean=s=>String(s??'').replace(/\u00a0/g,' ').replace(/[−–—]/g,'-').replace(/\s+/g,' ').trim();
-  const num='-?[\\d,]+(?:\\.\\d+)?';
-  const rowRe=new RegExp('^20\\s+(\\d{6})\\s+(.+?)\\s+(\\d{3})\\s+([YN])\\s+('+num+')\\s+('+num+')\\s+('+num+')\\s+('+num+')\\s+([YN])\\s+('+num+')\\s+(F\\d+)\\s+(\\d{2}\\/\\d{2}\\/\\d{4})\\s+(\\d{2}\\/\\d{2}\\/\\d{4})$');
   const toN=v=>{const n=Number(String(v).replace(/,/g,''));return Number.isFinite(n)?n:null};
-  const rows=[];let rawTransactionCount=0;const reasons=new Set();
+  const isNum=s=>/^-?[\d,]+(?:\.\d+)?$/.test(clean(s));
+  const isDate=s=>/^\d{2}\/\d{2}\/\d{4}$/.test(clean(s));
+  const rows=[];const seen=new Set();let rawTransactionCount=0;const reasons=new Set();
+
+  const pushParsed=(o,reason)=>{
+    if(!o||!o.sku||!o.adjustDate||o.adjustmentQty==null||o.unitCost==null)return false;
+    const key=[o.sku,o.ref||'',o.adjustDate,o.postDate||'',o.adjustmentQty,o.stockBefore,o.stockAfter].join('|');
+    if(seen.has(key))return false;seen.add(key);
+    const adjustmentAmount=Math.round(o.unitCost*o.adjustmentQty*100)/100;
+    const isLossReason=/Breakage|Expiry/i.test(reason||'');
+    rows.push({
+      date:isoLocalDate(parseDmyDateStrict(o.adjustDate))||o.adjustDate,
+      sku:o.sku,item:clean(o.item||''),qty:null,sales:null,
+      waste:isLossReason?Math.round((-adjustmentAmount)*100)/100:null,clearance:null,
+      periodStart:reportPeriod?.start||null,periodEnd:reportPeriod?.end||null,printDate:reportPeriod?.printDate||null,
+      adjustmentReason:reason||'未辨識',adjustmentQty:o.adjustmentQty,adjustmentAmount,
+      unitCost:o.unitCost,stockBefore:o.stockBefore,stockAfter:o.stockAfter,
+      detailCode:o.detail||'',partnership:o.partnership||'',clearanceFlag:o.clearanceFlag||'',diffPct:o.diffPct,
+      ref:o.ref||'',postDate:isoLocalDate(parseDmyDateStrict(o.postDate))||o.postDate||'',
+      sourceType:'pdf-inventory-adjustment',sourceFile:fileName
+    });
+    return true;
+  };
 
   for(const page of (rawPages||[])){
     const pageText=(page.items||[]).map(x=>clean(x.text)).join(' ');
     let reason='';
-    const reasonHit=pageText.match(/(?:調整原因\s*)?([A-Z]-[A-Za-z][A-Za-z-]*)/);
+    const reasonHit=pageText.match(/(?:調整\s*原因\s*)?([A-Z]-[A-Za-z][A-Za-z-]*)/);
     if(reasonHit)reason=reasonHit[1];
     if(reason)reasons.add(reason);
 
-    const lines=groupPdfItemsIntoLines(page.items);
-    for(const line of lines){
-      const text=clean(line.text);
-      if(/^20\s+\d{6}\s+/.test(text))rawTransactionCount++;
-      const m=text.match(rowRe);if(!m)continue;
-      const [,sku,item,detail,partnership,unitCost0,stockBefore0,stockAfter0,adjQty0,clearanceFlag,diffPct0,ref,adjustDate,postDate]=m;
-      const unitCost=toN(unitCost0),stockBefore=toN(stockBefore0),stockAfter=toN(stockAfter0),adjustmentQty=toN(adjQty0),diffPct=toN(diffPct0);
-      if(unitCost==null||adjustmentQty==null)continue;
-      const adjustmentAmount=Math.round(unitCost*adjustmentQty*100)/100;
-      const isLossReason=/Breakage|Expiry/i.test(reason);
-      // Loss analytics use positive values for write-offs and negative values for reversals/corrections.
-      const waste=isLossReason?Math.round((-adjustmentAmount)*100)/100:null;
-      rows.push({
-        date:isoLocalDate(parseDmyDateStrict(adjustDate))||adjustDate,
-        sku,
-        item:clean(item),
-        qty:null,
-        sales:null,
-        waste,
-        clearance:null,
-        periodStart:reportPeriod?.start||null,
-        periodEnd:reportPeriod?.end||null,
-        printDate:reportPeriod?.printDate||null,
-        adjustmentReason:reason||'未辨識',
-        adjustmentQty,
-        adjustmentAmount,
-        unitCost,
-        stockBefore,
-        stockAfter,
-        detailCode:detail,
-        partnership,
-        clearanceFlag,
-        diffPct,
-        ref,
-        postDate:isoLocalDate(parseDmyDateStrict(postDate))||postDate,
-        sourceType:'pdf-inventory-adjustment',
-        sourceFile:fileName
-      });
+    // Primary parser: reconstruct each transaction from items sharing the SKU baseline.
+    // This works even when PDF.js splits one visual row into many independent text objects.
+    const items=(page.items||[]).map(x=>({...x,text:clean(x.text)})).filter(x=>x.text);
+    const skuItems=items.filter(x=>/^\d{6}$/.test(x.text));
+    rawTransactionCount+=skuItems.length;
+    for(const skuIt of skuItems){
+      let parsed=false;
+      for(const tol of [2.6,4.5,7.0]){
+        const line=items.filter(x=>Math.abs(x.y-skuIt.y)<=tol).sort((a,b)=>a.x-b.x);
+        let toks=line.map(x=>x.text).filter(Boolean);
+        const si=toks.findIndex(t=>t===skuIt.text);
+        if(si<0)continue;
+        toks=toks.slice(Math.max(0,si-1));
+        // Locate the structural anchors instead of assuming the product name is one text item.
+        const skuIdx=toks.findIndex(t=>t===skuIt.text);
+        const detailIdx=toks.findIndex((t,i)=>i>skuIdx&&/^\d{3}$/.test(t));
+        if(detailIdx<0)continue;
+        const partIdx=toks.findIndex((t,i)=>i>detailIdx&&/^[YN]$/.test(t));
+        if(partIdx<0)continue;
+        const refIdx=toks.findIndex((t,i)=>i>partIdx&&/^F\d{6,}$/.test(t));
+        if(refIdx<0)continue;
+        const dates=[];for(let i=refIdx+1;i<toks.length;i++)if(isDate(toks[i]))dates.push(toks[i]);
+        if(dates.length<2)continue;
+        const nums=[];for(let i=partIdx+1;i<refIdx;i++)if(isNum(toks[i]))nums.push(toks[i]);
+        // Expected numeric block: unit cost, stock before, stock after, adjustment qty, diff %.
+        if(nums.length<5)continue;
+        const unitCost=toN(nums[0]),stockBefore=toN(nums[1]),stockAfter=toN(nums[2]),adjustmentQty=toN(nums[3]),diffPct=toN(nums[nums.length-1]);
+        const flag=toks.slice(partIdx+1,refIdx).find(t=>/^[YN]$/.test(t))||'';
+        const item=toks.slice(skuIdx+1,detailIdx).join(' ');
+        parsed=pushParsed({sku:skuIt.text,item,detail:toks[detailIdx],partnership:toks[partIdx],unitCost,stockBefore,stockAfter,adjustmentQty,clearanceFlag:flag,diffPct,ref:toks[refIdx],adjustDate:dates[0],postDate:dates[1]},reason);
+        if(parsed)break;
+      }
+    }
+
+    // Secondary parser: relaxed whole-line reconstruction for PDFs that already combine cells.
+    const num='-?[\\d,]+(?:\\.\\d+)?';
+    const rowRe=new RegExp('(?:^|\\s)20\\s+(\\d{6})\\s+(.+?)\\s+(\\d{3})\\s+([YN])\\s+('+num+')\\s+('+num+')\\s+('+num+')\\s+('+num+')\\s+([YN])\\s+('+num+')\\s+(F\\d{6,})\\s+(\\d{2}\\/\\d{2}\\/\\d{4})\\s+(\\d{2}\\/\\d{2}\\/\\d{4})(?:\\s|$)');
+    for(const tol of [2.6,4.5,7.0]){
+      for(const line of groupPdfItemsIntoLines(page.items,tol)){
+        const text=clean(line.text),m=text.match(rowRe);if(!m)continue;
+        const [,sku,item,detail,partnership,unitCost0,stockBefore0,stockAfter0,adjQty0,clearanceFlag,diffPct0,ref,adjustDate,postDate]=m;
+        pushParsed({sku,item,detail,partnership,unitCost:toN(unitCost0),stockBefore:toN(stockBefore0),stockAfter:toN(stockAfter0),adjustmentQty:toN(adjQty0),clearanceFlag,diffPct:toN(diffPct0),ref,adjustDate,postDate},reason);
+      }
     }
   }
 
   if(!rows.length)return [];
   const coverage=rawTransactionCount?rows.length/rawTransactionCount:1;
-  if(rawTransactionCount>=10&&coverage<0.75)return [];
-  const meta={
-    parser:'inventory-adjustment-detail',
-    reportType:'庫存調整單',
-    parsedTransactions:rows.length,
-    rawTransactionCount,
-    coverage,
-    adjustmentReasons:[...reasons]
-  };
+  // Do not reject a readable inventory-adjustment PDF merely because decorative/layout rows
+  // make exact coverage imperfect. Core transaction fields are validated row-by-row above.
+  if(rawTransactionCount>=20&&coverage<0.35)return [];
+  const meta={parser:'inventory-adjustment-detail-v2',reportType:'庫存調整單',sourceType:'pdf',parsedTransactions:rows.length,rawTransactionCount,coverage,adjustmentReasons:[...reasons]};
   Object.defineProperty(rows,'pdfMeta',{value:meta,enumerable:false,configurable:true});
   return rows;
 }
@@ -1268,11 +1288,11 @@ async function parseSalesPdf(file){
 
   const reportPeriod=extractReportPeriod(rawPages);
   const looksLikeInventoryAdjustment=
-    /庫存調整單/.test(searchableText) &&
-    /調整原因/.test(searchableText) &&
-    /調整量/.test(searchableText) &&
-    /Ref\s*#/.test(searchableText) &&
-    /單品編號/.test(searchableText);
+    /庫存\s*調整\s*單/.test(searchableText) &&
+    /調整\s*原因/.test(searchableText) &&
+    /調整\s*量/.test(searchableText) &&
+    /單品\s*編號/.test(searchableText) &&
+    (/Ref\s*#?/i.test(searchableText)||/F\d{6,}/.test(searchableText));
 
   if(looksLikeInventoryAdjustment){
     const adjustmentRows=parseInventoryAdjustmentPdf(rawPages,file.name,reportPeriod);
