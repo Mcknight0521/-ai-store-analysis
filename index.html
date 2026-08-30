@@ -638,6 +638,7 @@ function findMapping(headers){
 }
 function toNum(v){if(v==null||v==='')return null;const n=Number(String(v).replace(/[$,%\s,]/g,''));return Number.isFinite(n)?n:null}
 function toDate(v){
+ if(v==null||v===''||String(v).trim()==='')return null;
  if(v instanceof Date&&!isNaN(v))return v;
  if(typeof v==='number'&&window.XLSX){const p=XLSX.SSF.parse_date_code(v);if(p)return new Date(p.y,p.m-1,p.d)}
  const d=new Date(v);return isNaN(d)?null:d
@@ -979,17 +980,49 @@ async function parseSalesPdf(file){
     /銷售額/.test(searchableText);
 
   if(looksLikeDailyItem){
-    const parsed=parseDailyItemByLayout(rawPages,file.name);
-    if(parsed.length) return parsed;
+    const rawSkuCount=new Set(
+      rawPages.flatMap(p=>(p.items||[]).map(i=>String(i.text||'').trim()))
+        .filter(t=>/^\d{6}$/.test(t))
+    ).size;
 
-    const stream=parseDailyItemByTokenStream(rawPages,file.name);
-    if(stream.length) return stream;
+    const candidates=[
+      parseDailyItemByLayout(rawPages,file.name),
+      parseDailyItemByGeometryFallback(rawPages,file.name),
+      parseDailyItemByTokenStream(rawPages,file.name)
+    ].filter(x=>Array.isArray(x)&&x.length);
 
-    const fallback=parseDailyItemByGeometryFallback(rawPages,file.name);
-    if(fallback.length) return fallback;
+    const scoreCandidate=rows=>{
+      const products=rows.length;
+      const coverage=rawSkuCount?products/rawSkuCount:0;
+      const salesVals=rows.map(r=>r.sales).filter(v=>Number.isFinite(Number(v))).map(Number);
+      const qtyVals=rows.map(r=>r.qty).filter(v=>Number.isFinite(Number(v))).map(Number);
+      const clearanceVals=rows.map(r=>r.clearance).filter(v=>Number.isFinite(Number(v))).map(Number);
+      const positiveSales=salesVals.filter(v=>v>0).length/Math.max(1,salesVals.length);
+      const nonNegativeClearance=clearanceVals.filter(v=>v>=0).length/Math.max(1,clearanceVals.length);
+      const parser=rows.pdfMeta?.parser||'unknown';
+      // Coverage is the primary trust signal. A parser that finds 29 rows out of hundreds
+      // must not beat a parser that reconstructs nearly the whole report.
+      const score=coverage*1000 + Math.min(products,500) + positiveSales*80 + nonNegativeClearance*40
+        + (parser.includes('layout')?20:0) + (parser.includes('geometry')?15:0);
+      return {rows,products,coverage,positiveSales,nonNegativeClearance,score,parser};
+    };
+
+    const ranked=candidates.map(scoreCandidate).sort((a,b)=>b.score-a.score);
+    const best=ranked[0];
+
+    // For a multi-page retail item report, low SKU coverage is unsafe even if a few rows
+    // accidentally satisfy numeric checks. Refuse wrong analysis instead of showing false totals.
+    const minCoverage=rawSkuCount>=40?0.45:0.25;
+    if(best && best.coverage>=minCoverage && best.nonNegativeClearance>=0.98){
+      Object.defineProperty(best.rows,'pdfQuality',{
+        value:{rawSkuCount,coverage:best.coverage,parser:best.parser},
+        enumerable:false,configurable:true
+      });
+      return best.rows;
+    }
   }
 
-  throw new Error('PDF 文字已讀取，但目前無法可靠重建表格。這份檔案不會被拿去猜測分析。');
+  throw new Error('PDF 文字已讀取，但表格重建完整度不足；系統已阻止錯誤數字進入分析。');
 }
 
 
@@ -1060,6 +1093,7 @@ function parseDailyItemByTokenStream(rawPages,fileName){
 
       const [qty,salesEx,tax,sales,margin,commercial,inventory,nearQty,nearAmt,markdownQty,markdownAmt]=nums;
       if([qty,salesEx,tax,sales].some(v=>v==null))continue;
+      if([nearQty,nearAmt,markdownQty,markdownAmt].some(v=>v!=null&&v<0))continue;
 
       // Accounting relationship is the strongest safety check in this report.
       if(Math.abs((salesEx+tax)-sales)>Math.max(2,Math.abs(sales)*0.025))continue;
@@ -1164,6 +1198,7 @@ function parseDailyItemByGeometryFallback(rawPages,fileName){
 
             const [qty,salesEx,tax,sales,margin,commercial,inventory,nearQty,nearAmt,markdownQty,markdownAmt]=nums.map(x=>x.value);
             if([qty,salesEx,tax,sales].some(v=>v==null))continue;
+            if([nearQty,nearAmt,markdownQty,markdownAmt].some(v=>v!=null&&v<0))continue;
 
             // Strong accounting validation: untaxed + tax should reconstruct tax-inclusive sales.
             if(Math.abs((salesEx+tax)-sales)>Math.max(2,Math.abs(sales)*0.025))continue;
@@ -1712,10 +1747,18 @@ async function handleFiles(files){
   const sourceType=[...window.__opsImportContext.sourceTypes].join('+');
   let candidate=analyzeImportCandidate(staged,sourceType);
   const canonicalKeys=['date','sku','item','qty','sales','waste','clearance'];
-  const canonicalPresent=canonicalKeys.filter(k=>staged.some(r=>Object.prototype.hasOwnProperty.call(r,k)));
-  if(canonicalPresent.length>=2){
+  const hasRealCanonicalValue=(r,k)=>{
+    if(!Object.prototype.hasOwnProperty.call(r,k))return false;
+    const v=r[k];
+    if(k==='date')return !!toDate(v);
+    if(['qty','sales','waste','clearance'].includes(k))return v!=null&&v!==''&&Number.isFinite(Number(v));
+    return String(v??'').trim()!=='';
+  };
+  const canonicalPresent=canonicalKeys.filter(k=>staged.some(r=>hasRealCanonicalValue(r,k)));
+  if(canonicalPresent.length){
     const exact={...candidate.map};
     for(const k of canonicalPresent)exact[k]=k;
+    for(const k of canonicalKeys)if(!canonicalPresent.includes(k)&&exact[k]===k)delete exact[k];
     candidate={...candidate,map:exact};
   }
   Object.assign(window.__opsImportContext,{
