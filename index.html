@@ -3211,14 +3211,32 @@ window.addEventListener('unhandledrejection', function(e){
 
   function allowedHistoryEvent(e){return !!e&&['closure','typhoon'].includes(e.type)}
   function historyByDate(){const map=new Map();(state.historyEvents||[]).filter(allowedHistoryEvent).forEach(e=>{if(!map.has(e.date))map.set(e.date,[]);map.get(e.date).push(e)});return map}
+  function normalizeClosureScope(scope){
+    const s=String(scope||'').toLowerCase();
+    if(['partial','part','local','district'].includes(s))return 'partial';
+    if(['full','all','countywide','citywide'].includes(s))return 'full';
+    return '';
+  }
+  function closureDisplayName(e){
+    const scope=normalizeClosureScope(e?.scope);
+    if(scope==='partial')return `${state.region}｜部分地區停班停課`;
+    if(scope==='full')return `${state.region}｜全縣停班停課`;
+    return `${state.region}｜停班停課`;
+  }
   function groupHistory(type){
     const arr=(state.historyEvents||[]).filter(allowedHistoryEvent).filter(x=>x.type===type).sort((a,b)=>a.date.localeCompare(b.date)),groups=[];
-    arr.forEach(e=>{const last=groups[groups.length-1];if(last&&last.name===e.name&&iso(addDays(last.end,1))===e.date){last.end=new Date(e.date);last.days++}else groups.push({name:e.name,start:new Date(e.date),end:new Date(e.date),days:1,detail:e.detail,source:e.source})});return groups;
+    arr.forEach(e=>{
+      const scope=type==='closure'?normalizeClosureScope(e.scope):'';
+      const groupName=type==='closure'?closureDisplayName(e):e.name;
+      const last=groups[groups.length-1];
+      if(last&&last.name===groupName&&last.scope===scope&&iso(addDays(last.end,1))===e.date){last.end=new Date(e.date);last.days++}
+      else groups.push({name:groupName,start:new Date(e.date),end:new Date(e.date),days:1,detail:e.detail,source:e.source,scope});
+    });return groups;
   }
   function renderCards(){
     const box=$e('externalEventCards');if(!box)return;const cards=[],groups=festivalGroups();groups.forEach(g=>cards.push(`<div class="event-card festival"><span class="tag">${eventPin('節慶','festival')}</span><h4>${g.name}</h4><p>${g.start.slice(5).replace('-','/')}－${g.end.slice(5).replace('-','/')}</p><strong>${g.days} 天</strong></div>`));
     groupHistory('typhoon').forEach(g=>cards.push(`<div class="event-card typhoon"><span class="tag">${eventPin('颱風','typhoon')}</span><h4>${esc2(g.name)}</h4><p>${iso(g.start).slice(5).replace('-','/')}－${iso(g.end).slice(5).replace('-','/')}</p><strong>${g.days} 天</strong><small class="source-note">${esc2(g.source)}</small></div>`));
-    groupHistory('closure').forEach(g=>cards.push(`<div class="event-card closure"><span class="tag">${eventPin('停班停課','closure')}</span><h4>${esc2(state.region)}停班停課</h4><p>${iso(g.start).slice(5).replace('-','/')}${g.days>1?'－'+iso(g.end).slice(5).replace('-','/') : ''}</p><strong>${g.days} 天</strong><small class="source-note">${esc2(g.source)}</small></div>`));
+    groupHistory('closure').forEach(g=>cards.push(`<div class="event-card closure"><span class="tag">${eventPin(g.scope==='partial'?'部分地區停班停課':g.scope==='full'?'全縣停班停課':'停班停課','closure')}</span><h4>${esc2(g.name)}</h4><p>${iso(g.start).slice(5).replace('-','/')}${g.days>1?'－'+iso(g.end).slice(5).replace('-','/') : ''}</p><strong>${g.days} 天</strong>${g.scope==='partial'?'<small class="source-note">僅部分行政區域，不代表全縣停班停課</small>':''}<small class="source-note">${esc2(g.source)}</small></div>`));
     const peaks=buildDailySales().filter(x=>Math.abs(x.delta)>=.30).length;if(peaks)cards.push(`<div class="event-card peak"><span class="tag">${eventPin('高峰偵測','peak')}</span><h4>${peaks} 個明顯偏離日</h4><p>相較同星期基準偏離 ±30% 以上。</p><strong>${peaks} 天</strong></div>`);
     if(cards.length){box.innerHTML=cards.join('');return}if(state.failedSources.length){box.innerHTML=`<div class="empty warn-empty">部分外部資料讀取失敗（${esc2(state.failedSources.join('、'))}），目前不能判定為「無特殊事件」。節慶日曆仍正常。</div>`;return}box.innerHTML='<div class="empty">此資料期間沒有已辨識的特殊事件。</div>';
   }
@@ -3226,7 +3244,7 @@ window.addEventListener('unhandledrejection', function(e){
     const box=$e('salesEventTimeline');if(!box)return;const days=analysisDates();if(!days.length){box.innerHTML='<div class="empty">匯入含日期範圍的報表後，這裡會自動標示節慶、歷史颱風與停班停課。</div>';return}const hm=historyByDate();
     const display=days.map(x=>({...x,festival:festivalForDate(x.date),history:hm.get(iso(x.date))||[]})).filter(x=>x.festival||x.history.length||(x.hasSales&&x.baseline!=null&&Math.abs(x.delta)>=.30)).sort((a,b)=>a.date-b.date).slice(0,60);
     if(!display.length){if(state.failedSources.length){box.innerHTML=`<div class="empty warn-empty">部分外部資料讀取失敗（${esc2(state.failedSources.join('、'))}），暫時無法完整判定這段期間是否有特殊事件。</div>`}else{box.innerHTML='<div class="empty">此資料期間沒有已辨識的特殊事件。</div>'}return}
-    box.innerHTML=display.map(x=>{const day=iso(x.date),labels=[],classes=['event-day'];const ordered=[...x.history].sort((a,b)=>({closure:0,typhoon:1}[a.type]??9)-({closure:0,typhoon:1}[b.type]??9));ordered.forEach(e=>{labels.push(eventPin(e.name,e.type));classes.push(e.type)});if(x.festival){labels.push(eventPin(x.festival.name,'festival'));classes.push('festival')}if(!x.festival&&!x.history.length&&x.hasSales&&x.baseline!=null&&Math.abs(x.delta)>=.30)labels.push(eventPin(x.delta>0?'疑似特殊高峰':'疑似特殊低谷','peak'));if(!x.hasSales)return `<div class="${classes.join(' ')}"><div class="date">${day.slice(5).replace('-','/')}</div><div class="event-main"><div class="event-secondary">${labels.join('<span class="event-plus">＋</span>')}</div><small>事件日曆</small></div><div class="delta">—</div></div>`;const delta=x.baseline==null?'—':`${x.delta>=0?'+':''}${(x.delta*100).toFixed(1)}%`,deltaClass=x.delta>0?'up':x.delta<0?'down':'';return `<div class="${classes.join(' ')}"><div class="date">${day.slice(5).replace('-','/')}</div><div class="event-main"><div class="sales-primary"><strong>${money(x.sales)}</strong><span>營業額</span></div><div class="event-secondary">${labels.join('<span class="event-plus">＋</span>')}</div><small>${x.baseline!=null?`平常 ${money(x.baseline)}`:''}</small></div><div class="delta ${deltaClass}">${delta}</div></div>`}).join('');
+    box.innerHTML=display.map(x=>{const day=iso(x.date),labels=[],classes=['event-day'];const ordered=[...x.history].sort((a,b)=>({closure:0,typhoon:1}[a.type]??9)-({closure:0,typhoon:1}[b.type]??9));ordered.forEach(e=>{const label=e.type==='closure'?closureDisplayName(e):e.name;labels.push(eventPin(label,e.type));classes.push(e.type)});if(x.festival){labels.push(eventPin(x.festival.name,'festival'));classes.push('festival')}if(!x.festival&&!x.history.length&&x.hasSales&&x.baseline!=null&&Math.abs(x.delta)>=.30)labels.push(eventPin(x.delta>0?'疑似特殊高峰':'疑似特殊低谷','peak'));if(!x.hasSales)return `<div class="${classes.join(' ')}"><div class="date">${day.slice(5).replace('-','/')}</div><div class="event-main"><div class="event-secondary">${labels.join('<span class="event-plus">＋</span>')}</div><small>事件日曆</small></div><div class="delta">—</div></div>`;const delta=x.baseline==null?'—':`${x.delta>=0?'+':''}${(x.delta*100).toFixed(1)}%`,deltaClass=x.delta>0?'up':x.delta<0?'down':'';return `<div class="${classes.join(' ')}"><div class="date">${day.slice(5).replace('-','/')}</div><div class="event-main"><div class="sales-primary"><strong>${money(x.sales)}</strong><span>營業額</span></div><div class="event-secondary">${labels.join('<span class="event-plus">＋</span>')}</div><small>${x.baseline!=null?`平常 ${money(x.baseline)}`:''}</small></div><div class="delta ${deltaClass}">${delta}</div></div>`}).join('');
   }
   function eventPromiseTimeout(promise,ms,label){
     let timer;
@@ -3245,8 +3263,9 @@ window.addEventListener('unhandledrejection', function(e){
       const [closures,typhoons]=await Promise.all([loadHistoricalClosures(range,force),loadHistoricalTyphoons(range,force)]);
       if(token!==state.syncToken)return;
       state.historyEvents=[...closures,...typhoons];state.lastSync=new Date();state.status='success';renderCards();renderTimeline();
-      const c=closures.length,t=typhoons.length;
-      setStatus('ok',`官方資料已載入 · ${state.region} · 停班停課 ${c} 筆 · 颱風 ${t} 筆`);
+      const c=closures.length,t=typhoons.length,partial=closures.filter(e=>normalizeClosureScope(e.scope)==='partial').length,full=closures.filter(e=>normalizeClosureScope(e.scope)==='full').length;
+      const closureBreakdown=c?`（${full?`全縣 ${full}`:''}${full&&partial?'、':''}${partial?`部分地區 ${partial}`:''}${!full&&!partial?'範圍未標示':''}）`:'';
+      setStatus('ok',`官方資料已載入 · ${state.region} · 停班停課 ${c} 筆${closureBreakdown} · 颱風 ${t} 筆`);
     }catch(e){
       if(token!==state.syncToken)return;state.failedSources=['官方事件資料'];state.status='error';renderCards();renderTimeline();setStatus('bad',`官方事件資料暫時無法載入：${e?.message||'連線失敗'}。節慶日曆仍正常。`);
     }
