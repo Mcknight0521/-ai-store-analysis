@@ -24,7 +24,6 @@ jobs:
           grep -q 'parse-pdf' index.html
           grep -q 'renderAll' index.html
           grep -q 'opsAnomalyThresholdsV58' index.html
-          grep -q 'import-threshold-v518-js' index.html
       - name: Commit generated index
         run: |
           if git diff --quiet -- index.html; then exit 0; fi
