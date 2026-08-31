@@ -1,0 +1,37 @@
+name: Apply loss split v4.9
+
+on:
+  push:
+    paths:
+      - 'scripts/patch_loss_split_v49.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-loss-split-v49
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Patch loss split UI
+        run: python scripts/patch_loss_split_v49.py
+      - name: Commit patched index
+        run: |
+          if git diff --quiet -- index.html; then
+            echo "No index changes"
+            exit 0
+          fi
+          git config user.name "opspilot-loss-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html
+          git commit -m "Add clearance waste split and interval Top 10"
+          git push
