@@ -3163,9 +3163,11 @@ window.addEventListener('unhandledrejection', function(e){
   let officialEventRequest=null;
   async function loadOfficialHistory(range,force=false){
     if(!range)return {events:[],meta:{}};
-    const start=iso(range.start),end=iso(range.end),key=`opsOfficialEventsV42:${state.region}:${start}:${end}`;
-    const cached=force?null:cacheGet(key,24*3600e3);
-    if(cached){state.transportUsage.add('官方事件快取');return cached;}
+    const start=iso(range.start),end=iso(range.end),key=`opsOfficialEventsV44:${state.region}:${start}:${end}`;
+    // v4.4 event-store data supersedes the older cached empty responses.
+    // Keep the cache short so newly synced official events appear promptly.
+    const cached=force?null:cacheGet(key,15*60e3);
+    if(cached && Array.isArray(cached.events)){state.transportUsage.add('官方事件快取');return cached;}
     const base=(typeof getOpsPilotParserApi==='function'?getOpsPilotParserApi():'').replace(/\/$/,'');
     if(!base)throw new Error('尚未設定 OpsPilot Parser API');
     const reqKey=`${state.region}|${start}|${end}`;
@@ -3176,7 +3178,13 @@ window.addEventListener('unhandledrejection', function(e){
         const r=await fetch(`${base}/history-events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&region=${encodeURIComponent(state.region)}`,{cache:'no-store',signal:ctrl.signal});
         let j=null;try{j=await r.json()}catch{}
         if(!r.ok)throw new Error(typeof j?.detail==='string'?j.detail:`HTTP ${r.status}`);
-        const result={events:Array.isArray(j?.events)?j.events:[],meta:j?.meta||{}};
+        const events=Array.isArray(j?.events)?j.events:[];
+        // Normalize the backend response before it reaches the UI. This prevents
+        // stale/malformed cached payloads from being shown as a successful zero-event load.
+        const result={
+          events:events.filter(e=>e&&['closure','typhoon'].includes(e.type)&&typeof e.date==='string'),
+          meta:{...(j?.meta||{}),updatedAt:j?.updatedAt||j?.meta?.updatedAt||null}
+        };
         cacheSet(key,result);state.transportUsage.add('OpsPilot 官方事件庫');return result;
       }catch(e){if(e?.name==='AbortError')throw new Error('官方事件資料服務連線逾時');throw e}
       finally{clearTimeout(timer)}
@@ -3244,7 +3252,10 @@ window.addEventListener('unhandledrejection', function(e){
     }
   }
 
-  function init(){const sel=$e('eventRegion');if(!sel)return;if([...sel.options].some(o=>o.value===state.region))sel.value=state.region;sel.addEventListener('change',syncExternalEvents);renderTimeline();renderCards();scheduleExternalSync(30);const old=window.renderAll;if(typeof old==='function'&&!old.__eventWrapped){const wrapped=function(){const r=old.apply(this,arguments);renderTimeline();renderCards();scheduleExternalSync();return r};wrapped.__eventWrapped=true;window.renderAll=wrapped}}
+  function init(){
+    // Remove stale pre-v4.4 official-event cache entries that may contain the old 0-event response.
+    try{for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&k.startsWith('opsOfficialEventsV42:'))localStorage.removeItem(k)}}catch{}
+    const sel=$e('eventRegion');if(!sel)return;if([...sel.options].some(o=>o.value===state.region))sel.value=state.region;sel.addEventListener('change',()=>syncExternalEvents(true));renderTimeline();renderCards();scheduleExternalSync(30);const old=window.renderAll;if(typeof old==='function'&&!old.__eventWrapped){const wrapped=function(){const r=old.apply(this,arguments);renderTimeline();renderCards();scheduleExternalSync();return r};wrapped.__eventWrapped=true;window.renderAll=wrapped}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
