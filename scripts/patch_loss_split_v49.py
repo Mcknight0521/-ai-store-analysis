@@ -69,3 +69,4 @@ if 'id="loss-split-v49-js"' not in s:s=s.replace('</body>',js+'</body>',1)
 
 p.write_text(s,encoding='utf-8')
 print('patched v4.9: loss split, daily waste/clearance, interval Top 10')
+# deployment trigger 2026-09-01
