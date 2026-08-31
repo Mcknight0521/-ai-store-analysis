@@ -15,20 +15,25 @@ if 'id="interval-top10-lock-v50-css"' not in s:s=s.replace('</head>',style+'</he
 js='''
 <script id="interval-top10-lock-v50-js">
 (function(){
+ function hasRealSales(r){
+   return r && r.sales!=null && r.sales!=='' && Number.isFinite(Number(r.sales));
+ }
  function dailyReportAvailable(){
    const list=Array.isArray(window.rows)?window.rows:[];
    if(!window.confirmed||!list.length)return true;
    const pm=window.__opsPeriodMode||{};
    if(pm.mode==='mixed-aggregate'||pm.mode==='period-aggregate'||pm.mode==='aggregate')return false;
-   const valid=list.filter(r=>r.date instanceof Date&&!isNaN(r.date));
+   // Only dated SALES rows can unlock weekday/weekend Top 10.
+   // Waste / clearance / inventory-adjustment reports may contain dates too, but must never unlock this feature.
+   const valid=list.filter(r=>r.date instanceof Date&&!isNaN(r.date)&&hasRealSales(r));
    if(!valid.length)return false;
    const unique=new Set(valid.map(r=>{const d=r.date;return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}));
-   return unique.size>1 || pm.mode==='daily' || pm.dailyAvailable===true;
+   return unique.size>1 || (pm.mode==='daily' && valid.length>0) || (pm.dailyAvailable===true && valid.length>0);
  }
  function apply(){
    const panel=document.querySelector('.top10-sales-panel');if(!panel)return;
    let note=panel.querySelector('.interval-top10-notice');
-   if(!note){note=document.createElement('div');note.className='interval-top10-notice';note.innerHTML='<b>區間銷售報表無法使用</b><span>此功能僅支援「每日銷售報表」分別上傳後分析。</span>';panel.prepend(note)}
+   if(!note){note=document.createElement('div');note.className='interval-top10-notice';note.innerHTML='<b>平日／假日 Top 10 僅支援每日銷售報表</b><span>報廢、出清、庫存調整或區間彙總報表不會解鎖此功能。</span>';panel.prepend(note)}
    const disabled=window.confirmed&&!dailyReportAvailable();panel.classList.toggle('interval-disabled',disabled);
  }
  const old=window.renderAll;window.renderAll=function(){if(typeof old==='function')old.apply(this,arguments);apply()};
@@ -36,7 +41,15 @@ js='''
 })();
 </script>
 '''
-if 'id="interval-top10-lock-v50-js"' not in s:s=s.replace('</body>',js+'</body>',1)
+# Replace an already-deployed v5.0 block instead of leaving stale logic behind.
+if 'id="interval-top10-lock-v50-js"' in s:
+    a=s.find('<script id="interval-top10-lock-v50-js">')
+    b=s.find('</script>',a)
+    if a!=-1 and b!=-1:
+        s=s[:a]+js.strip()+s[b+9:]
+else:
+    s=s.replace('</body>',js+'</body>',1)
+if 'id="interval-top10-lock-v50-css"' not in s:
+    s=s.replace('</head>',style+'</head>',1)
 p.write_text(s,encoding='utf-8')
-print('patched v5.0: interval report disables weekday/weekend sales Top 10')
-# trigger deployment 2026-09-01
+print('patched v5.0.1: only daily sales rows unlock weekday/weekend Top 10')
