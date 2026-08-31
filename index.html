@@ -397,6 +397,10 @@ body{background:radial-gradient(circle at 18% -5%,#EEF3FF 0,transparent 28%),var
 .event-day .event-main .event-secondary .event-pin{font-size:12px!important;line-height:1.25}.event-day .event-main .event-secondary .event-pin svg{width:12px!important;height:12px!important}.event-day .date{font-size:13px!important}.event-day .event-main small{font-size:10px!important}.event-day .event-main .sales-primary span{font-size:10px!important}
 @media(max-width:760px){.event-day{grid-template-columns:54px minmax(0,1fr) auto!important;padding:15px 12px!important}.event-day .date{font-size:14px!important}.event-day .event-main .event-secondary{gap:6px!important;margin-top:7px!important}.event-day .event-main .event-secondary .event-pin{font-size:12px!important;font-weight:900!important}.event-card.daily-event h4{font-size:17px}.event-card.daily-event p{font-size:12px}}
 </style>
+
+<style id="event-single-list-v47">
+#externalEventCards{display:none!important}
+</style>
 </head>
 <body>
 <div class="app">
@@ -3251,31 +3255,7 @@ window.addEventListener('unhandledrejection', function(e){
       else groups.push({name:groupName,start:new Date(e.date),end:new Date(e.date),days:1,detail:e.detail,source:e.source,scope});
     });return groups;
   }
-  function renderCards(){
-    const box=$e('externalEventCards');if(!box)return;
-    const hm=historyByDate(),cards=[];
-    analysisDates().forEach(x=>{
-      const day=iso(x.date),festival=festivalForDate(x.date);
-      const history=(hm.get(day)||[]).filter(e=>e.type!=='climate');
-      const closures=history.filter(e=>e.type==='closure');
-      const typhoons=history.filter(e=>e.type==='typhoon');
-      if(!festival&&!closures.length&&!typhoons.length)return;
-      const hasFull=closures.some(e=>normalizeClosureScope(e.scope)==='full');
-      const hasPartial=!hasFull&&closures.some(e=>normalizeClosureScope(e.scope)==='partial');
-      const severity=hasFull?'closure-full':hasPartial?'closure-partial':typhoons.length?'typhoon-only':'festival-only';
-      const tags=[];
-      if(hasFull)tags.push(eventPin('全縣停班停課','closure-full'));
-      else if(hasPartial)tags.push(eventPin('部分地區停班停課','closure-partial'));
-      else if(closures.length)tags.push(eventPin('停班停課','closure-partial'));
-      typhoons.forEach(e=>tags.push(eventPin(e.name||'颱風影響','typhoon')));
-      if(festival)tags.push(eventPin(festival.name,'festival'));
-      const headline=hasFull?`${state.region}｜全縣停班停課`:hasPartial?`${state.region}｜部分地區停班停課`:typhoons.length?(typhoons[0].name||'颱風影響'):festival.name;
-      cards.push(`<div class="event-card daily-event ${severity}"><div class="daily-tags">${tags.join('')}</div><h4>${esc2(headline)}</h4><p>${day.slice(5).replace('-','/')} · 當日事件合併顯示</p></div>`);
-    });
-    if(cards.length){box.innerHTML=cards.join('');return}
-    if(state.failedSources.length){box.innerHTML=`<div class="empty warn-empty">部分外部資料讀取失敗（${esc2(state.failedSources.join('、'))}），目前不能判定為「無特殊事件」。節慶日曆仍正常。</div>`;return}
-    box.innerHTML='<div class="empty">此資料期間沒有已辨識的特殊事件。</div>';
-  }
+  function renderCards(){const box=$e('externalEventCards');if(box)box.innerHTML='';}
   function renderTimeline(){
     const box=$e('salesEventTimeline');if(!box)return;const days=analysisDates();
     if(!days.length){box.innerHTML='<div class="empty">匯入含日期範圍的報表後，這裡會自動標示颱風、停班停課與節慶。</div>';return}
