@@ -1,0 +1,22 @@
+from pathlib import Path
+import re
+p=Path('index.html'); s=p.read_text(encoding='utf-8')
+# Patch only safe injected analysis layer; keep original analysis DOM untouched.
+old_details = "function details(kind){const rows=list().filter(r=>kind==='sales'?r.sales!=null:kind==='clearance'?(r.clearance!=null||r.clearanceAmount!=null):kind==='waste'?(r.waste!=null||r.wasteAmount!=null):(r.clearance!=null||r.clearanceAmount!=null||r.waste!=null||r.wasteAmount!=null));if(!rows.length)return'<div class=\"v57-empty\">此分類目前沒有明細資料</div>';return `<div class=\"table-wrap\"><table><thead><tr><th>商品</th><th>營業額</th><th>出清</th><th>報廢</th><th>比率</th></tr></thead><tbody>${rows.map(r=>{const c=r.clearance??r.clearanceAmount,w=r.waste??r.wasteAmount,amount=kind==='clearance'?c:kind==='waste'?w:(c==null&&w==null?null:Number(c||0)+Number(w||0)),rr=kind==='sales'?null:rate(amount,r.sales);return `<tr><td>${esc(r.item||r.sku)}</td><td>${money(r.sales)}</td><td>${money(r.clearance??r.clearanceAmount)}</td><td>${money(r.waste??r.wasteAmount)}</td><td>${rr==null?'—':pct(rr)}</td></tr>`}).join('')}</tbody></table></div>`}"
+new_details = "function details(kind){const rows=aggregate().filter(x=>kind==='sales'?x.sales!=null:kind==='clearance'?x.clearance!=null:kind==='waste'?x.waste!=null:x.loss!=null);if(!rows.length)return'<div class=\"v57-empty\">此分類目前沒有明細資料</div>';const sorted=[...rows].sort((a,b)=>kind==='sales'?Number(b.sales||0)-Number(a.sales||0):kind==='clearance'?Number(b.clearance||0)-Number(a.clearance||0):kind==='waste'?Number(b.waste||0)-Number(a.waste||0):Number(b.loss||0)-Number(a.loss||0));return `<div class=\"table-wrap\"><table><thead><tr><th>商品</th><th>營業額</th><th>出清</th><th>報廢</th><th>比率</th></tr></thead><tbody>${sorted.map(x=>{const rr=kind==='sales'?null:kind==='clearance'?x.clearanceRate:kind==='waste'?x.wasteRate:x.lossRate;return `<tr><td>${esc(x.name)}</td><td>${money(x.sales)}</td><td>${money(x.clearance)}</td><td>${money(x.waste)}</td><td>${rr==null?'—':pct(rr)}</td></tr>`}).join('')}</tbody></table></div>`}"
+if old_details not in s: raise SystemExit('details function target not found')
+s=s.replace(old_details,new_details,1)
+old_block = "function detailBlock(kind,label){return `<div class=\"v57-detail\" data-v57-detail=\"${kind}\"><button type=\"button\"><span>${label}</span><span>查看明細　⌄</span></button><div class=\"v57-detail-body\">${details(kind)}</div></div>`}"
+new_block = "function detailBlock(kind,label){return `<details class=\"v57-detail v57-native-detail\" data-v57-detail=\"${kind}\"><summary><span>${label}</span><span>查看／收合</span></summary><div class=\"v57-detail-body\">${details(kind)}</div></details>`}"
+if old_block not in s: raise SystemExit('detailBlock target not found')
+s=s.replace(old_block,new_block,1)
+# Remove JS dependency for opening detail. Keep interval tab handler only.
+s=re.sub(r"document\.addEventListener\('click',e=>\{const tab=e\.target\.closest\?\.\('\[data-v57-tab\]'\);if\(tab\)\{window\.__v57IntervalTab=tab\.dataset\.v57Tab;render\(\);return\}const btn=e\.target\.closest\?\.\('\.v57-detail>button'\);if\(!btn\)return;const box=btn\.closest\('\.v57-detail'\),kind=box\.dataset\.v57Detail,open=box\.classList\.toggle\('open'\);btn\.lastElementChild\.textContent=open\?'收合　⌃':'查看明細　⌄';if\(open\)\{const body=box\.querySelector\('\.v57-detail-body'\);if\(body&&!body\.innerHTML\.trim\(\)\)body\.innerHTML=details\(kind\)\}\}\);",
+"document.addEventListener('click',e=>{const tab=e.target.closest?.('[data-v57-tab]');if(tab){window.__v57IntervalTab=tab.dataset.v57Tab;render();return}});",s,count=1)
+# Add native details styling without touching base DOM.
+style='''<style id="analysis-detail-v514-css">\n#analysis .v57-native-detail>summary{list-style:none;cursor:pointer;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:900;color:var(--ink);background:#fff}\n#analysis .v57-native-detail>summary::-webkit-details-marker{display:none}\n#analysis .v57-native-detail .v57-detail-body{display:block!important;padding:0 10px 10px}\n#analysis .v57-native-detail:not([open]) .v57-detail-body{display:none!important}\n#analysis .v57-native-detail[open]>summary{border-bottom:1px solid var(--line)}\n</style>'''
+# idempotent cleanup if rerun
+s=re.sub(r'<style id="analysis-detail-v514-css">.*?</style>','',s,flags=re.S)
+s=s.replace('</head>',style+'</head>',1)
+p.write_text(s,encoding='utf-8')
+print('analysis detail v5.14 patched: native details + aggregate-backed table')
