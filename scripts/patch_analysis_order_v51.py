@@ -13,21 +13,10 @@ js='''
    const split=all.find(x=>x.id==='lossSplitPanel'||x.querySelector('#lossSplitSummary'));
    const loss=all.find(x=>x.querySelector('#analysisBars'));
    if(!sales||!clearance||!loss)return;
-   // Reading order: sales -> clearance -> waste -> total loss.
-   // The split panel owns waste metrics; keep it after clearance and before the legacy total-loss ranking.
-   const anchor=sales;
-   anchor.after(clearance);
-   if(split){
-     clearance.after(split);
-     split.after(loss);
-   }else{
-     clearance.after(loss);
-   }
-   const t=loss.querySelector('#analysisTitle');
-   if(t && /品項損耗排行|每日損耗趨勢/.test(t.textContent||'')){
-     const kicker=loss.querySelector('.panel-kicker');
-     if(kicker)kicker.textContent='TOTAL LOSS';
-   }
+   const firstMovable=all.find(x=>x!==sales&&x!==clearance&&x!==split&&x!==loss) || null;
+   if(firstMovable) firstMovable.before(sales); else page.appendChild(sales);
+   sales.after(clearance);
+   if(split){clearance.after(split);split.after(loss)}else{clearance.after(loss)}
  }
  document.addEventListener('DOMContentLoaded',reorder);
  const old=window.renderAll;window.renderAll=function(){if(typeof old==='function')old.apply(this,arguments);reorder()};
@@ -35,10 +24,7 @@ js='''
 })();
 </script>
 '''
-if 'id="analysis-order-v51-js"' not in s:s.replace('</body>',js+'</body>',1)
-else: raise SystemExit('v51 already present')
-# fix assignment typo safely
-if 'id="analysis-order-v51-js"' not in s:
-    s=s.replace('</body>',js+'</body>',1)
+if 'id="analysis-order-v51-js"' not in s:s=s.replace('</body>',js+'</body>',1)
 p.write_text(s,encoding='utf-8')
 print('patched v5.1: analysis order sales -> clearance -> waste -> total loss')
+# trigger deployment 2026-09-01
