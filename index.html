@@ -134,6 +134,8 @@ table{width:100%;border-collapse:collapse;font-size:9px}th,td{padding:10px 9px;t
 .clearance-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #EEF2F6}
 .clearance-row:last-child{border-bottom:0}.clearance-row .name{font-weight:800;color:#111827}.clearance-row .meta{font-size:11px;color:#7A8699;margin-top:3px}.clearance-row .rate{text-align:right;font-weight:900}
 #clearanceModeSwitch button:disabled{opacity:.35}
+
+.event-auto-badge{display:inline-flex;align-items:center;min-height:34px;padding:0 11px;border:1px solid #d8e2ee;border-radius:10px;background:#f6f9fc;color:#53657a;font-size:12px;font-weight:700;white-space:nowrap}
 </style>
 
 <style id="improvement-center-v2">
@@ -486,9 +488,9 @@ body{background:radial-gradient(circle at 18% -5%,#EEF3FF 0,transparent 28%),var
       <section class="panel anomaly-center-panel"><div class="panel-head"><div><div class="panel-kicker">ANOMALY TRIAGE</div><h3>異常決策中心</h3><p>先判斷嚴重度與影響，再提供資料能支持的原因方向與下一步；不把推測寫成事實。</p></div></div><div id="anomalySummary" class="anomaly-summary-grid"><div class="anomaly-summary-card"><span>異常項目</span><strong>—</strong></div><div class="anomaly-summary-card danger"><span>重大異常</span><strong>—</strong></div><div class="anomaly-summary-card warn"><span>結構異常</span><strong>—</strong></div><div class="anomaly-summary-card"><span>主力品觀察</span><strong>—</strong></div></div><div id="anomalyList" class="anomaly-list"><div class="empty">等待資料</div></div></section>
       <section class="panel event-panel" id="externalEventPanel">
         <div class="panel-head"><div><div class="panel-kicker">EXTERNAL EVENT CONTEXT</div><h3>特殊事件辨識</h3><p>營業額為主；依匯入日期自動補上節慶、歷史颱風與停班停課。</p></div>
-          <div class="event-toolbar"><select id="eventRegion" aria-label="事件地區"><option>屏東縣</option><option>高雄市</option><option>臺南市</option><option>嘉義縣</option><option>嘉義市</option><option>臺中市</option><option>彰化縣</option><option>雲林縣</option><option>南投縣</option><option>臺北市</option><option>新北市</option><option>桃園市</option><option>新竹縣</option><option>新竹市</option><option>苗栗縣</option><option>宜蘭縣</option><option>花蓮縣</option><option>臺東縣</option><option>基隆市</option><option>澎湖縣</option><option>金門縣</option><option>連江縣</option></select><button id="refreshExternalEvents" type="button">同步歷史事件</button></div>
+          <div class="event-toolbar"><select id="eventRegion" aria-label="事件地區"><option>屏東縣</option><option>高雄市</option><option>臺南市</option><option>嘉義縣</option><option>嘉義市</option><option>臺中市</option><option>彰化縣</option><option>雲林縣</option><option>南投縣</option><option>臺北市</option><option>新北市</option><option>桃園市</option><option>新竹縣</option><option>新竹市</option><option>苗栗縣</option><option>宜蘭縣</option><option>花蓮縣</option><option>臺東縣</option><option>基隆市</option><option>澎湖縣</option><option>金門縣</option><option>連江縣</option></select><span class="event-auto-badge">官方資料自動更新</span></div>
         </div>
-        <div class="event-source-status"><i id="eventSourceDot" class="event-dot"></i><span id="eventSourceStatus">尚未同步歷史事件</span></div>
+        <div class="event-source-status"><i id="eventSourceDot" class="event-dot"></i><span id="eventSourceStatus">官方事件資料自動載入</span></div>
         <div id="externalEventCards" class="event-cards"><div class="empty">等待同步</div></div>
         <div id="salesEventTimeline" class="event-timeline"></div>
         <div class="event-note">事件層會依報表日期自動回查；營運影響優先顯示停班停課與颱風，節慶僅作輔助。</div>
@@ -3158,37 +3160,35 @@ window.addEventListener('unhandledrejection', function(e){
     for(const url of extractDgpaAttachmentUrls(detail.text,it.url)){try{const r=await fetchTextSmart(url);parsed=parseDGPA(r.text,state.region);if(parsed.found)return parsed}catch{}}
     return parsed;
   }
-  async function loadHistoricalClosures(range,force=false){
-    if(!range)return [];
-    const start=iso(range.start),end=iso(range.end),key=`opsDGPAV5:${state.region}:${start}:${end}`,cached=force?null:cacheGet(key,14*864e5);if(cached){state.transportUsage.add('停班停課快取');return cached;}
-
-    // Preferred path: ask OpsPilot backend to query DGPA server-side.
-    // This avoids iPhone Safari CORS / proxy parsing failures on DGPA historical pages.
-    try{
-      const base=(typeof getOpsPilotParserApi==='function'?getOpsPilotParserApi():'').replace(/\/$/,'');
-      if(base){
-        const url=`${base}/history-events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&region=${encodeURIComponent(state.region)}`;
-        const r=await fetch(url,{cache:'no-store'});
-        if(r.ok){
-          const j=await r.json();
-          const out=(Array.isArray(j.events)?j.events:[]).filter(e=>e&&e.type==='closure'&&e.date>=start&&e.date<=end).map(e=>({
-            type:'closure',date:e.date,name:e.name||'停班停課',detail:e.detail||'',scope:e.scope||'',source:e.source||'行政院人事行政總處'
-          }));
-          state.transportUsage.add('OpsPilot 後端／DGPA 官方資料');
-          cacheSet(key,out);return out;
-        }
-      }
-    }catch(e){console.warn('DGPA backend lookup failed, falling back to browser lookup',e)}
-
-    // Fallback for temporary backend issues.
-    const targets=[];let foundOlder=false;
-    for(let page=1;page<=50&&!foundOlder;page++){
-      try{const url=`https://www.dgpa.gov.tw/informationlist?page=${page}&uid=374`,r=await fetchTextSmart(url),items=extractDgpaList(r.text);if(!items.length){if(page>3)break;continue}for(const it of items){if(it.date>=iso(addDays(range.start,-1))&&it.date<=iso(addDays(range.end,1)))targets.push(it);if(it.date<iso(addDays(range.start,-3)))foundOlder=true}}catch(e){if(page>6)break}
-    }
-    const uniq=[...new Map(targets.map(x=>[x.url,x])).values()],out=[];
-    for(let i=0;i<uniq.length;i+=4){const batch=uniq.slice(i,i+4);const rr=await Promise.allSettled(batch.map(fetchDgpaClosureDetail));rr.forEach((r,j)=>{if(r.status!=='fulfilled'||!r.value?.closure)return;const it=batch[j],date=it.date;if(date>=start&&date<=end)out.push({type:'closure',date,name:'停班停課',detail:r.value.detail,source:'行政院人事行政總處'})})}
-    cacheSet(key,out);return out;
+  let officialEventRequest=null;
+  async function loadOfficialHistory(range,force=false){
+    if(!range)return {events:[],meta:{}};
+    const start=iso(range.start),end=iso(range.end),key=`opsOfficialEventsV42:${state.region}:${start}:${end}`;
+    const cached=force?null:cacheGet(key,24*3600e3);
+    if(cached){state.transportUsage.add('官方事件快取');return cached;}
+    const base=(typeof getOpsPilotParserApi==='function'?getOpsPilotParserApi():'').replace(/\/$/,'');
+    if(!base)throw new Error('尚未設定 OpsPilot Parser API');
+    const reqKey=`${state.region}|${start}|${end}`;
+    if(officialEventRequest?.key===reqKey)return officialEventRequest.promise;
+    const promise=(async()=>{
+      const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),5000);
+      try{
+        const r=await fetch(`${base}/history-events?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}&region=${encodeURIComponent(state.region)}`,{cache:'no-store',signal:ctrl.signal});
+        let j=null;try{j=await r.json()}catch{}
+        if(!r.ok)throw new Error(typeof j?.detail==='string'?j.detail:`HTTP ${r.status}`);
+        const result={events:Array.isArray(j?.events)?j.events:[],meta:j?.meta||{}};
+        cacheSet(key,result);state.transportUsage.add('OpsPilot 官方事件庫');return result;
+      }catch(e){if(e?.name==='AbortError')throw new Error('官方事件資料服務連線逾時');throw e}
+      finally{clearTimeout(timer)}
+    })();
+    officialEventRequest={key:reqKey,promise};
+    try{return await promise}finally{if(officialEventRequest?.key===reqKey)officialEventRequest=null}
   }
+  async function loadHistoricalClosures(range,force=false){
+    const j=await loadOfficialHistory(range,force),start=iso(range.start),end=iso(range.end);
+    return j.events.filter(e=>e&&e.type==='closure'&&e.date>=start&&e.date<=end).map(e=>({type:'closure',date:e.date,name:e.name||'停班停課',detail:e.detail||'',scope:e.scope||'',source:e.source||'行政院人事行政總處'}));
+  }
+
   function parseTyphoonDetail(text){
     const plain=stripHtml(text);if(!/颱風概況表|名稱/.test(plain)||!/發布時間/.test(plain))return null;const name=(plain.match(/名稱\s*[:|]?\s*([^\s(（|]{1,12})/)||[])[1];const id=(plain.match(/編號\s*[:|]?\s*(20\d{4})/)||[])[1];
     const sea=(plain.match(/海上\s*(20\d{2}-\d{2}-\d{2})\s*\d{2}:\d{2}/)||[])[1],land=(plain.match(/陸上\s*(20\d{2}-\d{2}-\d{2})\s*\d{2}:\d{2}/)||[])[1];
@@ -3196,11 +3196,11 @@ window.addEventListener('unhandledrejection', function(e){
     let end=releases.sort().slice(-1)[0]||null;if(!end){const dates=[...plain.matchAll(/解除[^2]{0,20}(20\d{2}-\d{2}-\d{2})/g)].map(m=>m[1]);end=dates.sort().slice(-1)[0]||null}
     if(!name||!(sea||land))return null;return {name,id,start:land||sea,end:end||land||sea,land:!!land,detail:`中央氣象署${land?'陸上':'海上'}颱風警報期間`};
   }
-  async function loadHistoricalTyphoons(range){
-    if(!range)return [];const years=[];for(let y=range.start.getFullYear();y<=range.end.getFullYear();y++)years.push(y);const all=[];
-    for(const y of years){const key=`opsCwaTyphoons:${y}`,cached=cacheGet(key,90*864e5);if(cached){all.push(...cached);continue}const found=[];for(let i=1;i<=35;i+=7){const ids=Array.from({length:Math.min(7,36-i)},(_,k)=>`${y}${String(i+k).padStart(2,'0')}`),rr=await Promise.allSettled(ids.map(id=>fetchTextSmart(`https://rdc28.cwa.gov.tw/TDB/public/typhoon_detail?typhoon_id=${id}`)));rr.forEach(r=>{if(r.status==='fulfilled'){const t=parseTyphoonDetail(r.value.text);if(t)found.push(t)}})}cacheSet(key,found);all.push(...found)}
-    const start=iso(range.start),end=iso(range.end),out=[];all.forEach(t=>{if(t.end<start||t.start>end)return;let d=new Date(Math.max(new Date(t.start),range.start));const until=new Date(Math.min(new Date(t.end),range.end));while(d<=until){out.push({type:'typhoon',date:iso(d),name:`${t.name}颱風`,detail:t.detail,source:'中央氣象署颱風資料庫'});d=addDays(d,1)}});return out;
+  async function loadHistoricalTyphoons(range,force=false){
+    const j=await loadOfficialHistory(range,force),start=iso(range.start),end=iso(range.end);
+    return j.events.filter(e=>e&&e.type==='typhoon'&&e.date>=start&&e.date<=end).map(e=>({type:'typhoon',date:e.date,name:e.name||'颱風',detail:e.detail||'',source:e.source||'中央氣象署'}));
   }
+
   function allowedHistoryEvent(e){return !!e&&['closure','typhoon'].includes(e.type)}
   function historyByDate(){const map=new Map();(state.historyEvents||[]).filter(allowedHistoryEvent).forEach(e=>{if(!map.has(e.date))map.set(e.date,[]);map.get(e.date).push(e)});return map}
   function groupHistory(type){
@@ -3220,34 +3220,31 @@ window.addEventListener('unhandledrejection', function(e){
     if(!display.length){if(state.failedSources.length){box.innerHTML=`<div class="empty warn-empty">部分外部資料讀取失敗（${esc2(state.failedSources.join('、'))}），暫時無法完整判定這段期間是否有特殊事件。</div>`}else{box.innerHTML='<div class="empty">此資料期間沒有已辨識的特殊事件。</div>'}return}
     box.innerHTML=display.map(x=>{const day=iso(x.date),labels=[],classes=['event-day'];const ordered=[...x.history].sort((a,b)=>({closure:0,typhoon:1}[a.type]??9)-({closure:0,typhoon:1}[b.type]??9));ordered.forEach(e=>{labels.push(eventPin(e.name,e.type));classes.push(e.type)});if(x.festival){labels.push(eventPin(x.festival.name,'festival'));classes.push('festival')}if(!x.festival&&!x.history.length&&x.hasSales&&x.baseline!=null&&Math.abs(x.delta)>=.30)labels.push(eventPin(x.delta>0?'疑似特殊高峰':'疑似特殊低谷','peak'));if(!x.hasSales)return `<div class="${classes.join(' ')}"><div class="date">${day.slice(5).replace('-','/')}</div><div class="event-main"><div class="event-secondary">${labels.join('<span class="event-plus">＋</span>')}</div><small>事件日曆</small></div><div class="delta">—</div></div>`;const delta=x.baseline==null?'—':`${x.delta>=0?'+':''}${(x.delta*100).toFixed(1)}%`,deltaClass=x.delta>0?'up':x.delta<0?'down':'';return `<div class="${classes.join(' ')}"><div class="date">${day.slice(5).replace('-','/')}</div><div class="event-main"><div class="sales-primary"><strong>${money(x.sales)}</strong><span>營業額</span></div><div class="event-secondary">${labels.join('<span class="event-plus">＋</span>')}</div><small>${x.baseline!=null?`平常 ${money(x.baseline)}`:''}</small></div><div class="delta ${deltaClass}">${delta}</div></div>`}).join('');
   }
+  function eventPromiseTimeout(promise,ms,label){
+    let timer;
+    const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(label||`查詢超過 ${Math.round(ms/1000)} 秒`)),ms)});
+    return Promise.race([promise,timeout]).finally(()=>clearTimeout(timer));
+  }
   function scheduleExternalSync(delay=240){
     if(state.syncTimer)clearTimeout(state.syncTimer);
     state.syncTimer=setTimeout(()=>{state.syncTimer=null;syncExternalEvents()},delay);
   }
   async function syncExternalEvents(force=false){
-    state.region=$e('eventRegion')?.value||state.region;localStorage.setItem('opsEventRegion',state.region);const range=analysisRange();renderTimeline();renderCards();if(!range){setStatus('warn','匯入含日期的報表後，會依該期間同步歷史事件');return}
-    const token=++state.syncToken;
-    state.status='loading';state.failedSources=[];state.transportUsage=new Set();
-    // 節慶先由本機立即顯示；停班停課走後端優先回來；較慢的颱風資料在背景並行同步。
-    setStatus('warn',`正在查 ${iso(range.start)}～${iso(range.end)} 的停班停課；節慶已先顯示…`);
-    const closureP=loadHistoricalClosures(range,force),typhoonP=loadHistoricalTyphoons(range);
-    const closureR=await Promise.allSettled([closureP]);
-    if(token!==state.syncToken)return;
-    const history=[],okSources=[];
-    if(closureR[0].status==='fulfilled'){history.push(...closureR[0].value);okSources.push('停班停課')}else state.failedSources.push('停班停課');
-    state.historyEvents=history;renderCards();renderTimeline();
-    const closureCount=history.filter(e=>e.type==='closure').length;
-    setStatus('warn',`${okSources.includes('停班停課')?`停班停課已完成${closureCount?` · 找到 ${closureCount} 筆`:' · 此縣市期間 0 筆'}`:'停班停課讀取失敗'}；颱風資料背景同步中…`);
-    const typhoonR=await Promise.allSettled([typhoonP]);
-    if(token!==state.syncToken)return;
-    if(typhoonR[0].status==='fulfilled'){history.push(...typhoonR[0].value);okSources.push('颱風')}else state.failedSources.push('颱風');
-    state.historyEvents=history;state.lastSync=new Date();state.status=state.failedSources.length?(okSources.length?'partial':'error'):'success';renderCards();renderTimeline();
-    const via=[...state.transportUsage].join('＋')||'快取';
-    if(state.status==='success')setStatus('ok',`資料已同步 · ${state.region} · ${via} · ${state.lastSync.toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})}`);
-    else if(state.status==='partial')setStatus('warn',`部分資料讀取失敗：${state.failedSources.join('、')} · 已成功：${okSources.join('、')||'無'} · ${via}`);
-    else setStatus('bad',`外部資料讀取失敗：${state.failedSources.join('、')}。這不代表沒有事件；節慶日曆仍可使用。`);
+    state.region=$e('eventRegion')?.value||state.region;localStorage.setItem('opsEventRegion',state.region);const range=analysisRange();renderTimeline();renderCards();if(!range){setStatus('warn','匯入含日期的報表後，會依該期間載入官方歷史事件');return}
+    const token=++state.syncToken;state.status='loading';state.failedSources=[];state.transportUsage=new Set();
+    setStatus('warn',`正在載入 ${iso(range.start)}～${iso(range.end)} 的官方事件資料…`);
+    try{
+      const [closures,typhoons]=await Promise.all([loadHistoricalClosures(range,force),loadHistoricalTyphoons(range,force)]);
+      if(token!==state.syncToken)return;
+      state.historyEvents=[...closures,...typhoons];state.lastSync=new Date();state.status='success';renderCards();renderTimeline();
+      const c=closures.length,t=typhoons.length;
+      setStatus('ok',`官方資料已載入 · ${state.region} · 停班停課 ${c} 筆 · 颱風 ${t} 筆`);
+    }catch(e){
+      if(token!==state.syncToken)return;state.failedSources=['官方事件資料'];state.status='error';renderCards();renderTimeline();setStatus('bad',`官方事件資料暫時無法載入：${e?.message||'連線失敗'}。節慶日曆仍正常。`);
+    }
   }
-  function init(){const sel=$e('eventRegion');if(!sel)return;if([...sel.options].some(o=>o.value===state.region))sel.value=state.region;$e('refreshExternalEvents')?.addEventListener('click',()=>syncExternalEvents(true));sel.addEventListener('change',syncExternalEvents);renderTimeline();renderCards();scheduleExternalSync(30);const old=window.renderAll;if(typeof old==='function'&&!old.__eventWrapped){const wrapped=function(){const r=old.apply(this,arguments);renderTimeline();renderCards();scheduleExternalSync();return r};wrapped.__eventWrapped=true;window.renderAll=wrapped}}
+
+  function init(){const sel=$e('eventRegion');if(!sel)return;if([...sel.options].some(o=>o.value===state.region))sel.value=state.region;sel.addEventListener('change',syncExternalEvents);renderTimeline();renderCards();scheduleExternalSync(30);const old=window.renderAll;if(typeof old==='function'&&!old.__eventWrapped){const wrapped=function(){const r=old.apply(this,arguments);renderTimeline();renderCards();scheduleExternalSync();return r};wrapped.__eventWrapped=true;window.renderAll=wrapped}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
