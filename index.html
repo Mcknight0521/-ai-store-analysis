@@ -3182,10 +3182,21 @@ window.addEventListener('unhandledrejection', function(e){
     for(const url of extractDgpaAttachmentUrls(detail.text,it.url)){try{const r=await fetchTextSmart(url);parsed=parseDGPA(r.text,state.region);if(parsed.found)return parsed}catch{}}
     return parsed;
   }
+  function purgeLegacyOfficialEventCachesV48(){
+    try{
+      const remove=[];
+      for(let i=0;i<localStorage.length;i++){
+        const k=localStorage.key(i)||'';
+        if(/^opsOfficialEventsV(?:4[0-7]|[0-3]\d):/.test(k))remove.push(k);
+      }
+      remove.forEach(k=>localStorage.removeItem(k));
+    }catch(e){}
+  }
+  purgeLegacyOfficialEventCachesV48();
   let officialEventRequest=null;
   async function loadOfficialHistory(range,force=false){
     if(!range)return {events:[],meta:{}};
-    const start=iso(range.start),end=iso(range.end),key=`opsOfficialEventsV45:${state.region}:${start}:${end}`;
+    const start=iso(range.start),end=iso(range.end),key=`opsOfficialEventsV48:${state.region}:${start}:${end}`;
     // v4.4 event-store data supersedes the older cached empty responses.
     // Keep the cache short so newly synced official events appear promptly.
     const cached=force?null:cacheGet(key,15*60e3);
@@ -3231,7 +3242,7 @@ window.addEventListener('unhandledrejection', function(e){
     return j.events.filter(e=>e&&e.type==='typhoon'&&e.date>=start&&e.date<=end).map(e=>({type:'typhoon',date:e.date,name:e.name||'颱風',detail:e.detail||'',source:e.source||'中央氣象署'}));
   }
 
-  function allowedHistoryEvent(e){return !!e&&['closure','typhoon','climate'].includes(e.type)&&/^\d{4}-\d{2}-\d{2}$/.test(String(e.date||''))}
+  function allowedHistoryEvent(e){return !!e&&['closure','typhoon'].includes(e.type)&&/^\d{4}-\d{2}-\d{2}$/.test(String(e.date||''))}
   function historyByDate(){const map=new Map();(state.historyEvents||[]).filter(allowedHistoryEvent).forEach(e=>{if(!map.has(e.date))map.set(e.date,[]);map.get(e.date).push(e)});return map}
   function normalizeClosureScope(scope){
     const s=String(scope||'').toLowerCase();
@@ -3296,10 +3307,10 @@ window.addEventListener('unhandledrejection', function(e){
       const [closures,typhoonsRaw,climate]=await Promise.all([loadHistoricalClosures(range,force),loadHistoricalTyphoons(range,force),loadHistoricalClimate(range)]);
       if(token!==state.syncToken)return;
       // A typhoon warning is nationwide context, but the UI only promotes it when the selected region
-      // has concrete local impact on the same full date:停班停課 or 豪雨以上。This avoids unrelated typhoons.
+      // has concrete local impact on the same full date using local operational evidence. This avoids unrelated typhoons.
       const localImpactDates=new Set([...closures,...climate].map(e=>e.date));
       const typhoons=typhoonsRaw.filter(e=>localImpactDates.has(e.date));
-      state.historyEvents=[...closures,...climate,...typhoons];state.lastSync=new Date();state.status='success';renderCards();renderTimeline();
+      state.historyEvents=[...closures,...typhoons];state.lastSync=new Date();state.status='success';renderCards();renderTimeline();
       const c=closures.length,t=typhoons.length,rain=climate.length,partial=closures.filter(e=>normalizeClosureScope(e.scope)==='partial').length,full=closures.filter(e=>normalizeClosureScope(e.scope)==='full').length;
       const closureBreakdown=c?`（${full?`全縣 ${full}`:''}${full&&partial?'、':''}${partial?`部分地區 ${partial}`:''}${!full&&!partial?'範圍未標示':''}）`:'';
       setStatus('ok',`事件資料已載入 · ${state.region} · 停班停課 ${c} 筆${closureBreakdown} · 颱風影響 ${t} 筆`);
