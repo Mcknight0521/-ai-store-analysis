@@ -1,0 +1,30 @@
+name: Apply import threshold final step v5.18
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch_import_threshold_step_v518.py'
+      - '.github/workflows/apply-import-threshold-v518.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python scripts/patch_import_threshold_step_v518.py
+      - name: Verify critical functions remain
+        run: |
+          grep -q "renderAll" index.html
+          grep -q "parse-file\|parse-pdf" index.html
+          grep -q "anomaly-center-v58-js" index.html
+          grep -q "import-threshold-v518-js" index.html
+      - name: Commit generated index
+        run: |
+          if git diff --quiet -- index.html; then exit 0; fi
+          git config user.name "opspilot-ui-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html
+          git commit -m "Move threshold setup to import final step v5.18"
+          git push
