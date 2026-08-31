@@ -23,3 +23,4 @@ rep("if(k&&k.startsWith('opsOfficialEventsV42:'))localStorage.removeItem(k)","if
 
 p.write_text(s,encoding='utf-8')
 print('patched index.html for event engine v4.5')
+# trigger workflow after it exists
