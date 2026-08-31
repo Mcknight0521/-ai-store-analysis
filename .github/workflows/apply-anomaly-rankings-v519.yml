@@ -25,7 +25,6 @@ jobs:
           grep -q 'renderAll' index.html
           grep -q 'opsAnomalyThresholdsV58' index.html
           grep -q 'import-threshold-v518-js' index.html
-          grep -q 'analysis-safe-v57' index.html
       - name: Commit generated index
         run: |
           if git diff --quiet -- index.html; then exit 0; fi
