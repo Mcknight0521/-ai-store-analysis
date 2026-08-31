@@ -1,0 +1,35 @@
+name: Apply priority threshold consistency v5.20
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch_priority_threshold_consistency_v520.py'
+      - '.github/workflows/apply-priority-threshold-v520.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Apply unified priority and per-import thresholds
+        run: python scripts/patch_priority_threshold_consistency_v520.py
+      - name: Regression guards
+        run: |
+          grep -q 'opspilot-priority-threshold-v520' index.html
+          grep -q '金額影響 60%' index.html
+          grep -q '改善優先商品' index.html
+          grep -q 'sessionStorage.setItem(KEY' index.html
+          grep -q 'parse-pdf' index.html
+      - name: Commit generated index
+        run: |
+          if git diff --quiet -- index.html; then exit 0; fi
+          git config user.name "opspilot-ui-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html
+          git commit -m "Build unified priority and per-import thresholds v5.20"
+          git push
