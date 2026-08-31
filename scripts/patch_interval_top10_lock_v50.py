@@ -39,3 +39,4 @@ js='''
 if 'id="interval-top10-lock-v50-js"' not in s:s=s.replace('</body>',js+'</body>',1)
 p.write_text(s,encoding='utf-8')
 print('patched v5.0: interval report disables weekday/weekend sales Top 10')
+# trigger deployment 2026-09-01
