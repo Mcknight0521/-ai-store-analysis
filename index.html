@@ -422,37 +422,40 @@ body{background:radial-gradient(circle at 18% -5%,#EEF3FF 0,transparent 28%),var
 
 
 
-<style id="analysis-layout-v55-css">
-#analysis .analysis-flow-v55{display:grid;gap:14px;margin-top:12px}
-#analysis .analysis-interval-v55{border:1px solid #cfe0ff;border-radius:20px;background:linear-gradient(180deg,#f7fbff,#fff);box-shadow:var(--shadow);overflow:hidden}
-#analysis .analysis-interval-v55>.loss-top10-v49{display:block!important;margin:0!important;padding:16px!important}
-#analysis .analysis-interval-v55 .panel-head{margin-top:0}
-#analysis .analysis-section-v55{position:relative;border-radius:20px;border:1px solid var(--line);background:#fff;box-shadow:var(--shadow);overflow:hidden}
-#analysis .analysis-section-v55>.analysis-section-label{display:flex;align-items:center;gap:10px;padding:14px 16px 4px;font-weight:950;letter-spacing:-.02em}
-#analysis .analysis-section-label .n{width:30px;height:30px;border-radius:999px;display:grid;place-items:center;color:#fff;font-size:13px;flex:0 0 auto}
-#analysis .analysis-section-label b{font-size:17px}
-#analysis .analysis-section-v55>.panel{border:0;box-shadow:none;border-radius:0;margin:0;background:transparent}
-#analysis .analysis-sales-v55{border-color:#cfe0ff;background:linear-gradient(180deg,#f7fbff,#fff)}
-#analysis .analysis-sales-v55 .analysis-section-label{color:#2156b7}.analysis-sales-v55 .analysis-section-label .n{background:#2C64F1}
-#analysis .analysis-clearance-v55{border-color:#cfe9dd;background:linear-gradient(180deg,#f7fcf9,#fff)}
-#analysis .analysis-clearance-v55 .analysis-section-label{color:#16805B}.analysis-clearance-v55 .analysis-section-label .n{background:#16805B}
-#analysis .analysis-waste-v55{border-color:#ffd9cf;background:linear-gradient(180deg,#fff9f7,#fff)}
-#analysis .analysis-waste-v55 .analysis-section-label{color:#c64f31}.analysis-waste-v55 .analysis-section-label .n{background:#e85d3d}
-#analysis .analysis-loss-v55{border-color:#d9e0ea;background:linear-gradient(180deg,#f8fafc,#fff)}
-#analysis .analysis-loss-v55 .analysis-section-label{color:#475467}.analysis-loss-v55 .analysis-section-label .n{background:#52637a}
-#analysis .topic-detail-v55{margin:8px 14px 14px;border:1px solid var(--line);border-radius:15px;background:#fff;overflow:hidden}
-#analysis .topic-detail-toggle-v55{width:100%;border:0;background:#fff;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--ink);font-weight:900;font-size:12px}
-#analysis .topic-detail-toggle-v55 .hint{font-size:10px;color:var(--muted);font-weight:800}
-#analysis .topic-detail-body-v55{display:none;padding:0 12px 12px}
-#analysis .topic-detail-v55.open .topic-detail-body-v55{display:block}
-#analysis .topic-detail-v55 .table-wrap{max-height:420px;background:#fff}
-#analysis .topic-detail-v55 table{font-size:9px}#analysis .topic-detail-v55 th{font-size:8px}
-#analysis .legacy-analysis-detail-v55{display:none!important}
-#analysis .analysis-waste-v55 #lossSplitPanel>.table-wrap{display:none!important}
-#analysis .analysis-waste-v55 #lossSplitPanel>.loss-top10-v49{display:none!important}
-@media(max-width:760px){#analysis .analysis-interval-v55>.loss-top10-v49{padding:13px 10px!important}#analysis .analysis-section-v55>.analysis-section-label{padding:12px 13px 3px}#analysis .analysis-section-label b{font-size:15px}#analysis .analysis-section-label .n{width:27px;height:27px;font-size:12px}#analysis .topic-detail-v55{margin:7px 10px 11px}}
-</style>
-</head>
+<style id="analysis-safe-v57-css">
+#analysis .analysis-safe-v57{display:grid;gap:14px;margin-top:12px}
+#analysis .analysis-safe-v57~.panel,#analysis .analysis-safe-v57~.analysis-layout,#analysis .analysis-safe-v57~.loss-top10-v49{display:none!important}
+#analysis .analysis-v57-card{border:1px solid var(--line);border-radius:20px;background:#fff;box-shadow:var(--shadow);overflow:hidden}
+#analysis .analysis-v57-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+#analysis .analysis-v57-no{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:13px;font-weight:950;flex:0 0 auto}
+#analysis .analysis-v57-head b{font-size:17px;letter-spacing:-.02em}
+#analysis .analysis-v57-head small{display:block;margin-top:3px;color:var(--muted);font-size:10px;font-weight:700}
+#analysis .sales-v57{border-color:#cfe0ff}.sales-v57 .analysis-v57-head{color:#2156b7;background:#f7fbff}.sales-v57 .analysis-v57-no{background:#2C64F1}
+#analysis .clearance-v57{border-color:#cfe9dd}.clearance-v57 .analysis-v57-head{color:#16805B;background:#f7fcf9}.clearance-v57 .analysis-v57-no{background:#16805B}
+#analysis .waste-v57{border-color:#ffd9cf}.waste-v57 .analysis-v57-head{color:#c64f31;background:#fff9f7}.waste-v57 .analysis-v57-no{background:#e85d3d}
+#analysis .loss-v57{border-color:#d9e0ea}.loss-v57 .analysis-v57-head{color:#475467;background:#f8fafc}.loss-v57 .analysis-v57-no{background:#52637a}
+#analysis .interval-v57{border-color:#cfe0ff;background:linear-gradient(180deg,#f7fbff,#fff)}
+#analysis .analysis-v57-body{padding:14px}
+#analysis .v57-kpi{padding:14px;border:1px solid var(--line);border-radius:15px;background:#fff;margin-bottom:14px}
+#analysis .v57-kpi span{display:block;color:var(--muted);font-size:10px;font-weight:800}
+#analysis .v57-kpi strong{display:block;margin-top:5px;font-size:26px;letter-spacing:-.04em}
+#analysis .v57-kpi small{display:block;margin-top:5px;color:var(--muted);font-size:10px}
+#analysis .v57-sub{margin-top:16px}#analysis .v57-sub:first-child{margin-top:0}
+#analysis .v57-sub h4{margin:0 0 9px;font-size:13px}.v57-note{color:var(--muted);font-size:10px;line-height:1.5;margin-top:-4px;margin-bottom:10px}
+#analysis .v57-tabs{display:flex;gap:6px;overflow:auto;padding-bottom:2px;margin-bottom:11px}
+#analysis .v57-tabs button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 10px;font-size:10px;font-weight:850;white-space:nowrap;color:#667085}
+#analysis .v57-tabs button.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+#analysis .v57-rank{display:grid;gap:8px}
+#analysis .v57-row{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:9px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:13px;background:#fff}
+#analysis .v57-rankno{width:30px;height:30px;border-radius:10px;background:#f2f5f9;display:grid;place-items:center;font-size:10px;font-weight:950}
+#analysis .v57-main{min-width:0}.v57-main b{display:block;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v57-main small{display:block;margin-top:3px;color:var(--muted);font-size:9px;line-height:1.35}
+#analysis .v57-value{text-align:right;font-size:11px;font-weight:900;white-space:nowrap}.v57-score{display:block;color:var(--muted);font-size:8px;margin-top:2px}
+#analysis .v57-detail{margin-top:16px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+#analysis .v57-detail>button{width:100%;border:0;background:#fff;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:900;color:var(--ink)}
+#analysis .v57-detail-body{display:none;padding:0 10px 10px}.v57-detail.open .v57-detail-body{display:block}.v57-detail .table-wrap{max-height:420px}
+#analysis .v57-empty{padding:16px;text-align:center;border:1px dashed #d8dee8;border-radius:13px;color:var(--muted);font-size:10px;background:#fafbfc}
+@media(max-width:760px){#analysis .analysis-v57-head{padding:12px 13px}.analysis-v57-head b{font-size:15px!important}#analysis .analysis-v57-body{padding:11px}.v57-row{grid-template-columns:28px minmax(0,1fr) auto!important;padding:9px!important}.v57-rankno{width:28px!important;height:28px!important}}
+</style></head>
 <body>
 <div class="app">
   <div class="topbar">
@@ -3454,50 +3457,38 @@ window.addEventListener('unhandledrejection', function(e){
 
 
 
-<script id="analysis-layout-v55-js">
+<script id="analysis-safe-v57-js">
 (function(){
  const money=v=>v==null||Number.isNaN(Number(v))?'—':new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD',maximumFractionDigits:0}).format(Number(v));
+ const pct=v=>v==null||Number.isNaN(Number(v))?'—':(Number(v)*100).toFixed(2)+'%';
  const num=v=>v==null||Number.isNaN(Number(v))?'—':new Intl.NumberFormat('zh-TW',{maximumFractionDigits:2}).format(Number(v));
- const pctv=(n,d)=>n!=null&&d!=null&&Number(d)>0?`${(Number(n)/Number(d)*100).toFixed(2)}%`:'—';
- const escv=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
- const datev=d=>d instanceof Date&&!isNaN(d)?`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`:'—';
- function closestPanel(el){return el?(el.classList&&el.classList.contains('panel')?el:el.closest('.panel')):null}
- function findPanelByText(page,re){return [...page.querySelectorAll('.panel')].find(p=>re.test((p.textContent||'').replace(/\s+/g,' ')))||null}
- function mkSection(kind,no,title){const sec=document.createElement('section');sec.className=`analysis-section-v55 analysis-${kind}-v55`;sec.innerHTML=`<div class="analysis-section-label"><span class="n">${no}</span><b>${title}</b></div>`;return sec}
- function detailColumns(kind){
-  if(kind==='sales')return [['日期',r=>datev(r.date)],['單品編號',r=>escv(r.sku||'—')],['商品名稱',r=>escv(r.item||r.sku||'—')],['營業額',r=>money(r.sales)],['銷售量',r=>num(r.qty)]];
-  if(kind==='clearance')return [['日期',r=>datev(r.date)],['單品編號',r=>escv(r.sku||'—')],['商品名稱',r=>escv(r.item||r.sku||'—')],['營業額',r=>money(r.sales)],['出清金額',r=>money(r.clearance)],['出清率',r=>pctv(r.clearance,r.sales)]];
-  if(kind==='waste')return [['日期',r=>datev(r.date)],['單品編號',r=>escv(r.sku||'—')],['商品名稱',r=>escv(r.item||r.sku||'—')],['報廢金額',r=>money(r.waste)],['營業額',r=>money(r.sales)],['報廢率',r=>pctv(r.waste,r.sales)]];
-  return [['日期',r=>datev(r.date)],['商品名稱',r=>escv(r.item||r.sku||'—')],['營業額',r=>money(r.sales)],['出清',r=>money(r.clearance)],['報廢',r=>money(r.waste)],['總損耗',r=>money((r.clearance==null&&r.waste==null)?null:Number(r.clearance||0)+Number(r.waste||0))]];
+ const esc=v=>String(v??'—').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+ const list=()=>Array.isArray(window.rows)?window.rows:[];
+ const add=(a,b)=>b==null?a:(a??0)+Number(b);
+ const rate=(n,d)=>n!=null&&d!=null&&Number(d)>0?Number(n)/Number(d):null;
+ function aggregate(){
+   const m=new Map();
+   list().forEach(r=>{const k=String(r.sku||r.item||'').trim();if(!k)return;if(!m.has(k))m.set(k,{sku:r.sku||'',name:r.item||r.sku||'未命名商品',sales:null,qty:null,clearance:null,waste:null});const x=m.get(k);x.sales=add(x.sales,r.sales);x.qty=add(x.qty,r.qty);x.clearance=add(x.clearance,r.clearance);x.waste=add(x.waste,r.waste)});
+   return [...m.values()].map(x=>{const loss=(x.clearance==null&&x.waste==null)?null:(x.clearance??0)+(x.waste??0);return {...x,loss,clearanceRate:rate(x.clearance,x.sales),wasteRate:rate(x.waste,x.sales),lossRate:rate(loss,x.sales)}});
  }
- function rowsFor(kind){const list=Array.isArray(window.rows)?window.rows:[];if(kind==='sales')return list.filter(r=>r.sales!=null);if(kind==='clearance')return list.filter(r=>r.clearance!=null);if(kind==='waste')return list.filter(r=>r.waste!=null);return list.filter(r=>r.clearance!=null||r.waste!=null)}
- function renderDetail(box,kind){const body=box.querySelector('.topic-detail-body-v55');if(!body)return;const cols=detailColumns(kind),list=rowsFor(kind);if(!list.length){body.innerHTML='<div class="empty">此分類目前沒有可顯示的明細資料</div>';return}body.innerHTML=`<div class="table-wrap"><table><thead><tr>${cols.map(c=>`<th>${c[0]}</th>`).join('')}</tr></thead><tbody>${list.map(r=>`<tr>${cols.map(c=>`<td>${c[1](r)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`}
- function addDetail(sec,kind,title){const box=document.createElement('div');box.className='topic-detail-v55';box.innerHTML=`<button type="button" class="topic-detail-toggle-v55" aria-expanded="false"><span>${title}</span><span class="hint">查看明細　⌄</span></button><div class="topic-detail-body-v55"></div>`;sec.appendChild(box);box.querySelector('button').onclick=()=>{const open=box.classList.toggle('open');box.querySelector('button').setAttribute('aria-expanded',open?'true':'false');if(open)renderDetail(box,kind)}}
- function apply(){
-  const page=document.getElementById('analysis');if(!page)return;
-  let flow=page.querySelector('.analysis-flow-v55');if(!flow){flow=document.createElement('div');flow.className='analysis-flow-v55';const toolbar=page.querySelector('.toolbar');toolbar?toolbar.after(flow):page.appendChild(flow)}
-  const sales=closestPanel(page.querySelector('.top10-sales-panel'))||closestPanel(page.querySelector('#salesTop10List'))||findPanelByText(page,/平日\s*\/\s*假日.*Top\s*10|SALES\s*TOP\s*10/i);
-  const clearance=closestPanel(page.querySelector('#clearanceRateSummary'))||findPanelByText(page,/出清率分析|出清.*Top\s*10/i);
-  const waste=document.getElementById('lossSplitPanel')||closestPanel(page.querySelector('#lossSplitSummary'));
-  const loss=closestPanel(page.querySelector('#analysisBars'))||findPanelByText(page,/品項損耗排行|每日損耗趨勢|損耗總覽/i);
-  if(!sales)return;
-  flow.innerHTML='';
-
-  const intervalTop=page.querySelector('.loss-top10-v49');
-  if(intervalTop){
-    const topWrap=document.createElement('section');topWrap.className='analysis-interval-v55';
-    topWrap.appendChild(intervalTop);flow.appendChild(topWrap);
-    const h=intervalTop.querySelector('h3');if(h)h.textContent='區間商品 Top 10';
-  }
-
-  const salesSec=mkSection('sales',1,'營業額分析');salesSec.appendChild(sales);flow.appendChild(salesSec);addDetail(salesSec,'sales','銷售資料明細');
-  if(clearance&&clearance!==sales){const sec=mkSection('clearance',2,'出清分析');sec.appendChild(clearance);flow.appendChild(sec);addDetail(sec,'clearance','出清資料明細')}
-  if(waste&&waste!==sales&&waste!==clearance){const sec=mkSection('waste',3,'報廢分析');sec.appendChild(waste);flow.appendChild(sec);const h=waste.querySelector('.panel-head h3');if(h)h.textContent='報廢分析';const p=waste.querySelector('.panel-head p');if(p)p.textContent='檢視期間報廢金額、報廢率與報廢商品；不補缺值、不把缺少資料視為 0。';addDetail(sec,'waste','報廢資料明細')}
-  if(loss&&loss!==sales&&loss!==clearance&&loss!==waste){const sec=mkSection('loss',4,'損耗總覽');sec.appendChild(loss);flow.appendChild(sec);addDetail(sec,'loss','損耗資料明細')}
-  [...page.querySelectorAll('.panel')].filter(p=>/資料明細/.test(p.textContent||'')&&!p.closest('.analysis-section-v55')).forEach(p=>p.classList.add('legacy-analysis-detail-v55'));
+ function totals(){let sales=null,clearance=null,waste=null;list().forEach(r=>{sales=add(sales,r.sales);clearance=add(clearance,r.clearance);waste=add(waste,r.waste)});const loss=(clearance==null&&waste==null)?null:(clearance??0)+(waste??0);return {sales,clearance,waste,loss,clearanceRate:rate(clearance,sales),wasteRate:rate(waste,sales),lossRate:rate(loss,sales)}}
+ function rankData(key){return aggregate().filter(x=>x[key]!=null&&Number.isFinite(Number(x[key]))).sort((a,b)=>Number(b[key])-Number(a[key])).slice(0,10)}
+ function rankHtml(data,key,isRate=false,extra=''){return data.length?`<div class="v57-rank">${data.map((x,i)=>`<div class="v57-row"><div class="v57-rankno">${i+1}</div><div class="v57-main"><b>${esc(x.name)}</b><small>營業額 ${money(x.sales)}${extra?` · ${extra.replace('{amount}',money(x[key])).replace('{rate}',pct(x[key]))}`:''}</small></div><div class="v57-value">${isRate?pct(x[key]):money(x[key])}</div></div>`).join('')}</div>`:'<div class="v57-empty">此指標目前沒有可排名的商品資料</div>'}
+ function priority(kind){const amount=kind==='clearance'?'clearance':kind==='waste'?'waste':'loss',rateKey=kind==='clearance'?'clearanceRate':kind==='waste'?'wasteRate':'lossRate',a=aggregate().filter(x=>x[amount]!=null&&x[rateKey]!=null);if(!a.length)return[];const maxA=Math.max(1,...a.map(x=>Number(x[amount])||0)),maxR=Math.max(.000001,...a.map(x=>Number(x[rateKey])||0));return a.map(x=>({...x,priorityScore:.6*((Number(x[amount])||0)/maxA)+.4*((Number(x[rateKey])||0)/maxR)})).sort((a,b)=>b.priorityScore-a.priorityScore).slice(0,10)}
+ function priorityHtml(kind){const amount=kind==='clearance'?'clearance':kind==='waste'?'waste':'loss',rateKey=kind==='clearance'?'clearanceRate':kind==='waste'?'wasteRate':'lossRate',a=priority(kind);return a.length?`<div class="v57-rank">${a.map((x,i)=>`<div class="v57-row"><div class="v57-rankno">${i+1}</div><div class="v57-main"><b>${esc(x.name)}</b><small>金額影響 ${money(x[amount])} · 比率 ${pct(x[rateKey])}</small></div><div class="v57-value">${Math.round(x.priorityScore*100)}<span class="v57-score">優先分數</span></div></div>`).join('')}</div>`:'<div class="v57-empty">需要同時有金額與營業額資料才能計算改善優先度</div>'}
+ function details(kind){const rows=list().filter(r=>kind==='sales'?r.sales!=null:kind==='clearance'?r.clearance!=null:kind==='waste'?r.waste!=null:r.clearance!=null||r.waste!=null);if(!rows.length)return'<div class="v57-empty">此分類目前沒有明細資料</div>';return `<div class="table-wrap"><table><thead><tr><th>商品</th><th>營業額</th><th>出清</th><th>報廢</th><th>比率</th></tr></thead><tbody>${rows.map(r=>{const amount=kind==='clearance'?r.clearance:kind==='waste'?r.waste:(r.clearance==null&&r.waste==null?null:Number(r.clearance||0)+Number(r.waste||0)),rr=kind==='sales'?null:rate(amount,r.sales);return `<tr><td>${esc(r.item||r.sku)}</td><td>${money(r.sales)}</td><td>${money(r.clearance)}</td><td>${money(r.waste)}</td><td>${rr==null?'—':pct(rr)}</td></tr>`}).join('')}</tbody></table></div>`}
+ function section(kind,no,title,subtitle,body){return `<section class="analysis-v57-card ${kind}-v57"><div class="analysis-v57-head"><span class="analysis-v57-no">${no}</span><div><b>${title}</b><small>${subtitle}</small></div></div><div class="analysis-v57-body">${body}</div></section>`}
+ function detailBlock(kind,label){return `<div class="v57-detail" data-v57-detail="${kind}"><button type="button"><span>${label}</span><span>查看明細　⌄</span></button><div class="v57-detail-body"></div></div>`}
+ function intervalBlock(){const tabs=[['sales','營業額'],['clearance','出清金額'],['waste','報廢金額'],['loss','總損耗'],['wasteRate','報廢率']],active=window.__v57IntervalTab||'sales';return `<section class="analysis-v57-card interval-v57"><div class="analysis-v57-head"><div><b>區間商品 Top 10</b><small>完整保留所有區間排行分頁</small></div></div><div class="analysis-v57-body"><div class="v57-tabs">${tabs.map(([k,l])=>`<button type="button" data-v57-tab="${k}" class="${k===active?'active':''}">${l}</button>`).join('')}</div><div id="v57IntervalRank">${rankHtml(rankData(active),active,active.endsWith('Rate'))}</div></div></section>`}
+ function render(){const page=document.getElementById('analysis');if(!page)return;let flow=page.querySelector('.analysis-safe-v57');if(!flow){flow=document.createElement('div');flow.className='analysis-safe-v57';const toolbar=page.querySelector('.toolbar');toolbar?toolbar.after(flow):page.appendChild(flow)}const t=totals();
+   const salesBody=`<div class="v57-kpi"><span>期間營業額</span><strong>${money(t.sales)}</strong><small>依匯入資料實際營業額加總</small></div><div class="v57-sub"><h4>營業額 Top 10</h4>${rankHtml(rankData('sales'),'sales')}</div>${detailBlock('sales','銷售資料明細')}`;
+   const clearanceBody=`<div class="v57-kpi"><span>總出清率</span><strong>${t.clearanceRate==null?'無資料':pct(t.clearanceRate)}</strong><small>${money(t.clearance)} ÷ ${money(t.sales)}</small></div><div class="v57-sub"><h4>出清金額 Top 10</h4>${rankHtml(rankData('clearance'),'clearance')}</div><div class="v57-sub"><h4>出清率 Top 10</h4>${rankHtml(rankData('clearanceRate'),'clearanceRate',true)}</div><div class="v57-sub"><h4>改善優先度</h4><div class="v57-note">同時考慮金額影響 60%＋比率 40%，避免只看金額或只看百分比。</div>${priorityHtml('clearance')}</div>${detailBlock('clearance','出清資料明細')}`;
+   const wasteBody=`<div class="v57-kpi"><span>總報廢率</span><strong>${t.wasteRate==null?'無資料':pct(t.wasteRate)}</strong><small>${money(t.waste)} ÷ ${money(t.sales)}</small></div><div class="v57-sub"><h4>報廢金額 Top 10</h4>${rankHtml(rankData('waste'),'waste')}</div><div class="v57-sub"><h4>報廢率 Top 10</h4>${rankHtml(rankData('wasteRate'),'wasteRate',true)}</div><div class="v57-sub"><h4>改善優先度</h4><div class="v57-note">同時考慮金額影響 60%＋比率 40%。</div>${priorityHtml('waste')}</div>${detailBlock('waste','報廢資料明細')}`;
+   const lossBody=`<div class="v57-kpi"><span>總損耗率</span><strong>${t.lossRate==null?'無資料':pct(t.lossRate)}</strong><small>${money(t.loss)} ÷ ${money(t.sales)}；損耗＝出清＋報廢</small></div><div class="v57-sub"><h4>損耗金額 Top 10</h4>${rankHtml(rankData('loss'),'loss')}</div><div class="v57-sub"><h4>損耗率 Top 10</h4>${rankHtml(rankData('lossRate'),'lossRate',true)}</div><div class="v57-sub"><h4>改善優先度</h4><div class="v57-note">同時考慮金額影響 60%＋比率 40%。</div>${priorityHtml('loss')}</div>${detailBlock('loss','損耗資料明細')}`;
+   flow.innerHTML=intervalBlock()+section('sales',1,'營業額分析','先看營業結構，再往下看出清、報廢與總損耗。',salesBody)+section('clearance',2,'出清分析','總出清率 → 金額 Top 10 → 出清率 Top 10 → 改善優先度 → 明細',clearanceBody)+section('waste',3,'報廢分析','總報廢率 → 金額 Top 10 → 報廢率 Top 10 → 改善優先度 → 明細',wasteBody)+section('loss',4,'損耗分析','總損耗率 → 金額 Top 10 → 損耗率 Top 10 → 改善優先度 → 明細',lossBody);
  }
- document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,0));const old=window.renderAll;window.renderAll=function(){if(typeof old==='function')old.apply(this,arguments);apply()};setTimeout(apply,120);
-})();
-</script>
-</body>
+ document.addEventListener('click',e=>{const tab=e.target.closest?.('[data-v57-tab]');if(tab){window.__v57IntervalTab=tab.dataset.v57Tab;render();return}const btn=e.target.closest?.('.v57-detail>button');if(!btn)return;const box=btn.closest('.v57-detail'),kind=box.dataset.v57Detail,open=box.classList.toggle('open');btn.lastElementChild.textContent=open?'收合　⌃':'查看明細　⌄';if(open&&!box.dataset.loaded){box.querySelector('.v57-detail-body').innerHTML=details(kind);box.dataset.loaded='1'}});
+ const old=window.renderAll;window.renderAll=function(){if(typeof old==='function')old.apply(this,arguments);render()};
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(render,0));else setTimeout(render,0);setTimeout(render,120);
+})();</script></body>
 </html>
