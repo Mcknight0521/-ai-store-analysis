@@ -67,3 +67,4 @@ s=s.replace("setStatus('ok',`事件資料已載入 · ${state.region} · 停班�
 
 p.write_text(s,encoding='utf-8')
 print('patched event UI v4.6: daily merged labels, closure severity, no rain labels')
+# workflow trigger
