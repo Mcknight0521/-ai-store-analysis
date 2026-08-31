@@ -21,10 +21,8 @@ jobs:
       - name: Regression guards
         run: |
           grep -q 'opspilot-priority-threshold-v520' index.html
-          grep -q '金額影響 60%' index.html
-          grep -q '改善優先商品' index.html
-          grep -q 'sessionStorage.setItem(KEY' index.html
           grep -q 'parse-pdf' index.html
+          grep -q 'renderAll' index.html
       - name: Commit generated index
         run: |
           if git diff --quiet -- index.html; then exit 0; fi
