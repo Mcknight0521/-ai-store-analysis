@@ -459,6 +459,10 @@ body{background:radial-gradient(circle at 18% -5%,#EEF3FF 0,transparent 28%),var
 #anomaly .av58-list{display:grid;gap:10px}.av58-card{padding:14px;border:1px solid var(--line);border-radius:17px;background:#fff;box-shadow:0 7px 20px rgba(23,43,77,.05)}.av58-card.high{border-left:4px solid #d94848}.av58-card.watch{border-left:4px solid #e19a2b}.av58-card-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.av58-card h4{margin:0;font-size:14px}.av58-badge{padding:5px 8px;border-radius:999px;font-size:9px;font-weight:900}.av58-card.high .av58-badge{background:#feecec;color:#c83434}.av58-card.watch .av58-badge{background:#fff3d9;color:#9a5a00}.av58-metrics{display:flex;gap:12px;flex-wrap:wrap;margin-top:9px}.av58-metrics span{font-size:10px;color:var(--muted)}.av58-metrics b{color:var(--ink);margin-left:3px}.av58-why{margin-top:10px;padding-top:10px;border-top:1px dashed #dfe5ec;font-size:10px;line-height:1.55;color:#59677a}.av58-action{margin-top:7px;font-size:10px;line-height:1.55;color:#26374d}.av58-action b{color:#0b63ce}.av58-empty{padding:18px;text-align:center;border:1px dashed #d8dee8;border-radius:14px;color:var(--muted);font-size:10px;background:#fafbfc}
 .av58-modal{position:fixed;inset:0;z-index:100;background:rgba(6,14,28,.48);display:none;align-items:flex-end;justify-content:center;padding:16px}.av58-modal.open{display:flex}.av58-sheet{width:min(560px,100%);background:#fff;border-radius:22px;padding:18px;box-shadow:0 24px 70px rgba(0,0,0,.25)}.av58-sheet h3{margin:0;font-size:18px}.av58-sheet p{margin:5px 0 14px;color:var(--muted);font-size:10px;line-height:1.5}.av58-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}.av58-field label{display:block;margin-bottom:6px;font-size:10px;font-weight:850;color:#475467}.av58-input{display:flex;align-items:center;border:1px solid var(--line);border-radius:12px;padding:0 10px;background:#fff}.av58-input input{width:100%;border:0;outline:0;padding:11px 2px;font-size:16px;font-weight:850}.av58-input span{font-size:11px;color:var(--muted)}.av58-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.av58-cancel,.av58-save{border:0;border-radius:11px;padding:10px 13px;font-size:10px;font-weight:900}.av58-cancel{background:#eef1f5;color:#475467}.av58-save{background:#2c64f1;color:#fff}
 @media(max-width:620px){#anomaly .av58-summary{grid-template-columns:1fr 1fr 1fr}.av58-stat{padding:10px}.av58-stat strong{font-size:19px}.av58-fields{grid-template-columns:1fr}.av58-top{align-items:center}.av58-hero h2{font-size:20px}}
+</style><style id="priority-events-v511-css">
+#overview #externalEventPanel{margin-top:14px}
+#overview .priority-v511{margin-top:14px}
+.priority-v511 .pv-grid{display:grid;gap:9px}.priority-v511 .pv-row{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff}.priority-v511 .pv-no{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:#f1f4f8;font-weight:950}.priority-v511 .pv-main b{display:block;font-size:12px}.priority-v511 .pv-main small{display:block;margin-top:4px;color:var(--muted);font-size:9px;line-height:1.45}.priority-v511 .pv-side{text-align:right}.priority-v511 .pv-side strong{display:block;font-size:12px}.priority-v511 .pv-badge{display:inline-block;margin-top:4px;padding:4px 7px;border-radius:999px;font-size:8px;font-weight:950}.pv-critical{background:#feecec;color:#c83434}.pv-high{background:#fff0df;color:#a95800}.pv-mid{background:#fff8d9;color:#8a6a00}.pv-low{background:#eaf8f0;color:#17754f}.priority-v511 .pv-rule{margin-top:10px;padding:11px 12px;border-radius:12px;background:#f7f9fc;color:#667085;font-size:9px;line-height:1.55}
 </style></head>
 <body>
 <div class="app">
@@ -3480,6 +3484,32 @@ window.addEventListener('unhandledrejection', function(e){
  document.addEventListener('click',e=>{if(e.target.closest('.av58-settings,.av58-start'))open();if(e.target.closest('.av58-cancel')||e.target.id==='av58Modal')close();if(e.target.closest('.av58-save')){const c=Number($('#av58Clearance').value),w=Number($('#av58Waste').value);if(!Number.isFinite(c)||!Number.isFinite(w)||c<0||w<0||c>100||w>100){if(typeof toast==='function')toast('請輸入 0～100 的出清率與報廢率');return}setT({clearance:c/100,waste:w/100});close();render();if(typeof toast==='function')toast('已儲存判定基準，開始分析')}});
  const old=window.renderAll;if(typeof old==='function')window.renderAll=function(){const r=old.apply(this,arguments);setTimeout(render,0);return r};
  document.addEventListener('DOMContentLoaded',render);setTimeout(render,0);window.renderAnomalyCenterV58=render;
+})();
+</script><script id="priority-events-v511-js">
+(function(){
+ function thresholds(){try{return JSON.parse(localStorage.getItem('opsAnomalyThresholdsV58')||'null')}catch(e){return null}}
+ function n(v){v=Number(v);return Number.isFinite(v)?v:0}
+ function moneyV(v){return '$'+Math.round(n(v)).toLocaleString()}
+ function renderPriority(){
+  const host=document.getElementById('priorityV511'); if(!host)return;
+  const rr=Array.isArray(window.rows)?window.rows:[]; if(!rr.length){host.innerHTML='<div class="empty">等待資料</div>';return}
+  const t=thresholds(); const ct=t?Number(t.clearance)/100:null, wt=t?Number(t.waste)/100:null;
+  const m=new Map(); rr.forEach(r=>{const k=String(r.item||r.sku||'未命名品項').trim();if(!m.has(k))m.set(k,{name:k,sales:0,clearance:0,waste:0});const x=m.get(k);x.sales+=n(r.sales);x.clearance+=n(r.clearance);x.waste+=n(r.waste)});
+  let a=[...m.values()].map(x=>{x.loss=x.clearance+x.waste;x.lossRate=x.sales>0?x.loss/x.sales:0;x.cr=x.sales>0?x.clearance/x.sales:0;x.wr=x.sales>0?x.waste/x.sales:0;return x}).filter(x=>x.loss>0);
+  const maxLoss=Math.max(...a.map(x=>x.loss),1);
+  a.forEach(x=>{const impact=x.loss/maxLoss;const cex=ct&&ct>0?Math.max(0,x.cr/ct-1):0;const wex=wt&&wt>0?Math.max(0,x.wr/wt-1):0;const exceed=Math.min(1,Math.max(cex,wex)/2);const dual=(ct&&wt&&x.cr>ct&&x.wr>wt)?1:0;x.score=Math.round((impact*.5+exceed*.3+dual*.2)*100);if(x.score>=75)x.level='極高';else if(x.score>=50)x.level='高';else if(x.score>=25)x.level='中';else x.level='低';});
+  a.sort((x,y)=>y.score-x.score||y.loss-x.loss); const cls={極高:'pv-critical',高:'pv-high',中:'pv-mid',低:'pv-low'};
+  host.innerHTML='<div class="pv-grid">'+a.slice(0,5).map((x,i)=>`<div class="pv-row"><div class="pv-no">${i+1}</div><div class="pv-main"><b>${x.name.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</b><small>損耗 ${moneyV(x.loss)}・損耗率 ${(x.lossRate*100).toFixed(2)}%・出清率 ${(x.cr*100).toFixed(2)}%・報廢率 ${(x.wr*100).toFixed(2)}%</small></div><div class="pv-side"><strong>${x.score} 分</strong><span class="pv-badge ${cls[x.level]}">${x.level}</span></div></div>`).join('')+'</div><div class="pv-rule">改善優先分數＝損耗金額影響 50%＋超標程度 30%＋出清與報廢同時超標 20%。率很高但金額很小的商品，不會自動排到最前面。損耗率＝（單品出清金額＋單品報廢金額）÷ 單品營業額。</div>';
+ }
+ function place(){
+  const ov=document.getElementById('overview'); if(!ov)return;
+  let box=document.getElementById('priorityPanelV511');
+  if(!box){box=document.createElement('section');box.id='priorityPanelV511';box.className='panel priority-v511';box.innerHTML='<div class="panel-head"><div><div class="panel-kicker">IMPROVEMENT PRIORITY</div><h3>最需要改善的商品</h3><p>同時考慮損耗金額、超標程度與雙重異常，避免只看百分比。</p></div></div><div id="priorityV511"></div>';const grid=ov.querySelector('.overview-grid');grid?.insertAdjacentElement('afterend',box)}
+  const ev=document.getElementById('externalEventPanel'); if(ev&&ev.parentElement!==ov)ov.appendChild(ev);
+  renderPriority();
+ }
+ const old=window.renderAll;if(typeof old==='function')window.renderAll=function(){const r=old.apply(this,arguments);setTimeout(place,0);return r};
+ document.addEventListener('DOMContentLoaded',place);setTimeout(place,0);
 })();
 </script></body>
 </html>
