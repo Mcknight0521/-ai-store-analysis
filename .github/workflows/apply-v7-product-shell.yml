@@ -34,8 +34,8 @@ jobs:
           grep -q 'assets/opspilot-ux-v16.css?v=16.0.0' index.html
           grep -q 'assets/opspilot-ux-v16.js?v=16.0.0' index.html
           grep -q 'assets/opspilot-v17.css?v=17.0.0' index.html
-          grep -q 'assets/opspilot-v17-fix.css?v=17.1.0' index.html
-          grep -q 'assets/opspilot-v17.js?v=17.1.0' index.html
+          grep -q 'assets/opspilot-v17-fix.css?v=17.2.0' index.html
+          grep -q 'assets/opspilot-v17.js?v=17.2.0' index.html
           ! grep -q 'assets/opspilot-eventfix.js?v=' index.html
           ! grep -q 'assets/opspilot-v7.css?v=' index.html
           ! grep -q 'assets/opspilot-structure.css?v=' index.html
@@ -46,6 +46,6 @@ jobs:
           git config user.name "opspilot-ui-bot"
           git config user.email "actions@users.noreply.github.com"
           git add index.html
-          git commit -m "Build OpsPilot v17.1 stability fix"
+          git commit -m "Build OpsPilot v17.2 four fixes"
           git pull --rebase
           git push
