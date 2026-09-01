@@ -1,0 +1,34 @@
+name: Apply OpsPilot v6 product rebuild
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch_v6_product_rebuild.py'
+      - '.github/workflows/apply-v6-product-rebuild.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Apply v6 product rebuild
+        run: python scripts/patch_v6_product_rebuild.py
+      - name: Verify v6 output
+        run: |
+          test -s index.html
+          grep -q 'opspilot-v6-product-rebuild' index.html
+          grep -q '出清金額 Top 10' index.html
+          grep -q '報廢率＝報廢金額 ÷ 營業額' index.html
+      - name: Commit generated index
+        run: |
+          if git diff --quiet -- index.html; then exit 0; fi
+          git config user.name "opspilot-ui-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add index.html
+          git commit -m "Build OpsPilot v6 product UI"
+          git push
