@@ -1,4 +1,4 @@
-name: Apply OpsPilot v8 presentation renderer
+name: Apply OpsPilot v9 application shell
 on:
   push:
     branches: [main]
@@ -18,17 +18,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: Apply v8 presentation renderer
+      - name: Apply v9 application shell
         run: python scripts/apply_v7_product_shell.py
-      - name: Verify renderer refs
+      - name: Verify v9 refs
         run: |
-          grep -q 'assets/opspilot-v7.css?v=8.0.0' index.html
-          grep -q 'assets/opspilot-v7.js?v=8.0.0' index.html
+          grep -q 'assets/opspilot-v7.css?v=9.0.0' index.html
+          grep -q 'assets/opspilot-v7.js?v=9.0.0' index.html
       - name: Commit generated index
         run: |
           if git diff --quiet -- index.html; then exit 0; fi
           git config user.name "opspilot-ui-bot"
           git config user.email "actions@users.noreply.github.com"
           git add index.html
-          git commit -m "Build OpsPilot v8 component presentation"
+          git commit -m "Build OpsPilot v9 distinct application shell"
           git push
