@@ -17,8 +17,10 @@ function current(){return $('#opxApp .opx-nav button.active')?.dataset.page||'ex
 function ensureStable(){let v=$('#v17StableView');if(v)return v;const base=$('#opxView');if(!base)return null;v=document.createElement('div');v.id='v17StableView';base.after(v);return v}
 let lastHTML='',lastPage='',timer=0;
 function build(page){if(page==='executive')return executiveHTML();if(page==='overview')return overviewHTML();if(page==='analysis')return analysisHTML();return $('#opxView')?.innerHTML||''}
-function render(force=false){const stable=ensureStable();if(!stable)return;const page=current(),html=build(page);if(!force&&page===lastPage&&html===lastHTML)return;lastPage=page;lastHTML=html;stable.innerHTML=html;stable.dataset.page=page}
+function renderPage(page,force=false){const stable=ensureStable();if(!stable)return;const html=build(page);if(!force&&page===lastPage&&html===lastHTML)return;lastPage=page;lastHTML=html;stable.innerHTML=html;stable.dataset.page=page}
+function render(force=false){renderPage(current(),force)}
 function schedule(force=false,delay=500){clearTimeout(timer);timer=setTimeout(()=>render(force),delay)}
-function init(){const app=$('#opxApp');if(!app||!$('#opxView')){setTimeout(init,100);return}document.body.classList.add('v17-ready','v17-stable');ensureStable();render(true);app.addEventListener('click',e=>{if(e.target.closest('.opx-nav button')){lastHTML='';lastPage='';schedule(true,120)}});['executive','overview','analysis','anomaly','improve','report'].forEach(id=>{const el=source(id);if(!el)return;new MutationObserver(()=>schedule(false,650)).observe(el,{subtree:true,childList:true,characterData:true})})}
+function jumpTop(){const sc=document.scrollingElement||document.documentElement;sc.scrollTop=0;document.documentElement.scrollTop=0;document.body.scrollTop=0;window.scrollTo(0,0)}
+function init(){const app=$('#opxApp');if(!app||!$('#opxView')){setTimeout(init,100);return}document.body.classList.add('v17-ready','v17-stable');ensureStable();render(true);app.addEventListener('click',e=>{const b=e.target.closest('.opx-nav button[data-page]');if(!b)return;const page=b.dataset.page;clearTimeout(timer);lastHTML='';lastPage='';queueMicrotask(()=>{renderPage(page,true);jumpTop()})});['executive','overview','analysis','anomaly','improve','report'].forEach(id=>{const el=source(id);if(!el)return;new MutationObserver(()=>schedule(false,650)).observe(el,{subtree:true,childList:true,characterData:true})})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
