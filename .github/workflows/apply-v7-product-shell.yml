@@ -1,12 +1,10 @@
-name: Apply OpsPilot full UI rebuild
+name: Apply OpsPilot complete UI rebuild
 on:
   push:
     branches: [main]
     paths:
-      - 'assets/opspilot-v7.css'
-      - 'assets/opspilot-v7.js'
-      - 'assets/opspilot-structure.css'
-      - 'assets/opspilot-display.css'
+      - 'assets/opspilot-rebuild.css'
+      - 'assets/opspilot-rebuild.js'
       - 'scripts/apply_v7_product_shell.py'
       - '.github/workflows/apply-v7-product-shell.yml'
   workflow_dispatch:
@@ -20,17 +18,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: Apply full UI rebuild
+      - name: Apply complete UI rebuild
         run: python scripts/apply_v7_product_shell.py
-      - name: Verify UI refs
+      - name: Verify rebuild refs
         run: |
-          grep -q 'assets/opspilot-display.css?v=14.0.0' index.html
-          grep -q 'assets/opspilot-v7.js?v=14.0.0' index.html
+          grep -q 'assets/opspilot-rebuild.css?v=15.0.0' index.html
+          grep -q 'assets/opspilot-rebuild.js?v=15.0.0' index.html
+          ! grep -q 'assets/opspilot-v7.css?v=' index.html
+          ! grep -q 'assets/opspilot-structure.css?v=' index.html
+          ! grep -q 'assets/opspilot-display.css?v=' index.html
       - name: Commit generated index
         run: |
           if git diff --quiet -- index.html; then exit 0; fi
           git config user.name "opspilot-ui-bot"
           git config user.email "actions@users.noreply.github.com"
           git add index.html
-          git commit -m "Build OpsPilot full UI rebuild"
+          git commit -m "Build OpsPilot v15 complete UI rebuild"
           git push
