@@ -1,0 +1,17 @@
+/* v17.1 stability + white money overview */
+.v17-stable #opxView{display:none!important}
+.v17-stable #v17StableView{display:block!important;min-height:1px}
+.v17-stable #v17StableView:empty{display:none!important}
+.v17-money{background:#fff!important;color:#12213a!important;border:1px solid #e2e8f1!important;box-shadow:0 14px 38px rgba(28,47,80,.08)!important}
+.v17-money:after{background:radial-gradient(circle,rgba(91,126,244,.10),transparent 68%)!important}
+.v17-money-head h2{color:#12213a!important}
+.v17-money-head p{color:#7e8b9f!important}
+.v17-money-head>div>small{color:#6681c4!important}
+.v17-money-grid article{background:#fff!important;border:1px solid #e2e8f1!important;color:#12213a!important;box-shadow:0 6px 18px rgba(27,47,79,.045)}
+.v17-money-grid small{color:#7c899d!important}
+.v17-money-grid span{color:#99a3b2!important}
+.v17-money-grid article:nth-child(1){background:linear-gradient(145deg,#fff,#f8fbff)!important}
+.v17-money-grid article:nth-child(2){background:linear-gradient(145deg,#fff,#f8fcfa)!important}
+.v17-money-grid article:nth-child(3){background:linear-gradient(145deg,#fff,#fffaf3)!important}
+.v17-money-grid article:nth-child(4){background:linear-gradient(145deg,#fff,#fff7f8)!important}
+@media(max-width:700px){.v17-money{padding:15px!important}.v17-money-grid{gap:8px!important}}
