@@ -40,7 +40,7 @@
         const ok=$$('.file-row',list||document).filter(r=>r.querySelector('span')?.textContent?.trim()==='✓').length;
         finishProgress(ok,arr.length);
         if(typeof window.setImportStep==='function')window.setImportStep(1);
-        const next=$('#nextImportStep'); if(next){next.disabled=!(window.staged?.length||0); next.hidden=false;}
+        const next=$('#nextImportStep'); if(next)next.hidden=false;
         const prev=$('#prevImportStep'); if(prev)prev.hidden=true;
         const confirm=$('#confirmImport'); if(confirm)confirm.hidden=true;
         return out;
