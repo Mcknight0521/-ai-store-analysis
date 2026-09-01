@@ -1,16 +1,20 @@
 from pathlib import Path
+import re
 p=Path('index.html')
 s=p.read_text(encoding='utf-8')
-base_css='<link rel="stylesheet" href="assets/opspilot-v7.css?v=11.0.0">'
-structure_css='<link rel="stylesheet" href="assets/opspilot-structure.css?v=12.0.0">'
-display_css='<link rel="stylesheet" href="assets/opspilot-display.css?v=14.0.0">'
-js='<script src="assets/opspilot-v7.js?v=14.0.0"></script>'
-import re
-s=re.sub(r'\n?<link rel="stylesheet" href="assets/opspilot-v7\.css\?v=[^"]+">','',s)
-s=re.sub(r'\n?<link rel="stylesheet" href="assets/opspilot-structure\.css\?v=[^"]+">','',s)
-s=re.sub(r'\n?<link rel="stylesheet" href="assets/opspilot-display\.css\?v=[^"]+">','',s)
-s=re.sub(r'\n?<script src="assets/opspilot-v7\.js\?v=[^"]+"></script>','',s)
-s=s.replace('</head>',base_css+'\n'+structure_css+'\n'+display_css+'\n</head>',1)
+# Remove every prior presentation skin / renderer. Core inline app logic stays untouched.
+patterns=[
+ r'\n?<link rel="stylesheet" href="assets/opspilot-v7\.css\?v=[^"]+">',
+ r'\n?<link rel="stylesheet" href="assets/opspilot-structure\.css\?v=[^"]+">',
+ r'\n?<link rel="stylesheet" href="assets/opspilot-display\.css\?v=[^"]+">',
+ r'\n?<link rel="stylesheet" href="assets/opspilot-rebuild\.css\?v=[^"]+">',
+ r'\n?<script src="assets/opspilot-v7\.js\?v=[^"]+"></script>',
+ r'\n?<script src="assets/opspilot-rebuild\.js\?v=[^"]+"></script>'
+]
+for pattern in patterns:s=re.sub(pattern,'',s)
+css='<link rel="stylesheet" href="assets/opspilot-rebuild.css?v=15.0.0">'
+js='<script src="assets/opspilot-rebuild.js?v=15.0.0"></script>'
+s=s.replace('</head>',css+'\n</head>',1)
 s=s.replace('</body>',js+'\n</body>',1)
 p.write_text(s,encoding='utf-8')
-print('OpsPilot full six-page UI rebuild linked; core business logic untouched')
+print('OpsPilot v15 complete UI rebuilt; core parser/judgement/formulas preserved')
