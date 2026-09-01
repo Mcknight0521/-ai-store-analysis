@@ -1,4 +1,4 @@
-name: Apply OpsPilot fresh display layer
+name: Apply OpsPilot full UI rebuild
 on:
   push:
     branches: [main]
@@ -20,19 +20,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-      - name: Apply fresh display layer
+      - name: Apply full UI rebuild
         run: python scripts/apply_v7_product_shell.py
-      - name: Verify display refs
+      - name: Verify UI refs
         run: |
-          grep -q 'assets/opspilot-v7.css?v=11.0.0' index.html
-          grep -q 'assets/opspilot-structure.css?v=12.0.0' index.html
-          grep -q 'assets/opspilot-display.css?v=13.0.0' index.html
-          grep -q 'assets/opspilot-v7.js?v=13.0.0' index.html
+          grep -q 'assets/opspilot-display.css?v=14.0.0' index.html
+          grep -q 'assets/opspilot-v7.js?v=14.0.0' index.html
       - name: Commit generated index
         run: |
           if git diff --quiet -- index.html; then exit 0; fi
           git config user.name "opspilot-ui-bot"
           git config user.email "actions@users.noreply.github.com"
           git add index.html
-          git commit -m "Build OpsPilot fresh display layer"
+          git commit -m "Build OpsPilot full UI rebuild"
           git push
