@@ -12,9 +12,9 @@ patterns=[
  r'\n?<script src="assets/opspilot-rebuild\.js\?v=[^"]+"></script>'
 ]
 for pattern in patterns:s=re.sub(pattern,'',s)
-css='<link rel="stylesheet" href="assets/opspilot-rebuild.css?v=15.0.0">'
+css='<link rel="stylesheet" href="assets/opspilot-rebuild.css?v=15.0.1">'
 js='<script src="assets/opspilot-rebuild.js?v=15.0.0"></script>'
 s=s.replace('</head>',css+'\n</head>',1)
 s=s.replace('</body>',js+'\n</body>',1)
 p.write_text(s,encoding='utf-8')
-print('OpsPilot v15 complete UI rebuilt; core parser/judgement/formulas preserved')
+print('OpsPilot v15.0.1 mobile import drawer fix; core parser/judgement/formulas preserved')
