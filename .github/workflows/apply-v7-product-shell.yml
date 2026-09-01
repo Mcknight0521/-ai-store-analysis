@@ -6,6 +6,7 @@ on:
       - 'assets/opspilot-rebuild.css'
       - 'assets/opspilot-rebuild.js'
       - 'assets/opspilot-scrollfix.js'
+      - 'assets/opspilot-eventfix.js'
       - 'scripts/apply_v7_product_shell.py'
       - '.github/workflows/apply-v7-product-shell.yml'
   workflow_dispatch:
@@ -26,6 +27,7 @@ jobs:
           grep -q 'assets/opspilot-rebuild.css?v=15.0.1' index.html
           grep -q 'assets/opspilot-rebuild.js?v=15.0.2' index.html
           grep -q 'assets/opspilot-scrollfix.js?v=15.0.4' index.html
+          grep -q 'assets/opspilot-eventfix.js?v=15.0.5' index.html
           ! grep -q 'assets/opspilot-v7.css?v=' index.html
           ! grep -q 'assets/opspilot-structure.css?v=' index.html
           ! grep -q 'assets/opspilot-display.css?v=' index.html
@@ -35,5 +37,5 @@ jobs:
           git config user.name "opspilot-ui-bot"
           git config user.email "actions@users.noreply.github.com"
           git add index.html
-          git commit -m "Build OpsPilot v15.0.4 nav top reset"
+          git commit -m "Build OpsPilot v15.0.5 period event fix"
           git push
