@@ -1,25 +1,53 @@
 (()=>{
- document.body.classList.remove('op-v8','op-v9');document.body.classList.add('op-v10');
- const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
- const ICONS={executive:'<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/></svg>',overview:'<svg viewBox="0 0 24 24"><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/><path d="M22 19V8"/><path d="m3 7 6-4 6 6 6-5"/></svg>',analysis:'<svg viewBox="0 0 24 24"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>',anomaly:'<svg viewBox="0 0 24 24"><path d="M12 3 2.7 20h18.6L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/></svg>',improve:'<svg viewBox="0 0 24 24"><path d="M4 13l5 5L20 6"/><path d="M20 12v8H4V4h11"/></svg>',report:'<svg viewBox="0 0 24 24"><path d="M6 3h12v18H6z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>'};
- const META={executive:['總覽','本期結果、關鍵影響與優先處理項目','本期營運'],overview:['洞察','看懂營運結構與變化，再追原因','營運洞察'],analysis:['分析','營業額、出清與報廢的結構拆解','結構分析'],anomaly:['異常','只看真正偏離標準的項目','異常辨識'],improve:['改善','把值得先處理的異常轉成行動','改善追蹤'],report:['報告','把本期判斷整理成可分享結果','決策報告']};
- function hasData(){let s=($('#kpiSales')?.textContent||'').trim(),st=($('#sourceStatus')?.textContent||'').trim();return !!(s&&s!=='—'&&!/等待資料/.test(st));}
- function nav(){ $$('.bottom-nav [data-page]').forEach(el=>{let k=el.dataset.page;if(ICONS[k]){let old=$('svg',el);if(old&&!old.dataset.v10)old.outerHTML=ICONS[k].replace('<svg ','<svg data-v10="1" ')}let t=$('span',el);if(t&&META[k])t.textContent=META[k][0]}); }
- function landing(){if($('#v10Landing'))return;let app=$('.app'),main=$('main.content');if(!app||!main)return;let el=document.createElement('section');el.id='v10Landing';el.className='v10-landing';el.innerHTML=`<div class="v10-start-card"><div class="v10-start-brand"><span class="v10-start-logo">${ICONS.executive}</span><span>OpsPilot</span></div><div class="v10-start-copy"><span class="v10-overline">STORE INTELLIGENCE</span><h1>開始一次<br><em>營運分析</em></h1><p>匯入本期資料後，再設定這次分析的警戒標準。OpsPilot 只根據實際資料做判斷。</p><button id="v10Import" type="button">${ICONS.analysis}<span>匯入本期資料</span></button></div><div class="v10-start-grid"><div><b>01</b><span>匯入資料</span></div><div><b>02</b><span>確認內容</span></div><div><b>03</b><span>設定警戒值</span></div><div><b>04</b><span>開始分析</span></div></div></div><div class="v10-preview"><div class="v10-preview-head"><span>本期營運結果</span><i></i></div><div class="v10-preview-kpis"><div></div><div></div><div></div><div></div></div><div class="v10-preview-list"><span></span><span></span><span></span><span></span><span></span></div></div>`;main.before(el);$('#v10Import',el)?.addEventListener('click',()=>$('#openImport')?.click());}
- function pageShell(id){let p=$('#'+id);if(!p)return;let meta=META[id];let head=$(':scope > .page-head',p);if(!head)return;
-   head.classList.add('v10-page-head');let eye=$('.eyebrow',head),h=$('h1',head),desc=$('p',head);if(eye)eye.textContent=meta[2].toUpperCase();if(h)h.textContent=meta[0];if(desc)desc.textContent=meta[1];
-   if(!$('.v10-page-icon',head)){let icon=document.createElement('span');icon.className='v10-page-icon';icon.innerHTML=ICONS[id];head.prepend(icon)}
-   let shell=$(':scope > .v10-page-shell',p);if(!shell){shell=document.createElement('div');shell.className='v10-page-shell v10-'+id+'-shell';head.after(shell)}
-   [...p.children].filter(x=>x!==head&&x!==shell).forEach(x=>shell.append(x));
-   [...shell.children].forEach((x,i)=>{x.classList.add('v10-module');x.dataset.v10order=String(i+1)});
- }
- function executive(){let p=$('#executive'),s=$('#executive > .v10-page-shell');if(!p||!s)return;let hero=$('.hero',s);if(hero){hero.classList.add('v10-result');let hi=$('.hero-inner',hero);if(hi)hi.classList.add('v10-result-inner');$$('.kpi',hero).forEach((k,i)=>{k.classList.add('v10-kpi');k.dataset.tone=['blue','rose','amber','green'][i%4]})}let grid=$('.grid-2',s);if(grid)grid.classList.add('v10-rank-grid');$$('.panel',s).forEach((x,i)=>{x.classList.add('v10-card');x.dataset.tone=['blue','amber','violet'][i%3]});$$('.rank-item',s).forEach((x,i)=>{x.classList.add('v10-rank');x.dataset.rank=String((i%5)+1)});}
- function overview(){let s=$('#overview > .v10-page-shell');if(!s)return;let grid=$('.overview-grid',s);if(grid)grid.classList.add('v10-insight-grid');$$('.metric',s).forEach((k,i)=>{k.classList.add('v10-kpi');k.dataset.tone=['blue','green','amber','violet','rose','cyan'][i%6]});$$('.panel,.v522-structure-head,.v522-card',s).forEach((x,i)=>{x.classList.add('v10-card');x.dataset.tone=['blue','green','violet'][i%3]});}
- function analysis(){let s=$('#analysis > .v10-page-shell');if(!s)return;let layout=$('.analysis-layout',s);if(layout)layout.classList.add('v10-analysis-grid');$$('.panel,.as57-card,.analysis-safe-v57',s).forEach((x,i)=>{x.classList.add('v10-card');x.dataset.tone=['blue','amber','rose'][i%3]});$$('.segmented',s).forEach(x=>x.classList.add('v10-segmented'));}
- function anomaly(){let s=$('#anomaly > .v10-page-shell');if(!s)return;$$('.panel,.ar519-panel,.ar519-head,.anomaly-rank-v519',s).forEach((x,i)=>{x.classList.add('v10-card');x.dataset.tone=i===0?'rose':(i%2?'amber':'blue')});$$('.ar519-row,.anomaly-item,.event-card',s).forEach((x,i)=>{x.classList.add('v10-list-row');x.dataset.rank=String((i%10)+1)});}
- function improve(){let s=$('#improve > .v10-page-shell');if(!s)return;$$('.panel,.improve-card,.improve-guide',s).forEach((x,i)=>{x.classList.add('v10-card');x.dataset.tone=i===0?'green':(i%2?'blue':'amber')});}
- function report(){let s=$('#report > .v10-page-shell');if(!s)return;$$('.panel,.report-card',s).forEach((x,i)=>{x.classList.add('v10-card');x.dataset.tone=i%2?'violet':'blue'});}
- function state(){let yes=hasData();document.body.classList.toggle('v10-has-data',yes);document.body.classList.toggle('v10-empty',!yes)}
- function run(){landing();nav();['executive','overview','analysis','anomaly','improve','report'].forEach(pageShell);executive();overview();analysis();anomaly();improve();report();state()}
- run();let lock=false;new MutationObserver(()=>{if(lock)return;lock=true;requestAnimationFrame(()=>{lock=false;run()})}).observe(document.body,{subtree:true,childList:true,characterData:true});
+  document.body.classList.remove('op-v8','op-v9','op-v10','v10-empty','v10-has-data');
+  document.body.classList.add('op-v11');
+  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const ICONS={
+    executive:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/></svg>',
+    overview:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/><path d="M22 19V8"/><path d="m3 7 6-4 6 6 6-5"/></svg>',
+    analysis:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>',
+    anomaly:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2.7 20h18.6L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/></svg>',
+    improve:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13l5 5L20 6"/><path d="M20 12v8H4V4h11"/></svg>',
+    report:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>'
+  };
+  const META={
+    executive:['總覽','PERIOD RESULT','本期結果與最值得注意的營運項目。'],
+    overview:['洞察','INSIGHTS','看懂營運結構與變化，再往下追原因。'],
+    analysis:['分析','ANALYSIS','營業額、出清與報廢的結構拆解。'],
+    anomaly:['異常','ANOMALY','辨識超標項目，不把排序當成根因。'],
+    improve:['改善','IMPROVEMENT','把值得先處理的異常轉成可驗證行動。'],
+    report:['報告','REPORT','把本期判斷整理成可分享的管理摘要。']
+  };
+  const tones=['blue','green','amber','rose','violet','cyan'];
+  function nav(){
+    $$('.bottom-nav [data-page]').forEach(el=>{
+      const k=el.dataset.page;if(!META[k])return;
+      const svg=$('svg',el);if(svg&&!svg.dataset.op11)svg.outerHTML=ICONS[k].replace('<svg ','<svg data-op11="1" ');
+      const span=$('span',el);if(span)span.textContent=META[k][0];
+    });
+  }
+  function heads(){
+    Object.entries(META).forEach(([id,[title,eyebrow,desc]])=>{
+      const h=$(`#${id}>.page-head`);if(!h)return;
+      const e=$('.eyebrow',h),t=$('h1',h),p=$('p',h);
+      if(e)e.textContent=eyebrow;if(t)t.textContent=title;if(p)p.textContent=desc;
+    });
+  }
+  function tone(nodes){nodes.forEach((el,i)=>el.dataset.opTone=tones[i%tones.length]);}
+  function decorate(){
+    tone($$('#executive .ex513-kpi'));
+    $$('#executive .ex513-card').forEach((el,i)=>el.dataset.opTone=['blue','amber','rose','violet'][i%4]);
+    tone($$('#overview .metric'));
+    $$('#analysis .analysis-v57-card').forEach((el,i)=>el.dataset.opTone=['blue','amber','rose'][i%3]);
+    $$('#anomaly .ar519-panel').forEach((el,i)=>el.dataset.opTone=i===0?'rose':tones[(i+1)%tones.length]);
+    tone($$('#improve .improve-stat'));
+  }
+  function cleanup(){
+    $('#v10Landing')?.remove();$('#v9Landing')?.remove();
+    document.body.classList.remove('v10-empty','v10-has-data');
+  }
+  function run(){cleanup();nav();heads();decorate();}
+  run();
+  let scheduled=false;
+  new MutationObserver(()=>{if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;run();});}).observe(document.body,{subtree:true,childList:true});
 })();
