@@ -1,12 +1,12 @@
 from pathlib import Path
 p=Path('index.html')
 s=p.read_text(encoding='utf-8')
-css='<link rel="stylesheet" href="assets/opspilot-v7.css?v=7.5.0">'
-js='<script src="assets/opspilot-v7.js?v=7.5.0"></script>'
+css='<link rel="stylesheet" href="assets/opspilot-v7.css?v=8.0.0">'
+js='<script src="assets/opspilot-v7.js?v=8.0.0"></script>'
 import re
 s=re.sub(r'\n?<link rel="stylesheet" href="assets/opspilot-v7\.css\?v=[^"]+">','',s)
 s=re.sub(r'\n?<script src="assets/opspilot-v7\.js\?v=[^"]+"></script>','',s)
 s=s.replace('</head>',css+'\n</head>',1)
 s=s.replace('</body>',js+'\n</body>',1)
 p.write_text(s,encoding='utf-8')
-print('OpsPilot v7.5 approved-right presentation linked; core logic untouched')
+print('OpsPilot v8 presentation renderer linked; application engine untouched')
