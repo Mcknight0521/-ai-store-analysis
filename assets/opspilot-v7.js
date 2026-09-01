@@ -1,22 +1,13 @@
 (()=>{
- document.body.classList.add('op-v7','op-v75');
- const SVG={
- executive:'<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/></svg>',
- overview:'<svg viewBox="0 0 24 24"><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/><path d="M22 19V8"/><path d="m3 7 6-4 6 6 6-5"/></svg>',
- analysis:'<svg viewBox="0 0 24 24"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>',
- anomaly:'<svg viewBox="0 0 24 24"><path d="M12 3 2.7 20h18.6L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/></svg>',
- improve:'<svg viewBox="0 0 24 24"><path d="M4 13l5 5L20 6"/><path d="M20 12v8H4V4h11"/></svg>',
- report:'<svg viewBox="0 0 24 24"><path d="M6 3h12v18H6z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>'};
+ document.body.classList.add('op-v7','op-v8');
+ const SVG={executive:'<svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/></svg>',overview:'<svg viewBox="0 0 24 24"><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/><path d="M22 19V8"/><path d="m3 7 6-4 6 6 6-5"/></svg>',analysis:'<svg viewBox="0 0 24 24"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>',anomaly:'<svg viewBox="0 0 24 24"><path d="M12 3 2.7 20h18.6L12 3Z"/><path d="M12 9v5"/><path d="M12 17.5h.01"/></svg>',improve:'<svg viewBox="0 0 24 24"><path d="M4 13l5 5L20 6"/><path d="M20 12v8H4V4h11"/></svg>',report:'<svg viewBox="0 0 24 24"><path d="M6 3h12v18H6z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>'};
  const NAV={executive:'總覽',overview:'洞察',analysis:'分析',anomaly:'異常',improve:'改善',report:'報告'};
- function applyNav(){document.querySelectorAll('.bottom-nav [data-page]').forEach(el=>{const k=el.dataset.page;if(SVG[k]){const s=el.querySelector('svg');if(s&&!s.dataset.v75)s.outerHTML=SVG[k].replace('<svg ','<svg data-v75="1" ')}const span=el.querySelector('span');if(span&&NAV[k])span.textContent=NAV[k]})}
- function applyPageLabels(){
-   const exec=document.querySelector('#executive .page-head');
-   if(exec){const e=exec.querySelector('.eyebrow'),h=exec.querySelector('h1'),p=exec.querySelector('p');if(e)e.textContent='OPERATIONS OVERVIEW';if(h)h.textContent='總覽';if(p)p.textContent='本期結果、關鍵影響與需要優先注意的營運項目。'}
-   const insight=document.querySelector('#overview .page-head');
-   if(insight){const e=insight.querySelector('.eyebrow'),h=insight.querySelector('h1'),p=insight.querySelector('p');if(e)e.textContent='INSIGHTS';if(h)h.textContent='洞察';if(p)p.textContent='從本期數字看營運結構與目前最值得注意的變化。'}
- }
- function decorate(){document.querySelectorAll('.kpi,.metric,.mini-card,.v522-card').forEach((e,i)=>{if(!e.dataset.skinTone)e.dataset.skinTone=['blue','green','amber','violet','rose','cyan'][i%6]})}
- function orderInsight(){const p=document.getElementById('overview');if(!p)return;const struct=p.querySelector('.v522-insight-structure');if(!struct)return;const result=[...p.querySelectorAll('section,.panel,.exec-v513')].find(e=>/本期營運結果|PERIOD RESULT/.test(e.textContent||''));if(result&&result.nextElementSibling!==struct)result.after(struct)}
- function run(){applyNav();applyPageLabels();decorate();orderInsight()}
- run();new MutationObserver(()=>requestAnimationFrame(run)).observe(document.body,{subtree:true,childList:true});
+ const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+ function nav(){ $$('.bottom-nav [data-page]').forEach(el=>{let k=el.dataset.page;if(SVG[k]){let s=$('svg',el);if(s&&!s.dataset.v8)s.outerHTML=SVG[k].replace('<svg ','<svg data-v8="1" ')}let t=$('span',el);if(t&&NAV[k])t.textContent=NAV[k]}); }
+ function heads(){[['executive','OPERATIONS OVERVIEW','總覽','本期結果、關鍵影響與需要優先注意的營運項目。'],['overview','INSIGHTS','洞察','從本期數字看營運結構與目前最值得注意的變化。']].forEach(([id,e,h,p])=>{let x=$('#'+id+' .page-head');if(!x)return;let a=$('.eyebrow',x),b=$('h1',x),c=$('p',x);if(a)a.textContent=e;if(b)b.textContent=h;if(c)c.textContent=p}) }
+ function executive(){let p=$('#executive');if(!p)return;p.classList.add('v8-rendered');let hero=$('.hero',p);if(hero)hero.classList.add('v8-period-card');let panels=$(':scope > .grid-2',p);if(panels)panels.classList.add('v8-top-grid');$$('.panel',p).forEach((e,i)=>{e.classList.add('v8-card');if(i<3)e.dataset.v8tone=['blue','amber','rose'][i]});$$('.rank-list',p).forEach(e=>e.classList.add('v8-rank-list'));$$('.rank-item',p).forEach((e,i)=>{e.classList.add('v8-rank-row');e.style.setProperty('--rank',i%5+1)});$$('.kpi',p).forEach((e,i)=>{e.classList.add('v8-kpi');e.dataset.v8tone=['blue','rose','amber','green'][i%4]});}
+ function overview(){let p=$('#overview');if(!p)return;p.classList.add('v8-rendered');$$('.metric',p).forEach((e,i)=>{e.classList.add('v8-kpi');e.dataset.v8tone=['blue','green','amber','violet','rose','cyan'][i%6]});$$('.panel',p).forEach(e=>e.classList.add('v8-card'));}
+ function pages(){['analysis','anomaly','improve','report'].forEach(id=>{let p=$('#'+id);if(p){p.classList.add('v8-rendered');$$('.panel,.as57-card,.ar519-panel,.improve-card,.report-card',p).forEach(e=>e.classList.add('v8-card'))}})}
+ function run(){nav();heads();executive();overview();pages()}
+ run();let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;run()})}).observe(document.body,{subtree:true,childList:true});
 })();
